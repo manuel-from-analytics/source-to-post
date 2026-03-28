@@ -10,6 +10,7 @@ import {
   X,
   LogOut,
   Sparkles,
+  Mic,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button";
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
   { icon: Library, label: "Biblioteca", path: "/library" },
+  { icon: Mic, label: "Mi Voz", path: "/voice" },
   { icon: PenTool, label: "Generador", path: "/generator" },
   { icon: History, label: "Historial", path: "/history" },
   { icon: Settings, label: "Ajustes", path: "/settings" },
