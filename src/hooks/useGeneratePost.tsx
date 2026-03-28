@@ -15,6 +15,7 @@ interface GenerateParams {
   writing_style?: string;
   iteration_prompt?: string;
   previous_content?: string;
+  use_voice?: boolean;
 }
 
 export function useGeneratePost() {
