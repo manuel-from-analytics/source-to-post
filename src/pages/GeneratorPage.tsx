@@ -16,6 +16,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useInputs } from "@/hooks/useInputs";
 import { useGeneratePost } from "@/hooks/useGeneratePost";
 import { CategoryFilter } from "@/components/CategoryWidgets";
+import { useVoiceSamples } from "@/hooks/useVoiceSamples";
+import { Switch } from "@/components/ui/switch";
 
 const typeIcons: Record<string, React.ElementType> = {
   pdf: File, url: Globe, youtube: Youtube, text: Type,
@@ -35,8 +37,10 @@ export default function GeneratorPage() {
   const [cta, setCta] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
   const [writingStyle, setWritingStyle] = useState("");
+  const [useVoice, setUseVoice] = useState(true);
 
   const { data: inputs, isLoading: loadingInputs } = useInputs();
+  const { data: voiceSamples } = useVoiceSamples();
   const { generate, savePost, isGenerating, content, setContent } = useGeneratePost();
 
   const toggleSource = (id: string) => {
@@ -55,6 +59,7 @@ export default function GeneratorPage() {
       cta: cta || undefined,
       target_audience: targetAudience || undefined,
       writing_style: writingStyle || undefined,
+      use_voice: useVoice && (voiceSamples?.length ?? 0) > 0,
     });
   };
 
@@ -71,6 +76,7 @@ export default function GeneratorPage() {
       writing_style: writingStyle || undefined,
       iteration_prompt: iterationPrompt.trim(),
       previous_content: content,
+      use_voice: useVoice && (voiceSamples?.length ?? 0) > 0,
     });
     setIterationPrompt("");
   };
@@ -253,6 +259,18 @@ export default function GeneratorPage() {
                   onChange={(e) => setWritingStyle(e.target.value)}
                 />
               </div>
+
+              {(voiceSamples?.length ?? 0) > 0 && (
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-medium">Usar mi voz</Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      {voiceSamples?.length} ejemplo{voiceSamples?.length !== 1 ? "s" : ""} de estilo guardado{voiceSamples?.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <Switch checked={useVoice} onCheckedChange={setUseVoice} />
+                </div>
+              )}
             </CardContent>
           </Card>
 

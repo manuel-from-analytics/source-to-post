@@ -46,6 +46,7 @@ serve(async (req) => {
       writing_style,
       iteration_prompt,
       previous_content,
+      use_voice,
     } = await req.json();
 
     // Fetch selected inputs
@@ -61,6 +62,20 @@ serve(async (req) => {
         const content = inp.extracted_content || inp.raw_content || inp.summary || "";
         return `[${inp.type.toUpperCase()}] ${inp.title}\n${content}${inp.original_url ? `\nURL: ${inp.original_url}` : ""}`;
       });
+    }
+
+    // Fetch voice samples if requested
+    let voiceTexts: string[] = [];
+    if (use_voice) {
+      const { data: samples, error: samplesError } = await supabase
+        .from("voice_samples")
+        .select("title, content")
+        .limit(10);
+      if (!samplesError && samples && samples.length > 0) {
+        voiceTexts = samples.map((s: any) =>
+          `${s.title ? `[${s.title}] ` : ""}${s.content}`
+        );
+      }
     }
 
     const goalMap: Record<string, string> = {
@@ -103,6 +118,17 @@ serve(async (req) => {
 Generas posts de alta calidad, optimizados para engagement.
 Usa emojis con moderación, formato con saltos de línea y estructura visual clara.
 NO uses markdown (ni asteriscos ni negritas), escribe en texto plano.`;
+
+    if (voiceTexts.length > 0) {
+      systemPrompt += `\n\nIMPORTANTE - ESTILO DE ESCRITURA:
+El usuario ha proporcionado los siguientes posts de ejemplo como referencia de su estilo personal.
+Analiza cuidadosamente: su narrativa, estructura de párrafos, uso de expresiones, forma de abrir y cerrar posts, longitud de frases, nivel de formalidad, y patrones recurrentes.
+Imita ese estilo fielmente al generar el nuevo post.
+
+EJEMPLOS DE REFERENCIA:
+${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}
+--- Fin de ejemplos ---`;
+    }
 
     let userPrompt = "";
 
