@@ -119,6 +119,17 @@ Generas posts de alta calidad, optimizados para engagement.
 Usa emojis con moderación, formato con saltos de línea y estructura visual clara.
 NO uses markdown (ni asteriscos ni negritas), escribe en texto plano.`;
 
+    if (voiceTexts.length > 0) {
+      systemPrompt += `\n\nIMPORTANTE - ESTILO DE ESCRITURA:
+El usuario ha proporcionado los siguientes posts de ejemplo como referencia de su estilo personal.
+Analiza cuidadosamente: su narrativa, estructura de párrafos, uso de expresiones, forma de abrir y cerrar posts, longitud de frases, nivel de formalidad, y patrones recurrentes.
+Imita ese estilo fielmente al generar el nuevo post.
+
+EJEMPLOS DE REFERENCIA:
+${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}
+--- Fin de ejemplos ---`;
+    }
+
     let userPrompt = "";
 
     if (iteration_prompt && previous_content) {
