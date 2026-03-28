@@ -259,6 +259,18 @@ export default function GeneratorPage() {
                   onChange={(e) => setWritingStyle(e.target.value)}
                 />
               </div>
+
+              {(voiceSamples?.length ?? 0) > 0 && (
+                <div className="flex items-center justify-between rounded-lg border p-3">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-medium">Usar mi voz</Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      {voiceSamples?.length} ejemplo{voiceSamples?.length !== 1 ? "s" : ""} de estilo guardado{voiceSamples?.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <Switch checked={useVoice} onCheckedChange={setUseVoice} />
+                </div>
+              )}
             </CardContent>
           </Card>
 
