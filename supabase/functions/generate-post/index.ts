@@ -46,6 +46,7 @@ serve(async (req) => {
       writing_style,
       iteration_prompt,
       previous_content,
+      use_voice,
     } = await req.json();
 
     // Fetch selected inputs
@@ -61,6 +62,20 @@ serve(async (req) => {
         const content = inp.extracted_content || inp.raw_content || inp.summary || "";
         return `[${inp.type.toUpperCase()}] ${inp.title}\n${content}${inp.original_url ? `\nURL: ${inp.original_url}` : ""}`;
       });
+    }
+
+    // Fetch voice samples if requested
+    let voiceTexts: string[] = [];
+    if (use_voice) {
+      const { data: samples, error: samplesError } = await supabase
+        .from("voice_samples")
+        .select("title, content")
+        .limit(10);
+      if (!samplesError && samples && samples.length > 0) {
+        voiceTexts = samples.map((s: any) =>
+          `${s.title ? `[${s.title}] ` : ""}${s.content}`
+        );
+      }
     }
 
     const goalMap: Record<string, string> = {
