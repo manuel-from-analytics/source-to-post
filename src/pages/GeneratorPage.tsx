@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   PenTool, Check, Copy, RefreshCw, Send, Sparkles,
-  FileText, ChevronDown
+  FileText, Save, Loader2, Globe, Youtube, File, Type
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,19 +13,29 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
+import { useInputs } from "@/hooks/useInputs";
+import { useGeneratePost } from "@/hooks/useGeneratePost";
 
-const mockSources = [
-  { id: "1", title: "Cómo construir tu marca personal en LinkedIn", type: "article" },
-  { id: "2", title: "The Art of Storytelling for Business", type: "youtube" },
-];
+const typeIcons: Record<string, React.ElementType> = {
+  pdf: File, url: Globe, youtube: Youtube, text: Type,
+};
 
 export default function GeneratorPage() {
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
-  const [generatedContent, setGeneratedContent] = useState("");
   const [iterationPrompt, setIterationPrompt] = useState("");
-  const [isGenerating, setIsGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Config state
+  const [goal, setGoal] = useState("");
+  const [tone, setTone] = useState("");
+  const [language, setLanguage] = useState("es");
+  const [length, setLength] = useState("medium");
+  const [cta, setCta] = useState("");
+  const [targetAudience, setTargetAudience] = useState("");
+  const [writingStyle, setWritingStyle] = useState("");
+
+  const { data: inputs, isLoading: loadingInputs } = useInputs();
+  const { generate, savePost, isGenerating, content, setContent } = useGeneratePost();
 
   const toggleSource = (id: string) => {
     setSelectedSources((prev) =>
@@ -34,19 +44,49 @@ export default function GeneratorPage() {
   };
 
   const handleGenerate = () => {
-    setIsGenerating(true);
-    setTimeout(() => {
-      setGeneratedContent(
-        `🚀 Lo que aprendí construyendo mi marca personal en LinkedIn\n\nDurante los últimos 6 meses, pasé de 200 a 5,000 seguidores en LinkedIn.\n\nNo fue suerte. Fue método.\n\nEstas son las 3 lecciones que más impacto tuvieron:\n\n1️⃣ Tu narrativa lo es todo\nAntes de escribir un solo post, definí qué problema resuelvo y para quién. Eso me dio claridad y consistencia.\n\n2️⃣ Regularidad > perfección\nPublico 3 veces por semana, aunque no sea "perfecto". La consistencia construye audiencia.\n\n3️⃣ Vulnerabilidad = conexión\nLos posts donde compartí fracasos tuvieron 3x más engagement que mis "victorias".\n\n¿Cuál ha sido tu mayor aprendizaje construyendo presencia en LinkedIn?\n\n#MarcaPersonal #LinkedIn #Founders`
-      );
-      setIsGenerating(false);
-    }, 1500);
+    generate({
+      input_ids: selectedSources,
+      goal: goal || undefined,
+      tone: tone || undefined,
+      language: language || undefined,
+      length: length || undefined,
+      cta: cta || undefined,
+      target_audience: targetAudience || undefined,
+      writing_style: writingStyle || undefined,
+    });
+  };
+
+  const handleIterate = () => {
+    if (!iterationPrompt.trim()) return;
+    generate({
+      input_ids: selectedSources,
+      goal: goal || undefined,
+      tone: tone || undefined,
+      language: language || undefined,
+      length: length || undefined,
+      cta: cta || undefined,
+      target_audience: targetAudience || undefined,
+      writing_style: writingStyle || undefined,
+      iteration_prompt: iterationPrompt.trim(),
+      previous_content: content,
+    });
+    setIterationPrompt("");
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(generatedContent);
+    navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleSave = () => {
+    savePost({
+      content,
+      input_id: selectedSources[0],
+      goal: goal || undefined,
+      tone: tone || undefined,
+      target_audience: targetAudience || undefined,
+    });
   };
 
   return (
@@ -68,28 +108,37 @@ export default function GeneratorPage() {
                 Fuentes de referencia
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2">
-              {mockSources.map((source) => (
-                <label
-                  key={source.id}
-                  className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-secondary/50 transition-colors"
-                >
-                  <Checkbox
-                    checked={selectedSources.includes(source.id)}
-                    onCheckedChange={() => toggleSource(source.id)}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{source.title}</p>
-                    <Badge variant="secondary" className="text-xs mt-1">
-                      {source.type}
-                    </Badge>
-                  </div>
-                </label>
-              ))}
-              {mockSources.length === 0 && (
+            <CardContent className="space-y-2 max-h-[250px] overflow-y-auto">
+              {loadingInputs ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : (inputs ?? []).length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
                   No tienes fuentes guardadas aún
                 </p>
+              ) : (
+                (inputs ?? []).map((source) => {
+                  const Icon = typeIcons[source.type] || FileText;
+                  return (
+                    <label
+                      key={source.id}
+                      className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-secondary/50 transition-colors"
+                    >
+                      <Checkbox
+                        checked={selectedSources.includes(source.id)}
+                        onCheckedChange={() => toggleSource(source.id)}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{source.title}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Icon className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground capitalize">{source.type}</span>
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })
               )}
             </CardContent>
           </Card>
@@ -104,7 +153,7 @@ export default function GeneratorPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-xs">Objetivo del post</Label>
-                <Select>
+                <Select value={goal} onValueChange={setGoal}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecciona objetivo" />
                   </SelectTrigger>
@@ -121,7 +170,7 @@ export default function GeneratorPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label className="text-xs">Tono</Label>
-                  <Select>
+                  <Select value={tone} onValueChange={setTone}>
                     <SelectTrigger>
                       <SelectValue placeholder="Tono" />
                     </SelectTrigger>
@@ -137,7 +186,7 @@ export default function GeneratorPage() {
 
                 <div className="space-y-2">
                   <Label className="text-xs">Idioma</Label>
-                  <Select>
+                  <Select value={language} onValueChange={setLanguage}>
                     <SelectTrigger>
                       <SelectValue placeholder="Idioma" />
                     </SelectTrigger>
@@ -153,7 +202,7 @@ export default function GeneratorPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label className="text-xs">Longitud</Label>
-                  <Select>
+                  <Select value={length} onValueChange={setLength}>
                     <SelectTrigger>
                       <SelectValue placeholder="Longitud" />
                     </SelectTrigger>
@@ -167,7 +216,7 @@ export default function GeneratorPage() {
 
                 <div className="space-y-2">
                   <Label className="text-xs">CTA</Label>
-                  <Select>
+                  <Select value={cta} onValueChange={setCta}>
                     <SelectTrigger>
                       <SelectValue placeholder="Call to action" />
                     </SelectTrigger>
@@ -184,12 +233,20 @@ export default function GeneratorPage() {
 
               <div className="space-y-2">
                 <Label className="text-xs">Audiencia objetivo</Label>
-                <Input placeholder="Ej: Founders, marketers, recruiters..." />
+                <Input
+                  placeholder="Ej: Founders, marketers, recruiters..."
+                  value={targetAudience}
+                  onChange={(e) => setTargetAudience(e.target.value)}
+                />
               </div>
 
               <div className="space-y-2">
                 <Label className="text-xs">Estilo / Voz</Label>
-                <Input placeholder="Ej: Como Gary Vee, como un mentor..." />
+                <Input
+                  placeholder="Ej: Como Gary Vee, como un mentor..."
+                  value={writingStyle}
+                  onChange={(e) => setWritingStyle(e.target.value)}
+                />
               </div>
             </CardContent>
           </Card>
@@ -220,9 +277,9 @@ export default function GeneratorPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-medium">Borrador</CardTitle>
-                {generatedContent && (
+                {content && (
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={handleGenerate} className="text-xs gap-1">
+                    <Button variant="ghost" size="sm" onClick={handleGenerate} disabled={isGenerating} className="text-xs gap-1">
                       <RefreshCw className="h-3 w-3" />
                       Regenerar
                     </Button>
@@ -230,17 +287,26 @@ export default function GeneratorPage() {
                       {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                       {copied ? "Copiado" : "Copiar"}
                     </Button>
+                    <Button variant="ghost" size="sm" onClick={handleSave} className="text-xs gap-1">
+                      <Save className="h-3 w-3" />
+                      Guardar
+                    </Button>
                   </div>
                 )}
               </div>
             </CardHeader>
             <CardContent>
-              {generatedContent ? (
+              {content ? (
                 <Textarea
-                  value={generatedContent}
-                  onChange={(e) => setGeneratedContent(e.target.value)}
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
                   className="min-h-[300px] resize-none border-none p-0 focus-visible:ring-0 text-sm leading-relaxed"
                 />
+              ) : isGenerating ? (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
+                  <p className="text-sm text-muted-foreground">Generando tu borrador...</p>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <PenTool className="h-10 w-10 text-muted-foreground/40 mb-3" />
@@ -256,7 +322,7 @@ export default function GeneratorPage() {
           </Card>
 
           {/* Iteration */}
-          {generatedContent && (
+          {content && !isGenerating && (
             <Card>
               <CardContent className="p-4">
                 <Label className="text-xs text-muted-foreground mb-2 block">
@@ -267,9 +333,10 @@ export default function GeneratorPage() {
                     placeholder='Ej: "Hazlo más directo", "Añade datos"...'
                     value={iterationPrompt}
                     onChange={(e) => setIterationPrompt(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleIterate()}
                     className="text-sm"
                   />
-                  <Button size="sm" className="gap-1">
+                  <Button size="sm" className="gap-1" onClick={handleIterate} disabled={isGenerating}>
                     <Send className="h-3.5 w-3.5" />
                     Enviar
                   </Button>
