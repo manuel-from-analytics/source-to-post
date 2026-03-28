@@ -15,6 +15,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { useInputs } from "@/hooks/useInputs";
 import { useGeneratePost } from "@/hooks/useGeneratePost";
+import { CategoryFilter } from "@/components/CategoryWidgets";
 
 const typeIcons: Record<string, React.ElementType> = {
   pdf: File, url: Globe, youtube: Youtube, text: Type,
@@ -22,6 +23,7 @@ const typeIcons: Record<string, React.ElementType> = {
 
 export default function GeneratorPage() {
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
+  const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
   const [iterationPrompt, setIterationPrompt] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -108,7 +110,9 @@ export default function GeneratorPage() {
                 Fuentes de referencia
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-2 max-h-[250px] overflow-y-auto">
+            <CardContent className="space-y-3">
+              <CategoryFilter selectedCategoryId={filterCategoryId} onSelect={setFilterCategoryId} />
+              <div className="space-y-2 max-h-[220px] overflow-y-auto">
               {loadingInputs ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -118,7 +122,7 @@ export default function GeneratorPage() {
                   No tienes fuentes guardadas aún
                 </p>
               ) : (
-                (inputs ?? []).map((source) => {
+                (inputs ?? []).filter((s) => !filterCategoryId || s.category_id === filterCategoryId).map((source) => {
                   const Icon = typeIcons[source.type] || FileText;
                   return (
                     <label
@@ -140,6 +144,7 @@ export default function GeneratorPage() {
                   );
                 })
               )}
+              </div>
             </CardContent>
           </Card>
 

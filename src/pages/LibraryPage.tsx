@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import {
-  Plus, Search, Filter, Star, FileText, Link as LinkIcon,
-  Youtube, File, MoreVertical, Tag, FolderOpen,
+  Plus, Search, Star, FileText,
+  Youtube, File,
   Upload, Globe, Type, Trash2, Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -17,6 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useInputs, useCreateInput, useToggleFavorite, useDeleteInput, type InputRow } from "@/hooks/useInputs";
+import { useCategories, type CategoryRow } from "@/hooks/useCategories";
+import { CategoryBadge, CategoryPicker, CategoryFilter } from "@/components/CategoryWidgets";
 
 const typeIcons: Record<string, React.ElementType> = {
   pdf: File,
@@ -41,6 +43,7 @@ const typeColors: Record<string, string> = {
 
 export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
   const [newInputOpen, setNewInputOpen] = useState(false);
   const [newInputType, setNewInputType] = useState("url");
 
@@ -52,13 +55,16 @@ export default function LibraryPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: inputs, isLoading } = useInputs();
+  const { data: categories } = useCategories();
   const createInput = useCreateInput();
   const toggleFavorite = useToggleFavorite();
   const deleteInput = useDeleteInput();
 
-  const filteredInputs = (inputs ?? []).filter((input) =>
-    input.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const categoriesMap = new Map((categories ?? []).map((c) => [c.id, c]));
+
+  const filteredInputs = (inputs ?? [])
+    .filter((input) => input.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    .filter((input) => !filterCategoryId || input.category_id === filterCategoryId);
 
   const resetForm = () => {
     setUrlValue("");
@@ -222,12 +228,15 @@ export default function LibraryPage() {
         </Dialog>
       </div>
 
-      {/* Search */}
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Buscar fuentes..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+      {/* Search + category filter */}
+      <div className="space-y-3">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Buscar fuentes..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
+          </div>
         </div>
+        <CategoryFilter selectedCategoryId={filterCategoryId} onSelect={setFilterCategoryId} />
       </div>
 
       {/* Loading */}
@@ -275,8 +284,11 @@ export default function LibraryPage() {
                     {input.original_url && (
                       <p className="text-xs text-muted-foreground mt-1 truncate">{input.original_url}</p>
                     )}
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
                       <Badge variant="secondary" className="text-xs">{typeLabels[input.type] ?? input.type}</Badge>
+                      {input.category_id && categoriesMap.get(input.category_id) && (
+                        <CategoryBadge category={categoriesMap.get(input.category_id)!} />
+                      )}
                       <span className="text-xs text-muted-foreground">
                         {new Date(input.created_at).toLocaleDateString("es")}
                       </span>
@@ -284,6 +296,7 @@ export default function LibraryPage() {
                   </div>
                 </Link>
                 <div className="flex items-center gap-1 flex-shrink-0">
+                  <CategoryPicker inputId={input.id} currentCategoryId={input.category_id} />
                   <button
                     onClick={(e) => { e.preventDefault(); toggleFavorite.mutate({ id: input.id, is_favorite: !input.is_favorite }); }}
                     className="p-1.5 rounded-md hover:bg-secondary transition-colors"
