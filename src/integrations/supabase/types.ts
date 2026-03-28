@@ -14,7 +14,220 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      generated_posts: {
+        Row: {
+          content: string
+          created_at: string
+          goal: string | null
+          id: string
+          input_id: string | null
+          is_favorite: boolean | null
+          status: Database["public"]["Enums"]["post_status"] | null
+          target_audience: string | null
+          title: string | null
+          tone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          goal?: string | null
+          id?: string
+          input_id?: string | null
+          is_favorite?: boolean | null
+          status?: Database["public"]["Enums"]["post_status"] | null
+          target_audience?: string | null
+          title?: string | null
+          tone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          goal?: string | null
+          id?: string
+          input_id?: string | null
+          is_favorite?: boolean | null
+          status?: Database["public"]["Enums"]["post_status"] | null
+          target_audience?: string | null
+          title?: string | null
+          tone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "generated_posts_input_id_fkey"
+            columns: ["input_id"]
+            isOneToOne: false
+            referencedRelation: "inputs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      input_tags: {
+        Row: {
+          input_id: string
+          tag_id: string
+        }
+        Insert: {
+          input_id: string
+          tag_id: string
+        }
+        Update: {
+          input_id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "input_tags_input_id_fkey"
+            columns: ["input_id"]
+            isOneToOne: false
+            referencedRelation: "inputs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "input_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inputs: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          extracted_content: string | null
+          file_path: string | null
+          id: string
+          is_favorite: boolean | null
+          original_url: string | null
+          raw_content: string | null
+          summary: string | null
+          title: string
+          type: Database["public"]["Enums"]["input_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          extracted_content?: string | null
+          file_path?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          original_url?: string | null
+          raw_content?: string | null
+          summary?: string | null
+          title: string
+          type: Database["public"]["Enums"]["input_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          extracted_content?: string | null
+          file_path?: string | null
+          id?: string
+          is_favorite?: boolean | null
+          original_url?: string | null
+          raw_content?: string | null
+          summary?: string | null
+          title?: string
+          type?: Database["public"]["Enums"]["input_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inputs_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          default_writing_style: string | null
+          full_name: string | null
+          id: string
+          preferred_language: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          default_writing_style?: string | null
+          full_name?: string | null
+          id: string
+          preferred_language?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          default_writing_style?: string | null
+          full_name?: string | null
+          id?: string
+          preferred_language?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +236,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      input_type: "pdf" | "url" | "youtube" | "text" | "audio"
+      post_status: "draft" | "final" | "published"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +364,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      input_type: ["pdf", "url", "youtube", "text", "audio"],
+      post_status: ["draft", "final", "published"],
+    },
   },
 } as const
