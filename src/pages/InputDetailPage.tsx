@@ -188,24 +188,33 @@ export default function InputDetailPage() {
       {/* PDF Extract button */}
       {input.type === "pdf" && input.file_path && !input.extracted_content && (
         <Card className="border-dashed">
-          <CardContent className="flex items-center justify-between py-4">
-            <div>
-              <p className="text-sm font-medium">Extraer texto del PDF</p>
-              <p className="text-xs text-muted-foreground">Usa IA para extraer el contenido textual del documento</p>
+          <CardContent className="py-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Extraer texto del PDF</p>
+                <p className="text-xs text-muted-foreground">
+                  {isExtracting ? extractionStep : "Extrae el contenido textual del documento"}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExtractPdf}
+                disabled={isExtracting}
+                className="gap-1.5"
+              >
+                {isExtracting ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" />Extrayendo...</>
+                ) : (
+                  <><FileText className="h-3.5 w-3.5" />Extraer texto</>
+                )}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExtractPdf}
-              disabled={isExtracting}
-              className="gap-1.5"
-            >
-              {isExtracting ? (
-                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Extrayendo...</>
-              ) : (
-                <><FileText className="h-3.5 w-3.5" />Extraer texto</>
-              )}
-            </Button>
+            {isExtracting && (
+              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                <div className="bg-primary h-full rounded-full animate-pulse" style={{ width: "100%" }} />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
