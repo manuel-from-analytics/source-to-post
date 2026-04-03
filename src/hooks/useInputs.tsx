@@ -98,10 +98,25 @@ export function useCreateInput() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["inputs"] });
       queryClient.invalidateQueries({ queryKey: ["inputs-count"] });
       toast.success("Fuente guardada correctamente");
+
+      // Auto-extract PDF text in background
+      if (data.type === "pdf" && data.file_path) {
+        supabase.functions.invoke("extract-pdf", {
+          body: { input_id: data.id },
+        }).then(({ error }) => {
+          if (error) {
+            console.error("PDF extraction error:", error);
+          } else {
+            queryClient.invalidateQueries({ queryKey: ["inputs"] });
+            queryClient.invalidateQueries({ queryKey: ["input-detail", data.id] });
+            toast.success("Texto del PDF extraído correctamente");
+          }
+        });
+      }
     },
     onError: (error: Error) => {
       toast.error(`Error al guardar: ${error.message}`);
