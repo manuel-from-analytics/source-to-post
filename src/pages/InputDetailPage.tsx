@@ -27,6 +27,7 @@ export default function InputDetailPage() {
   const queryClient = useQueryClient();
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionStep, setExtractionStep] = useState("");
 
   const { data: input, isLoading } = useQuery({
     queryKey: ["input-detail", id],
@@ -57,19 +58,20 @@ export default function InputDetailPage() {
   const handleExtractPdf = async () => {
     if (!input || !input.file_path) return;
     setIsExtracting(true);
+    setExtractionStep("Descargando PDF…");
     try {
-      // Try client-side extraction first by downloading the PDF
       const { data: fileBlob, error: dlError } = await supabase.storage
         .from("inputs")
         .download(input.file_path);
       
       if (!dlError && fileBlob) {
+        setExtractionStep("Analizando contenido del PDF…");
         const { extractTextFromPdfFile } = await import("@/lib/pdf");
         const file = new File([fileBlob], "doc.pdf", { type: "application/pdf" });
         const text = await extractTextFromPdfFile(file);
         
         if (text) {
-          // Save extracted text directly
+          setExtractionStep("Guardando texto extraído…");
           const { error: updateError } = await supabase
             .from("inputs")
             .update({ extracted_content: text })
@@ -82,7 +84,7 @@ export default function InputDetailPage() {
         }
       }
 
-      // Fallback to edge function (AI-based extraction)
+      setExtractionStep("Extrayendo con IA (puede tardar)…");
       const { data, error } = await supabase.functions.invoke("extract-pdf", {
         body: { input_id: input.id },
       });
@@ -95,6 +97,7 @@ export default function InputDetailPage() {
       toast.error(e.message || "Error al extraer texto del PDF");
     } finally {
       setIsExtracting(false);
+      setExtractionStep("");
     }
   };
 
@@ -185,24 +188,33 @@ export default function InputDetailPage() {
       {/* PDF Extract button */}
       {input.type === "pdf" && input.file_path && !input.extracted_content && (
         <Card className="border-dashed">
-          <CardContent className="flex items-center justify-between py-4">
-            <div>
-              <p className="text-sm font-medium">Extraer texto del PDF</p>
-              <p className="text-xs text-muted-foreground">Usa IA para extraer el contenido textual del documento</p>
+          <CardContent className="py-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Extraer texto del PDF</p>
+                <p className="text-xs text-muted-foreground">
+                  {isExtracting ? extractionStep : "Extrae el contenido textual del documento"}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExtractPdf}
+                disabled={isExtracting}
+                className="gap-1.5"
+              >
+                {isExtracting ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" />Extrayendo...</>
+                ) : (
+                  <><FileText className="h-3.5 w-3.5" />Extraer texto</>
+                )}
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExtractPdf}
-              disabled={isExtracting}
-              className="gap-1.5"
-            >
-              {isExtracting ? (
-                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Extrayendo...</>
-              ) : (
-                <><FileText className="h-3.5 w-3.5" />Extraer texto</>
-              )}
-            </Button>
+            {isExtracting && (
+              <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                <div className="bg-primary h-full rounded-full animate-pulse" style={{ width: "100%" }} />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
