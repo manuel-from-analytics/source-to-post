@@ -12,6 +12,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToggleFavorite, useDeleteInput, type InputRow } from "@/hooks/useInputs";
+import { extractTextFromPdfFile } from "@/lib/pdf";
 import { toast } from "sonner";
 
 const typeLabels: Record<string, string> = {
