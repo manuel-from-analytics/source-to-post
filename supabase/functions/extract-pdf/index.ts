@@ -1,11 +1,14 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+const MAX_PDF_SIZE = 4 * 1024 * 1024; // 4MB limit to stay within memory
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -14,36 +17,31 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
 
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { input_id } = await req.json();
     if (!input_id) {
       return new Response(JSON.stringify({ error: "input_id is required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch the input record
     const { data: input, error: inputError } = await supabase
       .from("inputs")
       .select("id, file_path, type, title")
@@ -52,35 +50,41 @@ serve(async (req) => {
 
     if (inputError || !input) {
       return new Response(JSON.stringify({ error: "Input not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     if (input.type !== "pdf" || !input.file_path) {
-      return new Response(JSON.stringify({ error: "This input is not a PDF or has no file" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ error: "Not a PDF" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Get a signed URL for the PDF instead of downloading it
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+    // Download PDF
+    const { data: fileData, error: downloadError } = await supabase.storage
       .from("inputs")
-      .createSignedUrl(input.file_path, 600); // 10 min expiry
+      .download(input.file_path);
 
-    if (signedUrlError || !signedUrlData?.signedUrl) {
-      console.error("Signed URL error:", signedUrlError);
-      return new Response(JSON.stringify({ error: "Could not access PDF" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (downloadError || !fileData) {
+      console.error("Download error:", downloadError);
+      return new Response(JSON.stringify({ error: "Could not download PDF" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const arrayBuffer = await fileData.arrayBuffer();
+    if (arrayBuffer.byteLength > MAX_PDF_SIZE) {
+      return new Response(JSON.stringify({ error: "El PDF es demasiado grande (máx. 4MB). Intenta con un archivo más pequeño." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const b64 = base64Encode(new Uint8Array(arrayBuffer));
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Use the signed URL directly — Gemini can fetch it
+    // Send as data URL with correct MIME type
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -92,7 +96,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: "Eres un asistente especializado en extraer texto de documentos PDF. Extrae TODO el texto del documento de forma fiel y completa, manteniendo la estructura de párrafos y secciones. No añadas interpretaciones ni resúmenes, solo el texto tal como aparece en el documento.",
+            content: "Eres un asistente especializado en extraer texto de documentos PDF. Extrae TODO el texto del documento de forma fiel y completa, manteniendo la estructura de párrafos y secciones. No añadas interpretaciones ni resúmenes, solo el texto tal como aparece.",
           },
           {
             role: "user",
@@ -100,12 +104,12 @@ serve(async (req) => {
               {
                 type: "image_url",
                 image_url: {
-                  url: signedUrlData.signedUrl,
+                  url: `data:application/pdf;base64,${b64}`,
                 },
               },
               {
                 type: "text",
-                text: `Extrae todo el texto de este documento PDF titulado "${input.title}". Devuelve solo el contenido textual, sin explicaciones adicionales.`,
+                text: `Extrae todo el texto de este documento PDF titulado "${input.title}". Devuelve solo el contenido textual.`,
               },
             ],
           },
@@ -126,7 +130,9 @@ serve(async (req) => {
       }
       const errText = await aiResponse.text();
       console.error("AI gateway error:", aiResponse.status, errText);
-      throw new Error("AI gateway error");
+      return new Response(JSON.stringify({ error: "Error al procesar el PDF con IA" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const aiData = await aiResponse.json();
@@ -134,12 +140,10 @@ serve(async (req) => {
 
     if (!extractedContent) {
       return new Response(JSON.stringify({ error: "No se pudo extraer texto del PDF" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Save extracted content
     const { error: updateError } = await supabase
       .from("inputs")
       .update({ extracted_content: extractedContent })
