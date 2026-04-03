@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil } from "lucide-react";
+import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Send, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { usePosts, useUpdatePostStatus, useUpdatePost, useDeletePost } from "@/hooks/usePosts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useGeneratePost } from "@/hooks/useGeneratePost";
 import type { Database } from "@/integrations/supabase/types";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
@@ -47,6 +48,9 @@ export default function HistoryPage() {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
   const [editTitle, setEditTitle] = useState("");
+  const [aiPrompt, setAiPrompt] = useState("");
+
+  const { generate, isGenerating, content: aiContent, setContent: setAiContent } = useGeneratePost();
 
   const handleCopy = (post: Post) => {
     navigator.clipboard.writeText(post.content);
@@ -179,7 +183,7 @@ export default function HistoryPage() {
       )}
 
       {/* Detail / Edit dialog */}
-      <Dialog open={!!selectedPost} onOpenChange={() => { setSelectedPost(null); setEditing(false); }}>
+      <Dialog open={!!selectedPost} onOpenChange={() => { setSelectedPost(null); setEditing(false); setAiContent(""); setAiPrompt(""); }}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">
@@ -188,11 +192,101 @@ export default function HistoryPage() {
           </DialogHeader>
           {selectedPost && !editing && (
             <div className="space-y-4">
+              {/* Content display - show AI result if generating/generated, otherwise original */}
               <div className="rounded-lg bg-secondary p-4">
-                <p className="text-sm whitespace-pre-line leading-relaxed">
-                  {selectedPost.content}
-                </p>
+                {isGenerating ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>Modificando con IA...</span>
+                    </div>
+                    <p className="text-sm whitespace-pre-line leading-relaxed">
+                      {aiContent || selectedPost.content}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm whitespace-pre-line leading-relaxed">
+                    {selectedPost.content}
+                  </p>
+                )}
               </div>
+
+              {/* AI iteration bar */}
+              {!isGenerating && (
+                <div className="flex gap-2 items-center">
+                  <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
+                  <Input
+                    placeholder='Ej: "Hazlo más directo", "Añade datos"...'
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && aiPrompt.trim()) {
+                        generate({
+                          input_ids: [],
+                          iteration_prompt: aiPrompt.trim(),
+                          previous_content: selectedPost.content,
+                        });
+                        setAiPrompt("");
+                      }
+                    }}
+                    className="text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    className="gap-1 flex-shrink-0"
+                    disabled={!aiPrompt.trim()}
+                    onClick={() => {
+                      generate({
+                        input_ids: [],
+                        iteration_prompt: aiPrompt.trim(),
+                        previous_content: selectedPost.content,
+                      });
+                      setAiPrompt("");
+                    }}
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              )}
+
+              {/* Apply AI result button */}
+              {!isGenerating && aiContent && (
+                <div className="flex gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                  <Sparkles className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium mb-1">Nueva versión generada por IA</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2">{aiContent.slice(0, 120)}...</p>
+                  </div>
+                  <div className="flex gap-1 flex-shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={() => setAiContent("")}
+                    >
+                      Descartar
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="text-xs"
+                      onClick={() => {
+                        updatePost.mutate(
+                          { id: selectedPost.id, content: aiContent },
+                          {
+                            onSuccess: () => {
+                              setSelectedPost({ ...selectedPost, content: aiContent });
+                              setAiContent("");
+                            },
+                          }
+                        );
+                      }}
+                    >
+                      Aplicar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">Estado:</span>
