@@ -19,11 +19,12 @@ serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     const token = authHeader.replace("Bearer ", "");
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
@@ -45,7 +46,7 @@ serve(async (req) => {
     // Fetch the input record
     const { data: input, error: inputError } = await supabase
       .from("inputs")
-      .select("id, file_path, type")
+      .select("id, file_path, type, title")
       .eq("id", input_id)
       .single();
 
@@ -63,32 +64,23 @@ serve(async (req) => {
       });
     }
 
-    // Download the PDF from storage
-    const { data: fileData, error: downloadError } = await supabase.storage
+    // Get a signed URL for the PDF instead of downloading it
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from("inputs")
-      .download(input.file_path);
+      .createSignedUrl(input.file_path, 600); // 10 min expiry
 
-    if (downloadError || !fileData) {
-      console.error("Download error:", downloadError);
-      return new Response(JSON.stringify({ error: "Could not download PDF" }), {
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      console.error("Signed URL error:", signedUrlError);
+      return new Response(JSON.stringify({ error: "Could not access PDF" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Convert to base64
-    const arrayBuffer = await fileData.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    let binary = "";
-    for (let i = 0; i < uint8Array.length; i++) {
-      binary += String.fromCharCode(uint8Array[i]);
-    }
-    const base64 = btoa(binary);
-
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    // Send PDF to Gemini for text extraction via multimodal content
+    // Use the signed URL directly — Gemini can fetch it
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -106,15 +98,14 @@ serve(async (req) => {
             role: "user",
             content: [
               {
-                type: "file",
-                file: {
-                  filename: "document.pdf",
-                  file_data: `data:application/pdf;base64,${base64}`,
+                type: "image_url",
+                image_url: {
+                  url: signedUrlData.signedUrl,
                 },
               },
               {
                 type: "text",
-                text: "Extrae todo el texto de este PDF. Devuelve solo el contenido textual del documento, sin explicaciones adicionales.",
+                text: `Extrae todo el texto de este documento PDF titulado "${input.title}". Devuelve solo el contenido textual, sin explicaciones adicionales.`,
               },
             ],
           },
@@ -124,15 +115,13 @@ serve(async (req) => {
 
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Límite de solicitudes excedido. Intenta de nuevo en unos minutos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        return new Response(JSON.stringify({ error: "Límite de solicitudes excedido." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (aiResponse.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errText = await aiResponse.text();
