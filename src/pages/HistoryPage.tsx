@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { usePosts, useUpdatePostStatus, useUpdatePost, useDeletePost } from "@/hooks/usePosts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useGeneratePost } from "@/hooks/useGeneratePost";
 import type { Database } from "@/integrations/supabase/types";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
