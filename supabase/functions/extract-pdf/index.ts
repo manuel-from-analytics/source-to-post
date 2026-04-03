@@ -74,7 +74,7 @@ serve(async (req) => {
 
     const arrayBuffer = await fileData.arrayBuffer();
     if (arrayBuffer.byteLength > MAX_PDF_SIZE) {
-      return new Response(JSON.stringify({ error: "El PDF es demasiado grande (máx. 4MB). Intenta con un archivo más pequeño." }), {
+      return new Response(JSON.stringify({ error: "El PDF es demasiado grande (máx. 10MB). Intenta con un archivo más pequeño." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
