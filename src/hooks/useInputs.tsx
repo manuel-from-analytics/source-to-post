@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { extractTextFromPdfFile } from "@/lib/pdf";
 
 export type InputType = "pdf" | "url" | "youtube" | "text";
 
@@ -70,9 +71,16 @@ export function useCreateInput() {
       if (!user) throw new Error("No autenticado");
 
       let file_path: string | null = null;
+      let extracted_content: string | null = null;
 
       // Upload PDF if provided
       if (params.file && params.type === "pdf") {
+        try {
+          extracted_content = await extractTextFromPdfFile(params.file);
+        } catch (error) {
+          console.error("Client PDF extraction failed:", error);
+        }
+
         const ext = params.file.name.split(".").pop();
         const filePath = `${user.id}/${crypto.randomUUID()}.${ext}`;
         const { error: uploadError } = await supabase.storage
@@ -90,6 +98,7 @@ export function useCreateInput() {
           type: params.type,
           original_url: params.original_url || null,
           raw_content: params.raw_content || null,
+          extracted_content,
           file_path,
         })
         .select()
@@ -103,8 +112,8 @@ export function useCreateInput() {
       queryClient.invalidateQueries({ queryKey: ["inputs-count"] });
       toast.success("Fuente guardada correctamente");
 
-      // Auto-extract PDF text in background
-      if (data.type === "pdf" && data.file_path) {
+      // Auto-extract PDF text in background only if browser parsing didn't get content
+      if (data.type === "pdf" && data.file_path && !data.extracted_content) {
         supabase.functions.invoke("extract-pdf", {
           body: { input_id: data.id },
         }).then(({ error }) => {
