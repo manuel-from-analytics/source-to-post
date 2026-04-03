@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
+import * as pdfjsLib from "npm:pdfjs-dist@5.6.205/legacy/build/pdf.mjs";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,7 +9,90 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB limit
+const AI_OCR_MAX_PDF_SIZE = 10 * 1024 * 1024; // 10MB limit for AI OCR fallback
+
+async function extractTextFromPdf(pdfBytes: Uint8Array) {
+  const loadingTask = pdfjsLib.getDocument({
+    data: pdfBytes,
+    disableWorker: true,
+    isEvalSupported: false,
+    useSystemFonts: false,
+  });
+
+  const pdf = await loadingTask.promise;
+  const pages: string[] = [];
+
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item) => ("str" in item ? item.str : ""))
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (pageText) {
+      pages.push(pageText);
+    }
+  }
+
+  return pages.join("\n\n").trim();
+}
+
+async function extractTextWithAi(pdfBytes: Uint8Array, title: string) {
+  const b64 = base64Encode(pdfBytes);
+
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+
+  const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "system",
+          content: "Eres un asistente especializado en extraer texto de documentos PDF. Extrae TODO el texto del documento de forma fiel y completa, manteniendo la estructura de párrafos y secciones. No añadas interpretaciones ni resúmenes, solo el texto tal como aparece.",
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:application/pdf;base64,${b64}`,
+              },
+            },
+            {
+              type: "text",
+              text: `Extrae todo el texto de este documento PDF titulado "${title}". Devuelve solo el contenido textual.`,
+            },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!aiResponse.ok) {
+    if (aiResponse.status === 429) {
+      throw new Error("Límite de solicitudes excedido.");
+    }
+    if (aiResponse.status === 402) {
+      throw new Error("Créditos de IA agotados.");
+    }
+
+    const errText = await aiResponse.text();
+    console.error("AI gateway error:", aiResponse.status, errText);
+    throw new Error("Error al procesar el PDF con IA");
+  }
+
+  const aiData = await aiResponse.json();
+  return (aiData.choices?.[0]?.message?.content || "").trim();
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -72,71 +156,25 @@ serve(async (req) => {
       });
     }
 
-    const arrayBuffer = await fileData.arrayBuffer();
-    if (arrayBuffer.byteLength > MAX_PDF_SIZE) {
-      return new Response(JSON.stringify({ error: "El PDF es demasiado grande (máx. 10MB). Intenta con un archivo más pequeño." }), {
+    const pdfBytes = new Uint8Array(await fileData.arrayBuffer());
+
+    let extractedContent = "";
+
+    try {
+      extractedContent = await extractTextFromPdf(pdfBytes);
+    } catch (parseError) {
+      console.error("Native PDF extraction failed:", parseError);
+    }
+
+    if (!extractedContent && pdfBytes.byteLength <= AI_OCR_MAX_PDF_SIZE) {
+      extractedContent = await extractTextWithAi(pdfBytes, input.title);
+    }
+
+    if (!extractedContent && pdfBytes.byteLength > AI_OCR_MAX_PDF_SIZE) {
+      return new Response(JSON.stringify({ error: "No se pudo extraer texto seleccionable del PDF y el archivo es demasiado grande para OCR con IA (máx. 10MB para ese modo)." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const b64 = base64Encode(new Uint8Array(arrayBuffer));
-
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-
-    // Send as data URL with correct MIME type
-    const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: "Eres un asistente especializado en extraer texto de documentos PDF. Extrae TODO el texto del documento de forma fiel y completa, manteniendo la estructura de párrafos y secciones. No añadas interpretaciones ni resúmenes, solo el texto tal como aparece.",
-          },
-          {
-            role: "user",
-            content: [
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:application/pdf;base64,${b64}`,
-                },
-              },
-              {
-                type: "text",
-                text: `Extrae todo el texto de este documento PDF titulado "${input.title}". Devuelve solo el contenido textual.`,
-              },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return new Response(JSON.stringify({ error: "Límite de solicitudes excedido." }), {
-          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (aiResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errText = await aiResponse.text();
-      console.error("AI gateway error:", aiResponse.status, errText);
-      return new Response(JSON.stringify({ error: "Error al procesar el PDF con IA" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const aiData = await aiResponse.json();
-    const extractedContent = aiData.choices?.[0]?.message?.content || "";
 
     if (!extractedContent) {
       return new Response(JSON.stringify({ error: "No se pudo extraer texto del PDF" }), {
