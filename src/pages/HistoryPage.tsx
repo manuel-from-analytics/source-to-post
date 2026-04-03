@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Send, Sparkles, Loader2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,9 +15,8 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
-import { usePosts, useUpdatePostStatus, useUpdatePost, useDeletePost } from "@/hooks/usePosts";
+import { usePosts, useUpdatePostStatus, useDeletePost } from "@/hooks/usePosts";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useGeneratePost } from "@/hooks/useGeneratePost";
 import type { Database } from "@/integrations/supabase/types";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
@@ -36,21 +35,15 @@ const statusColors: Record<PostStatus, string> = {
 };
 
 export default function HistoryPage() {
+  const navigate = useNavigate();
   const { data: posts, isLoading } = usePosts();
   const updateStatus = useUpdatePostStatus();
-  const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [editing, setEditing] = useState(false);
-  const [editContent, setEditContent] = useState("");
-  const [editTitle, setEditTitle] = useState("");
-  const [aiPrompt, setAiPrompt] = useState("");
-
-  const { generate, isGenerating, content: aiContent, setContent: setAiContent } = useGeneratePost();
 
   const handleCopy = (post: Post) => {
     navigator.clipboard.writeText(post.content);
@@ -58,24 +51,20 @@ export default function HistoryPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const handleStartEdit = () => {
-    if (!selectedPost) return;
-    setEditContent(selectedPost.content);
-    setEditTitle(selectedPost.title ?? "");
-    setEditing(true);
-  };
-
-  const handleSaveEdit = () => {
-    if (!selectedPost) return;
-    updatePost.mutate(
-      { id: selectedPost.id, content: editContent, title: editTitle || undefined },
-      {
-        onSuccess: () => {
-          setSelectedPost({ ...selectedPost, content: editContent, title: editTitle || null });
-          setEditing(false);
+  const handleEdit = (post: Post) => {
+    navigate("/generator", {
+      state: {
+        editingPost: {
+          id: post.id,
+          content: post.content,
+          goal: post.goal,
+          tone: post.tone,
+          target_audience: post.target_audience,
+          input_id: post.input_id,
+          title: post.title,
         },
-      }
-    );
+      },
+    });
   };
 
   const handleDelete = () => {
@@ -137,7 +126,7 @@ export default function HistoryPage() {
             <Card key={post.id} className="group">
               <CardContent className="p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => { setSelectedPost(post); setEditing(false); }}>
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedPost(post)}>
                     {post.title && (
                       <p className="text-sm font-medium mb-1">{post.title}</p>
                     )}
@@ -161,7 +150,7 @@ export default function HistoryPage() {
                     </div>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setSelectedPost(post); setEditing(false); }}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(post)}>
@@ -182,110 +171,21 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {/* Detail / Edit dialog */}
-      <Dialog open={!!selectedPost} onOpenChange={() => { setSelectedPost(null); setEditing(false); setAiContent(""); setAiPrompt(""); }}>
+      {/* Detail dialog */}
+      <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">
-              {editing ? "Editar post" : (selectedPost?.title || "Post generado")}
+              {selectedPost?.title || "Post generado"}
             </DialogTitle>
           </DialogHeader>
-          {selectedPost && !editing && (
+          {selectedPost && (
             <div className="space-y-4">
-              {/* Content display - show AI result if generating/generated, otherwise original */}
               <div className="rounded-lg bg-secondary p-4">
-                {isGenerating ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      <span>Modificando con IA...</span>
-                    </div>
-                    <p className="text-sm whitespace-pre-line leading-relaxed">
-                      {aiContent || selectedPost.content}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-sm whitespace-pre-line leading-relaxed">
-                    {selectedPost.content}
-                  </p>
-                )}
+                <p className="text-sm whitespace-pre-line leading-relaxed">
+                  {selectedPost.content}
+                </p>
               </div>
-
-              {/* AI iteration bar */}
-              {!isGenerating && (
-                <div className="flex gap-2 items-center">
-                  <Sparkles className="h-4 w-4 text-primary flex-shrink-0" />
-                  <Input
-                    placeholder='Ej: "Hazlo más directo", "Añade datos"...'
-                    value={aiPrompt}
-                    onChange={(e) => setAiPrompt(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && aiPrompt.trim()) {
-                        generate({
-                          input_ids: [],
-                          iteration_prompt: aiPrompt.trim(),
-                          previous_content: selectedPost.content,
-                        });
-                        setAiPrompt("");
-                      }
-                    }}
-                    className="text-sm"
-                  />
-                  <Button
-                    size="sm"
-                    className="gap-1 flex-shrink-0"
-                    disabled={!aiPrompt.trim()}
-                    onClick={() => {
-                      generate({
-                        input_ids: [],
-                        iteration_prompt: aiPrompt.trim(),
-                        previous_content: selectedPost.content,
-                      });
-                      setAiPrompt("");
-                    }}
-                  >
-                    <Send className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              )}
-
-              {/* Apply AI result button */}
-              {!isGenerating && aiContent && (
-                <div className="flex gap-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
-                  <Sparkles className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium mb-1">Nueva versión generada por IA</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{aiContent.slice(0, 120)}...</p>
-                  </div>
-                  <div className="flex gap-1 flex-shrink-0">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-xs"
-                      onClick={() => setAiContent("")}
-                    >
-                      Descartar
-                    </Button>
-                    <Button
-                      size="sm"
-                      className="text-xs"
-                      onClick={() => {
-                        updatePost.mutate(
-                          { id: selectedPost.id, content: aiContent },
-                          {
-                            onSuccess: () => {
-                              setSelectedPost({ ...selectedPost, content: aiContent });
-                              setAiContent("");
-                            },
-                          }
-                        );
-                      }}
-                    >
-                      Aplicar
-                    </Button>
-                  </div>
-                </div>
-              )}
 
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
@@ -308,7 +208,7 @@ export default function HistoryPage() {
                   </Select>
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" onClick={handleStartEdit} className="gap-1">
+                  <Button size="sm" variant="outline" onClick={() => handleEdit(selectedPost)} className="gap-1">
                     <Pencil className="h-3 w-3" /> Editar
                   </Button>
                   <Button size="sm" onClick={() => handleCopy(selectedPost)} className="gap-1">
@@ -319,30 +219,6 @@ export default function HistoryPage() {
                     )}
                   </Button>
                 </div>
-              </div>
-            </div>
-          )}
-          {selectedPost && editing && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Input
-                  placeholder="Título (opcional)"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                />
-                <Textarea
-                  value={editContent}
-                  onChange={(e) => setEditContent(e.target.value)}
-                  className="min-h-[200px]"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
-                  Cancelar
-                </Button>
-                <Button size="sm" onClick={handleSaveEdit} disabled={updatePost.isPending || !editContent.trim()}>
-                  Guardar
-                </Button>
               </div>
             </div>
           )}
