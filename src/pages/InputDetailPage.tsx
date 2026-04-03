@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Star, Trash2, ExternalLink, Loader2,
-  File, Youtube, Type, Globe, Sparkles, RefreshCw
+  FileText, Sparkles, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,6 +26,7 @@ export default function InputDetailPage() {
   const deleteInput = useDeleteInput();
   const queryClient = useQueryClient();
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const { data: input, isLoading } = useQuery({
     queryKey: ["input-detail", id],
@@ -51,6 +52,25 @@ export default function InputDetailPage() {
   const handleToggleFavorite = () => {
     if (!input) return;
     toggleFavorite.mutate({ id: input.id, is_favorite: !input.is_favorite });
+  };
+
+  const handleExtractPdf = async () => {
+    if (!input) return;
+    setIsExtracting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("extract-pdf", {
+        body: { input_id: input.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Texto extraído correctamente");
+      queryClient.invalidateQueries({ queryKey: ["input-detail", id] });
+      queryClient.invalidateQueries({ queryKey: ["inputs"] });
+    } catch (e: any) {
+      toast.error(e.message || "Error al extraer texto del PDF");
+    } finally {
+      setIsExtracting(false);
+    }
   };
 
   const handleSummarize = async () => {
@@ -136,6 +156,31 @@ export default function InputDetailPage() {
       </div>
 
       <Separator />
+
+      {/* PDF Extract button */}
+      {input.type === "pdf" && input.file_path && !input.extracted_content && (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center justify-between py-4">
+            <div>
+              <p className="text-sm font-medium">Extraer texto del PDF</p>
+              <p className="text-xs text-muted-foreground">Usa IA para extraer el contenido textual del documento</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExtractPdf}
+              disabled={isExtracting}
+              className="gap-1.5"
+            >
+              {isExtracting ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Extrayendo...</>
+              ) : (
+                <><FileText className="h-3.5 w-3.5" />Extraer texto</>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Summary */}
       <Card>
