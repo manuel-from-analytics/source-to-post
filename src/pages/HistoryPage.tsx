@@ -183,7 +183,7 @@ export default function HistoryPage() {
       )}
 
       {/* Detail / Edit dialog */}
-      <Dialog open={!!selectedPost} onOpenChange={() => { setSelectedPost(null); setEditing(false); }}>
+      <Dialog open={!!selectedPost} onOpenChange={() => { setSelectedPost(null); setEditing(false); setAiContent(""); setAiPrompt(""); }}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">
