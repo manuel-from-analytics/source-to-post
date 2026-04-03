@@ -55,9 +55,34 @@ export default function InputDetailPage() {
   };
 
   const handleExtractPdf = async () => {
-    if (!input) return;
+    if (!input || !input.file_path) return;
     setIsExtracting(true);
     try {
+      // Try client-side extraction first by downloading the PDF
+      const { data: fileBlob, error: dlError } = await supabase.storage
+        .from("inputs")
+        .download(input.file_path);
+      
+      if (!dlError && fileBlob) {
+        const { extractTextFromPdfFile } = await import("@/lib/pdf");
+        const file = new File([fileBlob], "doc.pdf", { type: "application/pdf" });
+        const text = await extractTextFromPdfFile(file);
+        
+        if (text) {
+          // Save extracted text directly
+          const { error: updateError } = await supabase
+            .from("inputs")
+            .update({ extracted_content: text })
+            .eq("id", input.id);
+          if (updateError) throw updateError;
+          toast.success("Texto extraído correctamente");
+          queryClient.invalidateQueries({ queryKey: ["input-detail", id] });
+          queryClient.invalidateQueries({ queryKey: ["inputs"] });
+          return;
+        }
+      }
+
+      // Fallback to edge function (AI-based extraction)
       const { data, error } = await supabase.functions.invoke("extract-pdf", {
         body: { input_id: input.id },
       });
