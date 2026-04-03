@@ -48,6 +48,9 @@ export default function HistoryPage() {
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
   const [editTitle, setEditTitle] = useState("");
+  const [aiPrompt, setAiPrompt] = useState("");
+
+  const { generate, isGenerating, content: aiContent, setContent: setAiContent } = useGeneratePost();
 
   const handleCopy = (post: Post) => {
     navigator.clipboard.writeText(post.content);
