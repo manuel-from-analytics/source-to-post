@@ -54,6 +54,25 @@ export default function InputDetailPage() {
     toggleFavorite.mutate({ id: input.id, is_favorite: !input.is_favorite });
   };
 
+  const handleExtractPdf = async () => {
+    if (!input) return;
+    setIsExtracting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("extract-pdf", {
+        body: { input_id: input.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Texto extraído correctamente");
+      queryClient.invalidateQueries({ queryKey: ["input-detail", id] });
+      queryClient.invalidateQueries({ queryKey: ["inputs"] });
+    } catch (e: any) {
+      toast.error(e.message || "Error al extraer texto del PDF");
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
   const handleSummarize = async () => {
     if (!input) return;
     setIsSummarizing(true);
