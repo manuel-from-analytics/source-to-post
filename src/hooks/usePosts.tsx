@@ -54,3 +54,40 @@ export function useUpdatePostStatus() {
     onError: () => toast.error("Error al actualizar el estado"),
   });
 }
+
+export function useUpdatePost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, content, title }: { id: string; content: string; title?: string }) => {
+      const { error } = await supabase
+        .from("generated_posts")
+        .update({ content, title, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      toast.success("Post actualizado");
+    },
+    onError: () => toast.error("Error al actualizar el post"),
+  });
+}
+
+export function useDeletePost() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("generated_posts")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
+      queryClient.invalidateQueries({ queryKey: ["posts-count"] });
+      toast.success("Post eliminado");
+    },
+    onError: () => toast.error("Error al eliminar el post"),
+  });
+}
