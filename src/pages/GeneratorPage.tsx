@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   PenTool, Check, Copy, RefreshCw, Send, Sparkles,
   FileText, Save, Loader2, Globe, Youtube, File, Type
@@ -8,22 +9,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useInputs } from "@/hooks/useInputs";
 import { useGeneratePost } from "@/hooks/useGeneratePost";
+import { useUpdatePost } from "@/hooks/usePosts";
 import { CategoryFilter } from "@/components/CategoryWidgets";
 import { useVoiceSamples } from "@/hooks/useVoiceSamples";
 import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 
 const typeIcons: Record<string, React.ElementType> = {
   pdf: File, url: Globe, youtube: Youtube, text: Type,
 };
 
+interface EditingPost {
+  id: string;
+  content: string;
+  goal?: string | null;
+  tone?: string | null;
+  target_audience?: string | null;
+  input_id?: string | null;
+  title?: string | null;
+}
+
 export default function GeneratorPage() {
+  const location = useLocation();
+  const editingPost = location.state?.editingPost as EditingPost | undefined;
+
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
   const [iterationPrompt, setIterationPrompt] = useState("");
@@ -42,6 +57,18 @@ export default function GeneratorPage() {
   const { data: inputs, isLoading: loadingInputs } = useInputs();
   const { data: voiceSamples } = useVoiceSamples();
   const { generate, savePost, isGenerating, content, setContent } = useGeneratePost();
+  const updatePost = useUpdatePost();
+
+  // Pre-fill from editing post
+  useEffect(() => {
+    if (editingPost) {
+      setContent(editingPost.content);
+      if (editingPost.goal) setGoal(editingPost.goal);
+      if (editingPost.tone) setTone(editingPost.tone);
+      if (editingPost.target_audience) setTargetAudience(editingPost.target_audience);
+      if (editingPost.input_id) setSelectedSources([editingPost.input_id]);
+    }
+  }, []);
 
   const toggleSource = (id: string) => {
     setSelectedSources((prev) =>
@@ -88,21 +115,38 @@ export default function GeneratorPage() {
   };
 
   const handleSave = () => {
-    savePost({
-      content,
-      input_id: selectedSources[0],
-      goal: goal || undefined,
-      tone: tone || undefined,
-      target_audience: targetAudience || undefined,
-    });
+    if (editingPost) {
+      updatePost.mutate(
+        {
+          id: editingPost.id,
+          content,
+          title: editingPost.title || undefined,
+        },
+        {
+          onSuccess: () => toast.success("Post actualizado"),
+        }
+      );
+    } else {
+      savePost({
+        content,
+        input_id: selectedSources[0],
+        goal: goal || undefined,
+        tone: tone || undefined,
+        target_audience: targetAudience || undefined,
+      });
+    }
   };
 
   return (
     <div className="p-4 lg:p-8 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Generador de Posts</h1>
+        <h1 className="text-2xl font-bold tracking-tight">
+          {editingPost ? "Editar Post" : "Generador de Posts"}
+        </h1>
         <p className="text-muted-foreground mt-1">
-          Selecciona fuentes de referencia y configura tu post
+          {editingPost
+            ? "Modifica los parámetros y regenera el contenido"
+            : "Selecciona fuentes de referencia y configura tu post"}
         </p>
       </div>
 
@@ -288,7 +332,7 @@ export default function GeneratorPage() {
             ) : (
               <>
                 <Sparkles className="h-4 w-4" />
-                Generar borrador
+                {editingPost ? "Regenerar post" : "Generar borrador"}
               </>
             )}
           </Button>
@@ -312,7 +356,7 @@ export default function GeneratorPage() {
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleSave} className="text-xs gap-1">
                       <Save className="h-3 w-3" />
-                      Guardar
+                      {editingPost ? "Actualizar" : "Guardar"}
                     </Button>
                   </div>
                 )}
