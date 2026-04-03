@@ -1,19 +1,18 @@
 import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
-  ArrowLeft, Star, Globe, Tag, FolderOpen, Plus,
-  Trash2, StickyNote, ExternalLink, Loader2,
-  File, Youtube, Type
+  ArrowLeft, Star, Trash2, ExternalLink, Loader2,
+  File, Youtube, Type, Globe, Sparkles, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToggleFavorite, useDeleteInput, type InputRow } from "@/hooks/useInputs";
+import { toast } from "sonner";
 
 const typeLabels: Record<string, string> = {
   pdf: "PDF", url: "URL", youtube: "YouTube", text: "Texto",
@@ -25,6 +24,8 @@ export default function InputDetailPage() {
   const { user } = useAuth();
   const toggleFavorite = useToggleFavorite();
   const deleteInput = useDeleteInput();
+  const queryClient = useQueryClient();
+  const [isSummarizing, setIsSummarizing] = useState(false);
 
   const { data: input, isLoading } = useQuery({
     queryKey: ["input-detail", id],
@@ -50,6 +51,25 @@ export default function InputDetailPage() {
   const handleToggleFavorite = () => {
     if (!input) return;
     toggleFavorite.mutate({ id: input.id, is_favorite: !input.is_favorite });
+  };
+
+  const handleSummarize = async () => {
+    if (!input) return;
+    setIsSummarizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("summarize-input", {
+        body: { input_id: input.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Resumen generado correctamente");
+      queryClient.invalidateQueries({ queryKey: ["input-detail", id] });
+      queryClient.invalidateQueries({ queryKey: ["inputs"] });
+    } catch (e: any) {
+      toast.error(e.message || "Error al generar el resumen");
+    } finally {
+      setIsSummarizing(false);
+    }
   };
 
   if (isLoading) {
@@ -118,16 +138,37 @@ export default function InputDetailPage() {
       <Separator />
 
       {/* Summary */}
-      {input.summary && (
-        <Card>
-          <CardHeader className="pb-2">
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
             <CardTitle className="text-sm font-medium text-muted-foreground">Resumen</CardTitle>
-          </CardHeader>
-          <CardContent>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSummarize}
+              disabled={isSummarizing}
+              className="gap-1.5"
+            >
+              {isSummarizing ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Generando...</>
+              ) : input.summary ? (
+                <><RefreshCw className="h-3.5 w-3.5" />Regenerar</>
+              ) : (
+                <><Sparkles className="h-3.5 w-3.5" />Generar resumen con IA</>
+              )}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {input.summary ? (
             <p className="text-sm leading-relaxed">{input.summary}</p>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <p className="text-sm text-muted-foreground italic">
+              Aún no hay resumen. Pulsa el botón para generarlo automáticamente con IA.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Content */}
       {displayContent && (
