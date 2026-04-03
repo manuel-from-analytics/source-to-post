@@ -157,6 +157,31 @@ export default function InputDetailPage() {
 
       <Separator />
 
+      {/* PDF Extract button */}
+      {input.type === "pdf" && input.file_path && !input.extracted_content && (
+        <Card className="border-dashed">
+          <CardContent className="flex items-center justify-between py-4">
+            <div>
+              <p className="text-sm font-medium">Extraer texto del PDF</p>
+              <p className="text-xs text-muted-foreground">Usa IA para extraer el contenido textual del documento</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExtractPdf}
+              disabled={isExtracting}
+              className="gap-1.5"
+            >
+              {isExtracting ? (
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Extrayendo...</>
+              ) : (
+                <><FileText className="h-3.5 w-3.5" />Extraer texto</>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Summary */}
       <Card>
         <CardHeader className="pb-2">
