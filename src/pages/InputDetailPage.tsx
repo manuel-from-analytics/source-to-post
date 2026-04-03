@@ -26,6 +26,7 @@ export default function InputDetailPage() {
   const deleteInput = useDeleteInput();
   const queryClient = useQueryClient();
   const [isSummarizing, setIsSummarizing] = useState(false);
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const { data: input, isLoading } = useQuery({
     queryKey: ["input-detail", id],
