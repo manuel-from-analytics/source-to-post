@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   Newspaper, Search, Loader2, Clock, ExternalLink,
   Library, Check, ChevronRight, Sparkles, Send, MoreVertical, Trash2,
-  Headphones, Pause, Play, Volume2,
+  Headphones, Pause, Play, Volume2, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -142,7 +142,7 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newslett
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ newsletter_id: newsletterId }),
+          body: JSON.stringify({ newsletter_id: newsletterId, force_regenerate: true }),
         }
       );
 
@@ -270,6 +270,15 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newslett
           <span className="text-[10px] tabular-nums text-muted-foreground">~{formatTime(estimatedDuration)}</span>
         </div>
       </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 p-0 shrink-0"
+        onClick={() => { window.speechSynthesis.cancel(); setIsPlaying(false); stopTimer(); setElapsed(0); pausedElapsedRef.current = 0; handleGenerate(); }}
+        title="Regenerar podcast"
+      >
+        <RefreshCw className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }
