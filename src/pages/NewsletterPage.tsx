@@ -178,6 +178,7 @@ export default function NewsletterPage() {
   };
 
   const activeNewsletter = selectedId ? selectedDetail : generatedNewsletter;
+  const hasHistory = Boolean(newsletters && newsletters.length > 0);
 
   return (
     <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-3 sm:p-4 lg:p-8">
@@ -190,7 +191,7 @@ export default function NewsletterPage() {
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_1.5fr]">
         {/* Left: Search + History */}
-        <div className="space-y-4">
+        <div className="space-y-3 sm:space-y-4">
           {/* Search */}
           <Card>
             <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
@@ -206,19 +207,20 @@ export default function NewsletterPage() {
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
-                  className="text-sm"
+                  className="h-10 text-sm"
                 />
                 <Button
                   size="sm"
                   onClick={handleGenerate}
                   disabled={isGenerating || !topic.trim()}
-                  className="shrink-0 gap-1 self-start sm:self-auto"
+                  className="h-10 w-full shrink-0 gap-1 sm:w-auto"
                 >
                   {isGenerating ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Send className="h-3.5 w-3.5" />
                   )}
+                  <span className="sm:hidden">Generar newsletter</span>
                 </Button>
               </div>
 
@@ -233,7 +235,7 @@ export default function NewsletterPage() {
                       <button
                         key={t}
                         onClick={() => handleReuseTopic(t)}
-                        className="max-w-full truncate rounded-full bg-secondary px-2 py-1 text-[11px] text-secondary-foreground transition-colors hover:bg-secondary/80 sm:max-w-[180px]"
+                        className="max-w-full truncate rounded-full bg-secondary px-2.5 py-1 text-[11px] text-secondary-foreground transition-colors hover:bg-secondary/80 sm:max-w-[180px]"
                       >
                         {t}
                       </button>
@@ -262,24 +264,24 @@ export default function NewsletterPage() {
                   Aún no has generado newsletters
                 </p>
               ) : (
-                <div className="space-y-0.5 max-h-[300px] overflow-y-auto overflow-x-hidden sm:max-h-[400px]">
+                <div className="space-y-1 max-h-[280px] overflow-y-auto overflow-x-hidden sm:max-h-[400px]">
                     {newsletters.map((nl) => (
                       <div
                         key={nl.id}
-                        className={`flex min-w-0 w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${
+                        className={`flex min-w-0 w-full items-start gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors ${
                           selectedId === nl.id
-                            ? "bg-primary/10 text-primary"
-                            : "hover:bg-secondary/50"
+                            ? "border-primary/20 bg-primary/10 text-primary"
+                            : "border-border/60 hover:bg-secondary/50"
                         }`}
                       >
                         <button
-                          className="flex items-center gap-2 flex-1 min-w-0"
+                          className="flex min-w-0 flex-1 items-start gap-2"
                           onClick={() => handleSelectHistory(nl)}
                         >
                           <Newspaper className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground" />
                           <div className="flex-1 min-w-0 text-left">
-                            <p className="text-[13px] font-medium truncate">{nl.topic}</p>
-                            <p className="text-[9px] text-muted-foreground">
+                            <p className="line-clamp-2 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{nl.topic}</p>
+                            <p className="mt-0.5 text-[9px] text-muted-foreground">
                               {format(new Date(nl.created_at), "d MMM yyyy", { locale: es })}
                             </p>
                           </div>
@@ -309,10 +311,10 @@ export default function NewsletterPage() {
         </div>
 
         {/* Right: Newsletter display */}
-        <div>
+          <div className="min-w-0">
           {isGenerating ? (
-            <Card className="min-h-[400px] flex items-center justify-center">
-              <div className="text-center space-y-3">
+            <Card className="flex min-h-[240px] items-center justify-center sm:min-h-[400px]">
+              <div className="space-y-3 px-6 text-center">
                 <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
                 <div>
                   <p className="font-medium text-sm">Generando newsletter...</p>
@@ -325,12 +327,12 @@ export default function NewsletterPage() {
           ) : activeNewsletter ? (
             <NewsletterView newsletter={activeNewsletter} />
           ) : (
-            <Card className="min-h-[400px] flex items-center justify-center">
-              <div className="text-center space-y-3">
+            <Card className={`flex items-center justify-center ${hasHistory ? "min-h-[220px] sm:min-h-[320px]" : "min-h-[260px] sm:min-h-[400px]"}`}>
+              <div className="space-y-3 px-6 py-10 text-center sm:py-14">
                 <Sparkles className="h-10 w-10 text-muted-foreground/40 mx-auto" />
                 <div>
                   <p className="font-medium text-sm">Tu newsletter aparecerá aquí</p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-xs">
+                  <p className="mx-auto mt-1 max-w-[16rem] text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">
                     Escribe un tema y genera una newsletter curada con fuentes independientes y verificadas
                   </p>
                 </div>
