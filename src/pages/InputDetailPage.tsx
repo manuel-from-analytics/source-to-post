@@ -163,36 +163,36 @@ export default function InputDetailPage() {
   const displayContent = input.extracted_content || input.raw_content || "";
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 max-w-4xl mx-auto">
+    <div className="p-3 sm:p-4 lg:p-8 space-y-4 sm:space-y-6 max-w-4xl mx-auto min-w-0 overflow-x-hidden [word-break:break-word]">
       <Link to="/library" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" />
         Volver a Biblioteca
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
+      <div className="flex items-start justify-between gap-2 min-w-0">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <Badge variant="secondary" className="text-xs">{typeLabels[input.type] ?? input.type}</Badge>
+            <Badge variant="secondary" className="text-xs flex-shrink-0">{typeLabels[input.type] ?? input.type}</Badge>
           </div>
-          <h1 className="text-xl lg:text-2xl font-bold">{input.title}</h1>
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold break-words">{input.title}</h1>
           {input.original_url && (
             <a
               href={input.original_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-1"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-1 break-all"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
               Ver original
             </a>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="icon" onClick={handleToggleFavorite}>
+        <div className="flex gap-1 flex-shrink-0">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleToggleFavorite}>
             <Star className={`h-4 w-4 ${input.is_favorite ? "fill-accent text-accent" : ""}`} />
           </Button>
-          <Button variant="ghost" size="icon" className="text-destructive" onClick={handleDelete}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={handleDelete}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -243,30 +243,30 @@ export default function InputDetailPage() {
       )}
 
       {/* Summary */}
-      <Card>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
+      <Card className="min-w-0 overflow-hidden">
+        <CardHeader className="pb-2 px-3 sm:px-6">
+          <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Resumen</CardTitle>
             <Button
               variant="outline"
               size="sm"
               onClick={handleSummarize}
               disabled={isSummarizing}
-              className="gap-1.5"
+              className="gap-1.5 flex-shrink-0 text-xs"
             >
               {isSummarizing ? (
                 <><Loader2 className="h-3.5 w-3.5 animate-spin" />Generando...</>
               ) : input.summary ? (
                 <><RefreshCw className="h-3.5 w-3.5" />Regenerar</>
               ) : (
-                <><Sparkles className="h-3.5 w-3.5" />Generar resumen con IA</>
+                <><Sparkles className="h-3.5 w-3.5" /><span className="hidden sm:inline">Generar resumen con IA</span><span className="sm:hidden">Resumir</span></>
               )}
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-3 sm:px-6">
           {input.summary ? (
-            <p className="text-sm leading-relaxed">{input.summary}</p>
+            <p className="text-sm leading-relaxed break-words [overflow-wrap:anywhere]">{input.summary}</p>
           ) : (
             <p className="text-sm text-muted-foreground italic">
               Aún no hay resumen. Pulsa el botón para generarlo automáticamente con IA.
@@ -277,16 +277,16 @@ export default function InputDetailPage() {
 
       {/* Content */}
       {displayContent && (
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="min-w-0 overflow-hidden">
+          <CardHeader className="pb-2 px-3 sm:px-6">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               {input.extracted_content ? "Contenido extraído" : "Contenido"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="prose prose-sm max-w-none">
+          <CardContent className="px-3 sm:px-6">
+            <div className="prose prose-sm max-w-none break-words [overflow-wrap:anywhere]">
               {displayContent.split("\n\n").map((p, i) => (
-                <p key={i} className="text-sm leading-relaxed mb-3">{p}</p>
+                <p key={i} className="text-sm leading-relaxed mb-3 break-words">{p}</p>
               ))}
             </div>
           </CardContent>
