@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
+  { icon: Newspaper, label: "Newsletter", path: "/newsletter" },
   { icon: Library, label: "Biblioteca", path: "/library" },
   { icon: Mic, label: "Mi Voz", path: "/voice" },
   { icon: PenTool, label: "Generador", path: "/generator" },
