@@ -142,7 +142,7 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newslett
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ newsletter_id: newsletterId }),
+          body: JSON.stringify({ newsletter_id: newsletterId, force_regenerate: true }),
         }
       );
 
