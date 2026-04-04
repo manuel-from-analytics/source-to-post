@@ -103,8 +103,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="animate-fade-in">{children}</div>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="animate-fade-in w-full">{children}</div>
         </main>
       </div>
     </div>

@@ -104,7 +104,7 @@ export default function HistoryPage() {
           />
         </div>
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full sm:w-[140px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
