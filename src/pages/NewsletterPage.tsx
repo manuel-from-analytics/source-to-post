@@ -117,11 +117,13 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
       }
 
       const data = await resp.json();
+      const detectedLang = data.language || "es";
       setScript(data.script);
+      setLang(detectedLang);
       setStatus("ready");
 
       // Start speaking
-      speakScript(data.script, data.language || "es");
+      speakScript(data.script, detectedLang);
     } catch (e: any) {
       console.error("Podcast error:", e);
       setStatus("error");
