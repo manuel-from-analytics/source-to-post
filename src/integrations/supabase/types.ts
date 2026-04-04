@@ -177,6 +177,84 @@ export type Database = {
           },
         ]
       }
+      newsletter_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          imported_to_library: boolean | null
+          input_id: string | null
+          newsletter_id: string
+          source_type: string | null
+          title: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          imported_to_library?: boolean | null
+          input_id?: string | null
+          newsletter_id: string
+          source_type?: string | null
+          title: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          imported_to_library?: boolean | null
+          input_id?: string | null
+          newsletter_id?: string
+          source_type?: string | null
+          title?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "newsletter_items_input_id_fkey"
+            columns: ["input_id"]
+            isOneToOne: false
+            referencedRelation: "inputs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "newsletter_items_newsletter_id_fkey"
+            columns: ["newsletter_id"]
+            isOneToOne: false
+            referencedRelation: "newsletters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      newsletters: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          language: string | null
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          topic: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          language?: string | null
+          topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
