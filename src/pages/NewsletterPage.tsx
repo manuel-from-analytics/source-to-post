@@ -12,10 +12,17 @@ import {
   useNewsletterDetail,
   useGenerateNewsletter,
   useImportToLibrary,
+  useDeleteNewsletter,
   useSearchTopics,
   type Newsletter,
   type NewsletterItem,
 } from "@/hooks/useNewsletters";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
