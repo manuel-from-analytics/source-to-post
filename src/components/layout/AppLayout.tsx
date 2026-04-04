@@ -12,6 +12,7 @@ import {
   Sparkles,
   Mic,
   Newspaper,
+  Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
