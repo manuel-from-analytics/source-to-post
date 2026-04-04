@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Newspaper, Search, Loader2, Clock, ExternalLink,
   Library, Check, ChevronRight, Sparkles, Send, MoreVertical, Trash2,
