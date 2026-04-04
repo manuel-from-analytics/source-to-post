@@ -163,7 +163,7 @@ export default function InputDetailPage() {
   const displayContent = input.extracted_content || input.raw_content || "";
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 max-w-4xl mx-auto">
+    <div className="p-3 sm:p-4 lg:p-8 space-y-4 sm:space-y-6 max-w-4xl mx-auto min-w-0 overflow-hidden">
       <Link to="/library" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" />
         Volver a Biblioteca
