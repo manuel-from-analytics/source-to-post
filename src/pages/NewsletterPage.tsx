@@ -178,10 +178,10 @@ export default function NewsletterPage() {
   const activeNewsletter = selectedId ? selectedDetail : generatedNewsletter;
 
   return (
-    <div className="p-4 lg:p-8 max-w-5xl mx-auto">
+    <div className="p-4 lg:p-8 max-w-5xl mx-auto overflow-hidden">
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Newsletter</h1>
-        <p className="text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1 break-words">
           Genera newsletters curadas con fuentes verificadas sobre cualquier tema
         </p>
       </div>
