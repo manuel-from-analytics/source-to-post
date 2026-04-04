@@ -21,35 +21,32 @@ function extractYouTubeVideoId(url: string): string | null {
 }
 
 async function fetchYouTubeTranscript(videoId: string): Promise<string> {
-  // Use YouTube's innertube API to get video info and captions
-  const innertubePayload = {
-    context: {
-      client: {
-        clientName: "WEB",
-        clientVersion: "2.20240101.00.00",
-        hl: "es",
-      },
+  // Fetch the video page with consent cookie to bypass EU consent screen
+  const pageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      "Accept-Language": "en-US,en;q=0.9",
+      "Cookie": "CONSENT=YES+1",
     },
-    videoId,
-  };
+  });
 
-  // First get video metadata and caption info
-  const playerRes = await fetch(
-    "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(innertubePayload),
-    }
-  );
+  if (!pageRes.ok) throw new Error(`YouTube page fetch failed: ${pageRes.status}`);
+  const html = await pageRes.text();
+  console.log("YouTube HTML length:", html.length);
 
-  if (!playerRes.ok) throw new Error(`YouTube API failed: ${playerRes.status}`);
-  const playerData = await playerRes.json();
+  // Extract title
+  const titleMatch = html.match(/<title>([^<]*)<\/title>/);
+  const title = titleMatch ? titleMatch[1].replace(" - YouTube", "").trim() : videoId;
 
-  const title = playerData?.videoDetails?.title || videoId;
-  const description = playerData?.videoDetails?.shortDescription || "";
-  const captionTracks =
-    playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+  // Extract description
+  const descMatch = html.match(/"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+  const description = descMatch ? JSON.parse(`"${descMatch[1]}"`) : "";
+
+  // Extract captions from playerCaptionsTracklistRenderer
+  const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
+  const captionTracks = captionMatch ? (() => {
+    try { return JSON.parse(captionMatch[1]); } catch { return null; }
+  })() : null;
 
   if (!captionTracks || captionTracks.length === 0) {
     // No captions — return description as fallback
