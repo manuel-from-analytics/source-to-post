@@ -293,7 +293,7 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {newsletter.id && !newsletter.id.startsWith("temp-") && (
-            <PodcastPlayer newsletterId={newsletter.id} savedScript={(newsletter as any).podcast_script} newsletterLang={newsletter.language} />
+            <PodcastPlayer newsletterId={newsletter.id} savedScript={newsletter.podcast_script} newsletterLang={newsletter.language} />
           )}
           {(newsletter.items || []).some(i => !i.imported_to_library) && (
             <Button
