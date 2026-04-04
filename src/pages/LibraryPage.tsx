@@ -280,7 +280,10 @@ export default function LibraryPage() {
                          <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">{input.summary}</p>
                       )}
                        <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
-                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{typeLabels[input.type] ?? input.type}</Badge>
+                        <Badge variant="secondary" className={`text-[10px] px-1.5 py-0 ${input.type === "youtube" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : ""}`}>
+                          {input.type === "youtube" && <Youtube className="h-2.5 w-2.5 mr-0.5" />}
+                          {typeLabels[input.type] ?? input.type}
+                        </Badge>
                         {input.category_id && categoriesMap.get(input.category_id) && (
                           <CategoryBadge category={categoriesMap.get(input.category_id)!} />
                         )}
