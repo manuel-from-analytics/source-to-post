@@ -56,8 +56,6 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string> {
   }
 
   console.log("Found", captionTracks.length, "caption tracks");
-    throw new Error("Este video de YouTube no tiene subtítulos ni descripción disponibles");
-  }
 
   // Prefer Spanish, then English, then first available
   const preferred =
