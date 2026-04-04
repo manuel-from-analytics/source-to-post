@@ -60,6 +60,33 @@ export function useNewsletterDetail(id: string | null) {
         .eq("newsletter_id", id)
         .order("created_at", { ascending: true });
 
+      // Check if referenced inputs still exist and mark orphaned ones as not imported
+      const importedItems = (items || []).filter(i => i.imported_to_library && i.input_id);
+      if (importedItems.length > 0) {
+        const inputIds = importedItems.map(i => i.input_id!);
+        const { data: existingInputs } = await supabase
+          .from("inputs")
+          .select("id")
+          .in("id", inputIds);
+        const existingIds = new Set((existingInputs || []).map(i => i.id));
+        const orphanedIds = importedItems
+          .filter(i => !existingIds.has(i.input_id!))
+          .map(i => i.id);
+        if (orphanedIds.length > 0) {
+          await supabase
+            .from("newsletter_items")
+            .update({ imported_to_library: false, input_id: null })
+            .in("id", orphanedIds);
+          // Patch local items
+          for (const item of items || []) {
+            if (orphanedIds.includes(item.id)) {
+              item.imported_to_library = false;
+              item.input_id = null;
+            }
+          }
+        }
+      }
+
       return { ...newsletter, items: items || [] } as Newsletter;
     },
     enabled: !!id,
