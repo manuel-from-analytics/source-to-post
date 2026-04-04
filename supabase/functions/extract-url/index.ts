@@ -117,47 +117,6 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string> {
 
   // Step 5: Last resort — return just title + link
   return `# ${title}\n\nVideo de YouTube: https://www.youtube.com/watch?v=${videoId}\n\n*No se pudieron extraer subtítulos ni descripción de este video.*`;
-
-  // Prefer Spanish, then English, then first available
-  const preferred =
-    captionTracks.find((t: any) => t.languageCode?.startsWith("es")) ||
-    captionTracks.find((t: any) => t.languageCode?.startsWith("en")) ||
-    captionTracks[0];
-
-  const captionUrl = preferred.baseUrl;
-  if (!captionUrl) throw new Error("URL de subtítulos no disponible");
-
-  console.log("Fetching captions from:", captionUrl);
-  const captionRes = await fetch(captionUrl);
-  if (!captionRes.ok) throw new Error(`Error al descargar subtítulos: ${captionRes.status}`);
-  const captionXml = await captionRes.text();
-
-  // Parse XML captions to plain text
-  const lines: string[] = [];
-  const regex = /<text[^>]*>([\s\S]*?)<\/text>/g;
-  let match;
-  while ((match = regex.exec(captionXml)) !== null) {
-    const text = match[1]
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/\n/g, " ")
-      .trim();
-    if (text) lines.push(text);
-  }
-
-  if (lines.length === 0) {
-    // Captions XML was empty — fallback to description
-    if (description) {
-      return `# ${title}\n\n## Descripción del video\n\n${description}\n\n*Los subtítulos estaban vacíos. Se muestra la descripción.*`;
-    }
-    throw new Error("Subtítulos vacíos");
-  }
-
-  const lang = preferred.languageCode || "desconocido";
-  return `# ${title}\n\n**Idioma de subtítulos:** ${lang}\n\n## Transcripción\n\n${lines.join(" ")}`;
 }
 
 Deno.serve(async (req) => {
