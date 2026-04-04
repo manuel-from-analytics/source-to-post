@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Newspaper, Search, Loader2, Clock, ExternalLink,
-  Library, Check, ChevronRight, Sparkles, Send,
+  Library, Check, ChevronRight, Sparkles, Send, MoreVertical, Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,10 +12,17 @@ import {
   useNewsletterDetail,
   useGenerateNewsletter,
   useImportToLibrary,
+  useDeleteNewsletter,
   useSearchTopics,
   type Newsletter,
   type NewsletterItem,
 } from "@/hooks/useNewsletters";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -141,6 +148,14 @@ export default function NewsletterPage() {
   const { data: pastTopics } = useSearchTopics();
   const { data: selectedDetail } = useNewsletterDetail(selectedId);
   const { generate, isGenerating } = useGenerateNewsletter();
+  const deleteMutation = useDeleteNewsletter();
+
+  const handleDelete = (id: string) => {
+    if (selectedId === id) {
+      setSelectedId(null);
+    }
+    deleteMutation.mutate(id);
+  };
 
   const handleGenerate = async () => {
     if (!topic.trim()) return;
@@ -246,26 +261,45 @@ export default function NewsletterPage() {
                 </p>
               ) : (
                 <div className="space-y-1 max-h-[400px] overflow-y-auto">
-                  {newsletters.map((nl) => (
-                    <button
-                      key={nl.id}
-                      onClick={() => handleSelectHistory(nl)}
-                      className={`w-full text-left rounded-lg px-3 py-2.5 transition-colors flex items-center gap-2 ${
-                        selectedId === nl.id
-                          ? "bg-primary/10 text-primary"
-                          : "hover:bg-secondary/50"
-                      }`}
-                    >
-                      <Newspaper className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{nl.topic}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {format(new Date(nl.created_at), "d MMM yyyy", { locale: es })}
-                        </p>
+                    {newsletters.map((nl) => (
+                      <div
+                        key={nl.id}
+                        className={`w-full text-left rounded-lg px-3 py-2.5 transition-colors flex items-center gap-2 ${
+                          selectedId === nl.id
+                            ? "bg-primary/10 text-primary"
+                            : "hover:bg-secondary/50"
+                        }`}
+                      >
+                        <button
+                          className="flex items-center gap-2 flex-1 min-w-0"
+                          onClick={() => handleSelectHistory(nl)}
+                        >
+                          <Newspaper className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <div className="flex-1 min-w-0 text-left">
+                            <p className="text-sm font-medium truncate">{nl.topic}</p>
+                            <p className="text-[10px] text-muted-foreground">
+                              {format(new Date(nl.created_at), "d MMM yyyy", { locale: es })}
+                            </p>
+                          </div>
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 shrink-0">
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => handleDelete(nl.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                    </button>
-                  ))}
+                    ))}
                 </div>
               )}
             </CardContent>
