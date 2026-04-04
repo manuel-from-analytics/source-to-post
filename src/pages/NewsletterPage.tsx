@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Newspaper, Search, Loader2, Clock, ExternalLink,
   Library, Check, ChevronRight, Sparkles, Send, MoreVertical, Trash2,
+  Headphones, Pause, Play, Volume2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,6 +84,120 @@ function NewsletterItemCard({ item, onImport, importing }: {
   );
 }
 
+function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
+  const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">("idle");
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const handleGenerate = async () => {
+    setStatus("generating");
+    try {
+      const { data: { session } } = await (await import("@/integrations/supabase/client")).supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error("No autenticado");
+
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/newsletter-audio`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ newsletter_id: newsletterId }),
+        }
+      );
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Error desconocido" }));
+        throw new Error(err.error || `Error ${resp.status}`);
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      setAudioUrl(url);
+      setStatus("ready");
+
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      audio.onended = () => setIsPlaying(false);
+      audio.play();
+      setIsPlaying(true);
+    } catch (e: any) {
+      console.error("Podcast error:", e);
+      setStatus("error");
+      const { toast } = await import("sonner");
+      toast.error(e.message || "Error al generar el podcast");
+    }
+  };
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play();
+      setIsPlaying(true);
+    }
+  };
+
+  if (status === "idle") {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-xs gap-1.5"
+        onClick={handleGenerate}
+      >
+        <Headphones className="h-3.5 w-3.5" />
+        Escuchar podcast
+      </Button>
+    );
+  }
+
+  if (status === "generating") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
+        <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <span className="text-xs text-muted-foreground">Generando podcast...</span>
+      </div>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-xs gap-1.5 text-destructive border-destructive/30"
+        onClick={handleGenerate}
+      >
+        <Headphones className="h-3.5 w-3.5" />
+        Reintentar podcast
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 p-0"
+        onClick={togglePlay}
+      >
+        {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+      </Button>
+      <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
+      <span className="text-xs text-muted-foreground">
+        {isPlaying ? "Reproduciendo..." : "Podcast listo"}
+      </span>
+    </div>
+  );
+}
+
 function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
   const importMutation = useImportToLibrary();
 
@@ -100,18 +215,23 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
             {format(new Date(newsletter.created_at), "d MMM yyyy, HH:mm", { locale: es })}
           </p>
         </div>
-        {(newsletter.items || []).some(i => !i.imported_to_library) && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs gap-1"
-            onClick={handleImportAll}
-            disabled={importMutation.isPending}
-          >
-            <Library className="h-3.5 w-3.5" />
-            Importar todas
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {newsletter.id && !newsletter.id.startsWith("temp-") && (
+            <PodcastPlayer newsletterId={newsletter.id} />
+          )}
+          {(newsletter.items || []).some(i => !i.imported_to_library) && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs gap-1"
+              onClick={handleImportAll}
+              disabled={importMutation.isPending}
+            >
+              <Library className="h-3.5 w-3.5" />
+              Importar todas
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="space-y-3">
