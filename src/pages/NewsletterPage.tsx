@@ -88,6 +88,7 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
   const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">("idle");
   const [isPlaying, setIsPlaying] = useState(false);
   const [script, setScript] = useState<string | null>(null);
+  const [lang, setLang] = useState("es");
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const handleGenerate = async () => {
