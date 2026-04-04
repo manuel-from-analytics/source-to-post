@@ -39,6 +39,18 @@ serve(async (req) => {
       });
     }
 
+    // Check if podcast script already exists
+    const { data: existing } = await supabase
+      .from("newsletters")
+      .select("podcast_script, language")
+      .eq("id", newsletter_id)
+      .single();
+    if (existing?.podcast_script) {
+      return new Response(JSON.stringify({ script: existing.podcast_script, language: existing.language || "es" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: newsletter, error: nlError } = await supabase
       .from("newsletters")
       .select("*")
