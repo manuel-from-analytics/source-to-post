@@ -155,16 +155,26 @@ export function useDeleteInput() {
 
   return useMutation({
     mutationFn: async (input: InputRow) => {
+      // Release newsletter references so deleted materials can be re-imported later
+      const { error: newsletterError } = await supabase
+        .from("newsletter_items")
+        .update({ imported_to_library: false, input_id: null })
+        .eq("input_id", input.id);
+      if (newsletterError) throw newsletterError;
+
       // Delete file from storage if exists
       if (input.file_path) {
         await supabase.storage.from("inputs").remove([input.file_path]);
       }
+
       const { error } = await supabase.from("inputs").delete().eq("id", input.id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["inputs"] });
       queryClient.invalidateQueries({ queryKey: ["inputs-count"] });
+      queryClient.invalidateQueries({ queryKey: ["newsletter-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["newsletters"] });
       toast.success("Fuente eliminada");
     },
     onError: (error: Error) => {
