@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import {
   Newspaper, Search, Loader2, Clock, ExternalLink,
   Library, Check, ChevronRight, Sparkles, Send, MoreVertical, Trash2,
-  Headphones, Pause, Play, Volume2,
+  Headphones, Pause, Play, Volume2, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
