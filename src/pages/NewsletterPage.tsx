@@ -42,15 +42,15 @@ function NewsletterItemCard({ item, onImport, importing }: {
   importing: boolean;
 }) {
   return (
-    <div className="space-y-2 rounded-lg border p-4">
+    <div className="space-y-1.5 rounded-lg border p-3 sm:p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <h4 className="flex-1 text-sm font-medium leading-tight break-words [overflow-wrap:anywhere]">{item.title}</h4>
+        <h4 className="flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{item.title}</h4>
         <div className="self-start shrink-0">
           <SourceBadge type={item.source_type} />
         </div>
       </div>
       {item.description && (
-        <p className="text-xs leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">{item.description}</p>
+        <p className="text-[11px] leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere] line-clamp-2">{item.description}</p>
       )}
       <div className="flex flex-wrap items-center gap-2">
         <a
@@ -180,26 +180,26 @@ export default function NewsletterPage() {
   const activeNewsletter = selectedId ? selectedDetail : generatedNewsletter;
 
   return (
-    <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-4 lg:p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Newsletter</h1>
-        <p className="text-muted-foreground mt-1 break-words">
+    <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-3 sm:p-4 lg:p-8">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Newsletter</h1>
+        <p className="text-sm text-muted-foreground mt-0.5 break-words">
           Genera newsletters curadas con fuentes verificadas sobre cualquier tema
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_1.5fr]">
         {/* Left: Search + History */}
         <div className="space-y-4">
           {/* Search */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 sm:text-sm">
                 <Search className="h-4 w-4" />
                 Buscar tema
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2 px-3 sm:px-6 sm:space-y-3">
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   placeholder="Ej: AI agents in enterprise analytics..."
@@ -246,13 +246,13 @@ export default function NewsletterPage() {
 
           {/* History */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
+              <CardTitle className="text-xs font-medium flex items-center gap-2 sm:text-sm">
                 <Clock className="h-4 w-4" />
                 Historial
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               {loadingHistory ? (
                 <div className="flex justify-center py-6">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -262,11 +262,11 @@ export default function NewsletterPage() {
                   Aún no has generado newsletters
                 </p>
               ) : (
-                <div className="space-y-1 max-h-[400px] overflow-y-auto overflow-x-hidden">
+                <div className="space-y-0.5 max-h-[300px] overflow-y-auto overflow-x-hidden sm:max-h-[400px]">
                     {newsletters.map((nl) => (
                       <div
                         key={nl.id}
-                        className={`flex min-w-0 w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left transition-colors ${
+                        className={`flex min-w-0 w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${
                           selectedId === nl.id
                             ? "bg-primary/10 text-primary"
                             : "hover:bg-secondary/50"
@@ -276,10 +276,10 @@ export default function NewsletterPage() {
                           className="flex items-center gap-2 flex-1 min-w-0"
                           onClick={() => handleSelectHistory(nl)}
                         >
-                          <Newspaper className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                          <Newspaper className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground" />
                           <div className="flex-1 min-w-0 text-left">
-                            <p className="text-sm font-medium truncate">{nl.topic}</p>
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-[13px] font-medium truncate">{nl.topic}</p>
+                            <p className="text-[9px] text-muted-foreground">
                               {format(new Date(nl.created_at), "d MMM yyyy", { locale: es })}
                             </p>
                           </div>
