@@ -130,6 +130,35 @@ export function useGenerateNewsletter() {
   return { generate, isGenerating };
 }
 
+export function useDeleteNewsletter() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error: itemsError } = await supabase
+        .from("newsletter_items")
+        .delete()
+        .eq("newsletter_id", id);
+      if (itemsError) throw itemsError;
+
+      const { error } = await supabase
+        .from("newsletters")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["newsletters"] });
+      queryClient.invalidateQueries({ queryKey: ["newsletter-topics"] });
+      queryClient.invalidateQueries({ queryKey: ["newsletter-detail"] });
+      toast.success("Newsletter eliminada");
+    },
+    onError: (error: Error) => {
+      toast.error(`Error al eliminar: ${error.message}`);
+    },
+  });
+}
+
 export function useImportToLibrary() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
