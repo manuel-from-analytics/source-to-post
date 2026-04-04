@@ -25,6 +25,7 @@ const navItems = [
   { icon: PenTool, label: "Generador", path: "/generator" },
   { icon: History, label: "Historial", path: "/history" },
   { icon: Settings, label: "Ajustes", path: "/settings" },
+  { icon: Smartphone, label: "Instalar App", path: "/install" },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
