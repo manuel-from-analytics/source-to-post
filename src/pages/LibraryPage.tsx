@@ -268,47 +268,47 @@ export default function LibraryPage() {
         {filteredInputs.map((input) => {
           const Icon = typeIcons[input.type] || FileText;
           return (
-            <Card key={input.id} className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/20">
-              <CardContent className="flex items-start gap-3 p-4">
-                <Link to={`/library/${input.id}`} className="flex items-start gap-3 flex-1 min-w-0">
-                  <div className={`rounded-lg p-2 mt-0.5 ${typeColors[input.type] ?? "bg-secondary"}`}>
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+             <Card key={input.id} className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/20">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-start gap-3">
+                  <Link to={`/library/${input.id}`} className="flex items-start gap-3 flex-1 min-w-0">
+                    <div className={`rounded-lg p-2 mt-0.5 flex-shrink-0 ${typeColors[input.type] ?? "bg-secondary"}`}>
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="font-medium text-sm truncate">{input.title}</h3>
-                    </div>
-                    {input.summary && (
-                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{input.summary}</p>
-                    )}
-                    {input.original_url && (
-                      <p className="text-xs text-muted-foreground mt-1 truncate">{input.original_url}</p>
-                    )}
-                    <div className="flex items-center gap-2 mt-2 flex-wrap">
-                      <Badge variant="secondary" className="text-xs">{typeLabels[input.type] ?? input.type}</Badge>
-                      {input.category_id && categoriesMap.get(input.category_id) && (
-                        <CategoryBadge category={categoriesMap.get(input.category_id)!} />
+                      {input.summary && (
+                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{input.summary}</p>
                       )}
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(input.created_at).toLocaleDateString("es")}
-                      </span>
+                      {input.original_url && (
+                        <p className="text-xs text-muted-foreground mt-1 truncate">{input.original_url}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <Badge variant="secondary" className="text-xs">{typeLabels[input.type] ?? input.type}</Badge>
+                        {input.category_id && categoriesMap.get(input.category_id) && (
+                          <CategoryBadge category={categoriesMap.get(input.category_id)!} />
+                        )}
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(input.created_at).toLocaleDateString("es")}
+                        </span>
+                      </div>
                     </div>
+                  </Link>
+                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                    <CategoryPicker inputId={input.id} currentCategoryId={input.category_id} />
+                    <button
+                      onClick={(e) => { e.preventDefault(); toggleFavorite.mutate({ id: input.id, is_favorite: !input.is_favorite }); }}
+                      className="p-1.5 rounded-md hover:bg-secondary transition-colors"
+                    >
+                      <Star className={`h-4 w-4 ${input.is_favorite ? "text-accent fill-accent" : "text-muted-foreground"}`} />
+                    </button>
+                    <button
+                      onClick={(e) => { e.preventDefault(); deleteInput.mutate(input); }}
+                      className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
-                </Link>
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <CategoryPicker inputId={input.id} currentCategoryId={input.category_id} />
-                  <button
-                    onClick={(e) => { e.preventDefault(); toggleFavorite.mutate({ id: input.id, is_favorite: !input.is_favorite }); }}
-                    className="p-1.5 rounded-md hover:bg-secondary transition-colors"
-                  >
-                    <Star className={`h-4 w-4 ${input.is_favorite ? "text-accent fill-accent" : "text-muted-foreground"}`} />
-                  </button>
-                  <button
-                    onClick={(e) => { e.preventDefault(); deleteInput.mutate(input); }}
-                    className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
                 </div>
               </CardContent>
             </Card>
