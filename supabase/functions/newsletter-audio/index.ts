@@ -32,7 +32,7 @@ serve(async (req) => {
       });
     }
 
-    const { newsletter_id } = await req.json();
+    const { newsletter_id, force_regenerate } = await req.json();
     if (!newsletter_id) {
       return new Response(JSON.stringify({ error: "newsletter_id is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -45,7 +45,7 @@ serve(async (req) => {
       .select("podcast_script, language")
       .eq("id", newsletter_id)
       .single();
-    if (existing?.podcast_script) {
+    if (existing?.podcast_script && !force_regenerate) {
       return new Response(JSON.stringify({ script: existing.podcast_script, language: existing.language || "es" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
