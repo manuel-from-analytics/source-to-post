@@ -109,10 +109,10 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="p-4 lg:p-8 space-y-6 max-w-5xl mx-auto overflow-hidden">
+    <div className="mx-auto max-w-5xl min-w-0 space-y-6 overflow-hidden p-4 lg:p-8">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between min-w-0">
-        <div>
+      <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight">Biblioteca</h1>
           <p className="text-muted-foreground mt-1">
             {inputs?.length ?? 0} fuentes guardadas
@@ -120,7 +120,7 @@ export default function LibraryPage() {
         </div>
         <Dialog open={newInputOpen} onOpenChange={(open) => { setNewInputOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button>
+            <Button className="shrink-0 self-start sm:self-auto">
               <Plus className="mr-2 h-4 w-4" />
               Añadir fuente
             </Button>
@@ -229,7 +229,7 @@ export default function LibraryPage() {
       </div>
 
       {/* Search + category filter */}
-      <div className="space-y-3">
+      <div className="min-w-0 space-y-3">
         <div className="flex gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -268,22 +268,22 @@ export default function LibraryPage() {
         {filteredInputs.map((input) => {
           const Icon = typeIcons[input.type] || FileText;
           return (
-             <Card key={input.id} className="group cursor-pointer transition-all hover:shadow-md hover:border-primary/20">
+             <Card key={input.id} className="group overflow-hidden transition-all hover:border-primary/20 hover:shadow-md">
               <CardContent className="p-3 sm:p-4">
-                <div className="flex items-start gap-3">
-                  <Link to={`/library/${input.id}`} className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                  <Link to={`/library/${input.id}`} className="flex min-w-0 flex-1 items-start gap-3">
                     <div className={`rounded-lg p-2 mt-0.5 flex-shrink-0 ${typeColors[input.type] ?? "bg-secondary"}`}>
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-sm truncate">{input.title}</h3>
+                       <h3 className="text-sm font-medium break-words [overflow-wrap:anywhere]">{input.title}</h3>
                       {input.summary && (
-                        <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{input.summary}</p>
+                         <p className="mt-1 line-clamp-2 text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">{input.summary}</p>
                       )}
                       {input.original_url && (
-                        <p className="text-xs text-muted-foreground mt-1 truncate">{input.original_url}</p>
+                         <p className="mt-1 line-clamp-1 text-xs text-muted-foreground break-all">{input.original_url}</p>
                       )}
-                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                       <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
                         <Badge variant="secondary" className="text-xs">{typeLabels[input.type] ?? input.type}</Badge>
                         {input.category_id && categoriesMap.get(input.category_id) && (
                           <CategoryBadge category={categoriesMap.get(input.category_id)!} />
@@ -294,7 +294,7 @@ export default function LibraryPage() {
                       </div>
                     </div>
                   </Link>
-                  <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <div className="flex shrink-0 items-center justify-end gap-0.5 sm:self-start">
                     <CategoryPicker inputId={input.id} currentCategoryId={input.category_id} />
                     <button
                       onClick={(e) => { e.preventDefault(); toggleFavorite.mutate({ id: input.id, is_favorite: !input.is_favorite }); }}

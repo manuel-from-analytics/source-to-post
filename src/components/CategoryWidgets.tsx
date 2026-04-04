@@ -29,14 +29,14 @@ export function CategoryBadge({
   return (
     <Badge
       variant="outline"
-      className={`text-xs gap-1 ${className}`}
+      className={`inline-flex max-w-full items-center gap-1 overflow-hidden text-xs ${className}`}
       style={{ borderColor: category.color ?? undefined, color: category.color ?? undefined }}
     >
       <span
         className="inline-block h-2 w-2 rounded-full"
         style={{ backgroundColor: category.color ?? "#3b82f6" }}
       />
-      {category.name}
+      <span className="max-w-[8rem] truncate sm:max-w-[12rem]">{category.name}</span>
       {onRemove && (
         <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="ml-0.5 hover:opacity-70">
           <X className="h-3 w-3" />
@@ -141,10 +141,10 @@ export function CategoryFilter({
   if (!categories?.length) return null;
 
   return (
-    <div className="flex gap-1.5 flex-wrap">
+    <div className="flex min-w-0 flex-wrap gap-1.5">
       <button
         onClick={() => onSelect(null)}
-        className={`text-xs px-2.5 py-1 rounded-full border transition-colors ${
+        className={`max-w-full rounded-full border px-2.5 py-1 text-xs transition-colors ${
           !selectedCategoryId ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"
         }`}
       >
@@ -154,12 +154,12 @@ export function CategoryFilter({
         <button
           key={cat.id}
           onClick={() => onSelect(cat.id === selectedCategoryId ? null : cat.id)}
-          className={`text-xs px-2.5 py-1 rounded-full border transition-colors flex items-center gap-1.5 ${
+          className={`flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
             cat.id === selectedCategoryId ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"
           }`}
         >
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: cat.id === selectedCategoryId ? "currentColor" : (cat.color ?? "#3b82f6") }} />
-          {cat.name}
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: cat.id === selectedCategoryId ? "currentColor" : (cat.color ?? "#3b82f6") }} />
+          <span className="max-w-[8rem] truncate sm:max-w-[12rem]">{cat.name}</span>
         </button>
       ))}
     </div>

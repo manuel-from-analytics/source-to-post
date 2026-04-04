@@ -138,7 +138,7 @@ export default function GeneratorPage() {
   };
 
   return (
-    <div className="p-4 lg:p-8 max-w-5xl mx-auto overflow-hidden">
+    <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-4 lg:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">
           {editingPost ? "Editar Post" : "Generador de Posts"}
@@ -160,9 +160,9 @@ export default function GeneratorPage() {
                 Fuentes de referencia
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="min-w-0 space-y-3">
               <CategoryFilter selectedCategoryId={filterCategoryId} onSelect={setFilterCategoryId} />
-              <div className="space-y-2 max-h-[220px] overflow-y-auto">
+              <div className="max-h-[220px] space-y-2 overflow-x-hidden overflow-y-auto">
               {loadingInputs ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -177,15 +177,15 @@ export default function GeneratorPage() {
                   return (
                     <label
                       key={source.id}
-                      className="flex items-center gap-3 rounded-lg border p-3 cursor-pointer hover:bg-secondary/50 transition-colors"
+                      className="flex min-w-0 items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-secondary/50"
                     >
                       <Checkbox
                         checked={selectedSources.includes(source.id)}
                         onCheckedChange={() => toggleSource(source.id)}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{source.title}</p>
-                        <div className="flex items-center gap-2 mt-1">
+                        <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{source.title}</p>
+                        <div className="mt-1 flex flex-wrap items-center gap-2">
                           <Icon className="h-3 w-3 text-muted-foreground" />
                           <span className="text-xs text-muted-foreground capitalize">{source.type}</span>
                         </div>
@@ -222,7 +222,7 @@ export default function GeneratorPage() {
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-xs">Tono</Label>
                   <Select value={tone} onValueChange={setTone}>
@@ -254,7 +254,7 @@ export default function GeneratorPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-xs">Longitud</Label>
                   <Select value={length} onValueChange={setLength}>
@@ -305,10 +305,10 @@ export default function GeneratorPage() {
               </div>
 
               {(voiceSamples?.length ?? 0) > 0 && (
-                <div className="flex items-center justify-between rounded-lg border p-3">
-                  <div className="space-y-0.5">
+                <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                  <div className="min-w-0 space-y-0.5">
                     <Label className="text-xs font-medium">Usar mi voz</Label>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="text-[10px] text-muted-foreground break-words [overflow-wrap:anywhere]">
                       {voiceSamples?.length} ejemplo{voiceSamples?.length !== 1 ? "s" : ""} de estilo guardado{voiceSamples?.length !== 1 ? "s" : ""}
                     </p>
                   </div>
@@ -342,10 +342,10 @@ export default function GeneratorPage() {
         <div className="space-y-4">
           <Card className="min-h-[400px]">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="text-sm font-medium">Borrador</CardTitle>
                 {content && (
-                  <div className="flex gap-1">
+                  <div className="flex flex-wrap gap-1">
                     <Button variant="ghost" size="sm" onClick={handleGenerate} disabled={isGenerating} className="text-xs gap-1">
                       <RefreshCw className="h-3 w-3" />
                       Regenerar
@@ -395,7 +395,7 @@ export default function GeneratorPage() {
                 <Label className="text-xs text-muted-foreground mb-2 block">
                   Pedir cambios
                 </Label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
                     placeholder='Ej: "Hazlo más directo", "Añade datos"...'
                     value={iterationPrompt}
@@ -403,7 +403,7 @@ export default function GeneratorPage() {
                     onKeyDown={(e) => e.key === "Enter" && handleIterate()}
                     className="text-sm"
                   />
-                  <Button size="sm" className="gap-1" onClick={handleIterate} disabled={isGenerating}>
+                  <Button size="sm" className="gap-1 self-start sm:self-auto" onClick={handleIterate} disabled={isGenerating}>
                     <Send className="h-3.5 w-3.5" />
                     Enviar
                   </Button>
