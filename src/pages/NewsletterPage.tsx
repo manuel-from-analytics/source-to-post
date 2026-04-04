@@ -88,6 +88,7 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
   const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">("idle");
   const [isPlaying, setIsPlaying] = useState(false);
   const [script, setScript] = useState<string | null>(null);
+  const [lang, setLang] = useState("es");
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const handleGenerate = async () => {
@@ -116,11 +117,13 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
       }
 
       const data = await resp.json();
+      const detectedLang = data.language || "es";
       setScript(data.script);
+      setLang(detectedLang);
       setStatus("ready");
 
       // Start speaking
-      speakScript(data.script, data.language || "es");
+      speakScript(data.script, detectedLang);
     } catch (e: any) {
       console.error("Podcast error:", e);
       setStatus("error");
@@ -129,17 +132,17 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
     }
   };
 
-  const speakScript = (text: string, lang: string) => {
+  const speakScript = (text: string, language: string) => {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang === "es" ? "es-ES" : lang === "en" ? "en-US" : lang;
+    utterance.lang = language === "es" ? "es-ES" : language === "en" ? "en-US" : language;
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
     // Try to find a good voice for the language
     const voices = window.speechSynthesis.getVoices();
-    const langVoice = voices.find(v => v.lang.startsWith(lang) && v.localService === false)
-      || voices.find(v => v.lang.startsWith(lang));
+    const langVoice = voices.find(v => v.lang.startsWith(language) && v.localService === false)
+      || voices.find(v => v.lang.startsWith(language));
     if (langVoice) utterance.voice = langVoice;
 
     utterance.onend = () => setIsPlaying(false);
@@ -158,7 +161,7 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
       window.speechSynthesis.resume();
       setIsPlaying(true);
     } else if (script) {
-      speakScript(script, "es");
+      speakScript(script, lang);
     }
   };
 
