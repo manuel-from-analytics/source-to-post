@@ -87,13 +87,14 @@ function NewsletterItemCard({ item, onImport, importing }: {
 function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
   const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">("idle");
   const [isPlaying, setIsPlaying] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [script, setScript] = useState<string | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   const handleGenerate = async () => {
     setStatus("generating");
     try {
-      const { data: { session } } = await (await import("@/integrations/supabase/client")).supabase.auth.getSession();
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) throw new Error("No autenticado");
 
@@ -114,16 +115,12 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
         throw new Error(err.error || `Error ${resp.status}`);
       }
 
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      setAudioUrl(url);
+      const data = await resp.json();
+      setScript(data.script);
       setStatus("ready");
 
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.onended = () => setIsPlaying(false);
-      audio.play();
-      setIsPlaying(true);
+      // Start speaking
+      speakScript(data.script, data.language || "es");
     } catch (e: any) {
       console.error("Podcast error:", e);
       setStatus("error");
@@ -132,25 +129,47 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
     }
   };
 
+  const speakScript = (text: string, lang: string) => {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang === "es" ? "es-ES" : lang === "en" ? "en-US" : lang;
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+
+    // Try to find a good voice for the language
+    const voices = window.speechSynthesis.getVoices();
+    const langVoice = voices.find(v => v.lang.startsWith(lang) && v.localService === false)
+      || voices.find(v => v.lang.startsWith(lang));
+    if (langVoice) utterance.voice = langVoice;
+
+    utterance.onend = () => setIsPlaying(false);
+    utterance.onerror = () => setIsPlaying(false);
+    utteranceRef.current = utterance;
+
+    window.speechSynthesis.speak(utterance);
+    setIsPlaying(true);
+  };
+
   const togglePlay = () => {
-    if (!audioRef.current) return;
     if (isPlaying) {
-      audioRef.current.pause();
+      window.speechSynthesis.pause();
       setIsPlaying(false);
-    } else {
-      audioRef.current.play();
+    } else if (window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
       setIsPlaying(true);
+    } else if (script) {
+      speakScript(script, "es");
     }
   };
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { window.speechSynthesis.cancel(); };
+  }, []);
+
   if (status === "idle") {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        className="text-xs gap-1.5"
-        onClick={handleGenerate}
-      >
+      <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleGenerate}>
         <Headphones className="h-3.5 w-3.5" />
         Escuchar podcast
       </Button>
@@ -161,19 +180,14 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
     return (
       <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
         <Loader2 className="h-4 w-4 animate-spin text-primary" />
-        <span className="text-xs text-muted-foreground">Generando podcast...</span>
+        <span className="text-xs text-muted-foreground">Generando guion...</span>
       </div>
     );
   }
 
   if (status === "error") {
     return (
-      <Button
-        variant="outline"
-        size="sm"
-        className="text-xs gap-1.5 text-destructive border-destructive/30"
-        onClick={handleGenerate}
-      >
+      <Button variant="outline" size="sm" className="text-xs gap-1.5 text-destructive border-destructive/30" onClick={handleGenerate}>
         <Headphones className="h-3.5 w-3.5" />
         Reintentar podcast
       </Button>
@@ -182,12 +196,7 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
 
   return (
     <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 w-7 p-0"
-        onClick={togglePlay}
-      >
+      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={togglePlay}>
         {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
       </Button>
       <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
