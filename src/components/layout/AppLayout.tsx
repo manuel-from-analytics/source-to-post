@@ -14,7 +14,7 @@ import {
   Newspaper,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -103,8 +103,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto">
-          <div className="animate-fade-in">{children}</div>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="animate-fade-in w-full">{children}</div>
         </main>
       </div>
     </div>
