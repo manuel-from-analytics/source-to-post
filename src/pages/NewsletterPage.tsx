@@ -161,7 +161,7 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
       window.speechSynthesis.resume();
       setIsPlaying(true);
     } else if (script) {
-      speakScript(script, "es");
+      speakScript(script, lang);
     }
   };
 
