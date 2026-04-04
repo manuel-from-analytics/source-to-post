@@ -39,7 +39,6 @@ serve(async (req) => {
       });
     }
 
-    // Fetch newsletter + items
     const { data: newsletter, error: nlError } = await supabase
       .from("newsletters")
       .select("*")
@@ -57,7 +56,6 @@ serve(async (req) => {
       .eq("newsletter_id", newsletter_id)
       .order("created_at", { ascending: true });
 
-    // Step 1: Generate podcast script using AI
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
@@ -101,6 +99,11 @@ Rules:
     if (!aiResponse.ok) {
       const errText = await aiResponse.text();
       console.error("AI error:", aiResponse.status, errText);
+      if (aiResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit. Intenta de nuevo en unos segundos." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       throw new Error("Failed to generate podcast script");
     }
 
@@ -110,53 +113,8 @@ Rules:
 
     console.log("Podcast script generated, length:", script.length);
 
-    // Step 2: Convert to audio using ElevenLabs TTS
-    const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-    if (!ELEVENLABS_API_KEY) {
-      return new Response(JSON.stringify({ error: "ElevenLabs not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // Use Laura voice (good for Spanish) - FGY2WhTYpPnrIDTdsKH5
-    const voiceId = "FGY2WhTYpPnrIDTdsKH5";
-
-    const ttsResponse = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: script,
-          model_id: "eleven_multilingual_v2",
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-            style: 0.4,
-            use_speaker_boost: true,
-          },
-        }),
-      }
-    );
-
-    if (!ttsResponse.ok) {
-      const errText = await ttsResponse.text();
-      console.error("ElevenLabs error:", ttsResponse.status, errText);
-      throw new Error(`TTS failed: ${ttsResponse.status}`);
-    }
-
-    const audioBuffer = await ttsResponse.arrayBuffer();
-    console.log("Audio generated, size:", audioBuffer.byteLength);
-
-    return new Response(audioBuffer, {
-      headers: {
-        ...corsHeaders,
-        "Content-Type": "audio/mpeg",
-        "Content-Length": audioBuffer.byteLength.toString(),
-      },
+    return new Response(JSON.stringify({ script, language: lang }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
   } catch (e) {
