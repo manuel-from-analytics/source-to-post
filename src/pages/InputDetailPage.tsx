@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Star, Trash2, ExternalLink, Loader2,
-  FileText, Sparkles, RefreshCw
+  FileText, Sparkles, RefreshCw, Youtube
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
