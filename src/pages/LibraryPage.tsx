@@ -109,20 +109,21 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl min-w-0 space-y-6 overflow-hidden p-4 lg:p-8">
+    <div className="mx-auto max-w-5xl min-w-0 space-y-4 overflow-hidden p-3 sm:space-y-6 sm:p-4 lg:p-8">
       {/* Header */}
-      <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-w-0 items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight">Biblioteca</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Biblioteca</h1>
+          <p className="text-sm text-muted-foreground">
             {inputs?.length ?? 0} fuentes guardadas
           </p>
         </div>
         <Dialog open={newInputOpen} onOpenChange={(open) => { setNewInputOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
-            <Button className="shrink-0 self-start sm:self-auto">
-              <Plus className="mr-2 h-4 w-4" />
-              Añadir fuente
+            <Button size="sm" className="shrink-0 gap-1.5">
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">Añadir fuente</span>
+              <span className="sm:hidden">Añadir</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
@@ -229,13 +230,10 @@ export default function LibraryPage() {
       </div>
 
       {/* Search + category filter */}
-      <div className="min-w-0 space-y-3">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
+      <div className="min-w-0 space-y-2">
+        <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Buscar fuentes..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="pl-9" />
-          </div>
-        </div>
+            <Input placeholder="Buscar fuentes..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-9 pl-9 text-sm" />
         <CategoryFilter selectedCategoryId={filterCategoryId} onSelect={setFilterCategoryId} />
       </div>
 
@@ -264,49 +262,46 @@ export default function LibraryPage() {
       )}
 
       {/* Input cards */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filteredInputs.map((input) => {
           const Icon = typeIcons[input.type] || FileText;
           return (
-             <Card key={input.id} className="group overflow-hidden transition-all hover:border-primary/20 hover:shadow-md">
-              <CardContent className="p-3 sm:p-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                  <Link to={`/library/${input.id}`} className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className={`rounded-lg p-2 mt-0.5 flex-shrink-0 ${typeColors[input.type] ?? "bg-secondary"}`}>
-                      <Icon className="h-4 w-4" />
+             <Card key={input.id} className="group overflow-hidden transition-colors hover:border-primary/20">
+              <CardContent className="p-2.5 sm:p-4">
+                <div className="flex items-start gap-2.5">
+                  <Link to={`/library/${input.id}`} className="flex min-w-0 flex-1 items-start gap-2.5">
+                    <div className={`rounded-md p-1.5 mt-0.5 flex-shrink-0 ${typeColors[input.type] ?? "bg-secondary"}`}>
+                       <Icon className="h-3.5 w-3.5" />
                     </div>
                     <div className="flex-1 min-w-0">
-                       <h3 className="text-sm font-medium break-words [overflow-wrap:anywhere]">{input.title}</h3>
+                       <h3 className="text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{input.title}</h3>
                       {input.summary && (
-                         <p className="mt-1 line-clamp-2 text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">{input.summary}</p>
+                         <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">{input.summary}</p>
                       )}
-                      {input.original_url && (
-                         <p className="mt-1 line-clamp-1 text-xs text-muted-foreground break-all">{input.original_url}</p>
-                      )}
-                       <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="text-xs">{typeLabels[input.type] ?? input.type}</Badge>
+                       <div className="mt-1.5 flex min-w-0 flex-wrap items-center gap-1.5">
+                        <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{typeLabels[input.type] ?? input.type}</Badge>
                         {input.category_id && categoriesMap.get(input.category_id) && (
                           <CategoryBadge category={categoriesMap.get(input.category_id)!} />
                         )}
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[10px] text-muted-foreground">
                           {new Date(input.created_at).toLocaleDateString("es")}
                         </span>
                       </div>
                     </div>
                   </Link>
-                  <div className="flex shrink-0 items-center justify-end gap-0.5 sm:self-start">
+                  <div className="flex shrink-0 items-center gap-0">
                     <CategoryPicker inputId={input.id} currentCategoryId={input.category_id} />
                     <button
                       onClick={(e) => { e.preventDefault(); toggleFavorite.mutate({ id: input.id, is_favorite: !input.is_favorite }); }}
-                      className="p-1.5 rounded-md hover:bg-secondary transition-colors"
+                      className="p-1 rounded-md hover:bg-secondary transition-colors"
                     >
-                      <Star className={`h-4 w-4 ${input.is_favorite ? "text-accent fill-accent" : "text-muted-foreground"}`} />
+                      <Star className={`h-3.5 w-3.5 ${input.is_favorite ? "text-accent fill-accent" : "text-muted-foreground"}`} />
                     </button>
                     <button
                       onClick={(e) => { e.preventDefault(); deleteInput.mutate(input); }}
-                      className="p-1.5 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
+                      className="p-1 rounded-md hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
