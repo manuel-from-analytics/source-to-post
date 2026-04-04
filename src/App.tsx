@@ -14,6 +14,7 @@ import GeneratorPage from "@/pages/GeneratorPage";
 import HistoryPage from "@/pages/HistoryPage";
 import SettingsPage from "@/pages/SettingsPage";
 import VoicePage from "@/pages/VoicePage";
+import NewsletterPage from "@/pages/NewsletterPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
