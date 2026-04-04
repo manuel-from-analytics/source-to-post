@@ -125,6 +125,12 @@ Rules:
 
     console.log("Podcast script generated, length:", script.length);
 
+    // Save podcast script to newsletter
+    await supabase
+      .from("newsletters")
+      .update({ podcast_script: script })
+      .eq("id", newsletter_id);
+
     return new Response(JSON.stringify({ script, language: lang }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
