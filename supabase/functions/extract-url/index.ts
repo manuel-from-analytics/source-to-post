@@ -49,10 +49,13 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string> {
   })() : null;
 
   if (!captionTracks || captionTracks.length === 0) {
-    // No captions — return description as fallback
     if (description) {
       return `# ${title}\n\n## Descripción del video\n\n${description}\n\n*Este video no tiene subtítulos disponibles. Se muestra la descripción.*`;
     }
+    throw new Error("Este video de YouTube no tiene subtítulos ni descripción disponibles");
+  }
+
+  console.log("Found", captionTracks.length, "caption tracks");
     throw new Error("Este video de YouTube no tiene subtítulos ni descripción disponibles");
   }
 
