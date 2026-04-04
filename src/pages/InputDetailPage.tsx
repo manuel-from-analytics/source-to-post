@@ -101,6 +101,27 @@ export default function InputDetailPage() {
     }
   };
 
+  const handleExtractUrl = async () => {
+    if (!input || !input.original_url) return;
+    setIsExtracting(true);
+    setExtractionStep("Extrayendo contenido de la URL…");
+    try {
+      const { data, error } = await supabase.functions.invoke("extract-url", {
+        body: { input_id: input.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success("Contenido extraído correctamente");
+      queryClient.invalidateQueries({ queryKey: ["input-detail", id] });
+      queryClient.invalidateQueries({ queryKey: ["inputs"] });
+    } catch (e: any) {
+      toast.error(e.message || "Error al extraer contenido de la URL");
+    } finally {
+      setIsExtracting(false);
+      setExtractionStep("");
+    }
+  };
+
   const handleSummarize = async () => {
     if (!input) return;
     setIsSummarizing(true);
@@ -185,28 +206,30 @@ export default function InputDetailPage() {
 
       <Separator />
 
-      {/* PDF Extract button */}
-      {input.type === "pdf" && input.file_path && !input.extracted_content && (
+      {/* Extract button for PDF or URL without extracted content */}
+      {((input.type === "pdf" && input.file_path) || (input.type === "url" && input.original_url)) && !input.extracted_content && (
         <Card className="border-dashed">
           <CardContent className="py-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Extraer texto del PDF</p>
+                <p className="text-sm font-medium">
+                  {input.type === "pdf" ? "Extraer texto del PDF" : "Extraer contenido de la URL"}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  {isExtracting ? extractionStep : "Extrae el contenido textual del documento"}
+                  {isExtracting ? extractionStep : input.type === "pdf" ? "Extrae el contenido textual del documento" : "Extrae el contenido del artículo"}
                 </p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleExtractPdf}
+                onClick={input.type === "pdf" ? handleExtractPdf : handleExtractUrl}
                 disabled={isExtracting}
                 className="gap-1.5"
               >
                 {isExtracting ? (
                   <><Loader2 className="h-3.5 w-3.5 animate-spin" />Extrayendo...</>
                 ) : (
-                  <><FileText className="h-3.5 w-3.5" />Extraer texto</>
+                  <><FileText className="h-3.5 w-3.5" />Extraer contenido</>
                 )}
               </Button>
             </div>
