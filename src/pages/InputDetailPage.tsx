@@ -185,28 +185,30 @@ export default function InputDetailPage() {
 
       <Separator />
 
-      {/* PDF Extract button */}
-      {input.type === "pdf" && input.file_path && !input.extracted_content && (
+      {/* Extract button for PDF or URL without extracted content */}
+      {((input.type === "pdf" && input.file_path) || (input.type === "url" && input.original_url)) && !input.extracted_content && (
         <Card className="border-dashed">
           <CardContent className="py-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Extraer texto del PDF</p>
+                <p className="text-sm font-medium">
+                  {input.type === "pdf" ? "Extraer texto del PDF" : "Extraer contenido de la URL"}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  {isExtracting ? extractionStep : "Extrae el contenido textual del documento"}
+                  {isExtracting ? extractionStep : input.type === "pdf" ? "Extrae el contenido textual del documento" : "Extrae el contenido del artículo"}
                 </p>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleExtractPdf}
+                onClick={input.type === "pdf" ? handleExtractPdf : handleExtractUrl}
                 disabled={isExtracting}
                 className="gap-1.5"
               >
                 {isExtracting ? (
                   <><Loader2 className="h-3.5 w-3.5 animate-spin" />Extrayendo...</>
                 ) : (
-                  <><FileText className="h-3.5 w-3.5" />Extraer texto</>
+                  <><FileText className="h-3.5 w-3.5" />Extraer contenido</>
                 )}
               </Button>
             </div>
