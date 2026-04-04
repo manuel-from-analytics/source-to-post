@@ -148,6 +148,14 @@ export default function NewsletterPage() {
   const { data: pastTopics } = useSearchTopics();
   const { data: selectedDetail } = useNewsletterDetail(selectedId);
   const { generate, isGenerating } = useGenerateNewsletter();
+  const deleteMutation = useDeleteNewsletter();
+
+  const handleDelete = (id: string) => {
+    if (selectedId === id) {
+      setSelectedId(null);
+    }
+    deleteMutation.mutate(id);
+  };
 
   const handleGenerate = async () => {
     if (!topic.trim()) return;
