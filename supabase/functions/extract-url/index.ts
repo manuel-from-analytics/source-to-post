@@ -21,76 +21,102 @@ function extractYouTubeVideoId(url: string): string | null {
 }
 
 async function fetchYouTubeTranscript(videoId: string): Promise<string> {
-  // Fetch the video page to extract caption tracks from the player response
-  const pageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept-Language": "es,en;q=0.9",
-    },
-  });
-
-  if (!pageRes.ok) throw new Error(`YouTube page fetch failed: ${pageRes.status}`);
-  const html = await pageRes.text();
-
-  // Extract title
-  const titleMatch = html.match(/<title>([^<]*)<\/title>/);
-  const title = titleMatch ? titleMatch[1].replace(" - YouTube", "").trim() : "";
-
-  // Extract captions from playerCaptionsTracklistRenderer
-  const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
-  if (!captionMatch) {
-    // No captions available — try to extract description instead
-    const descMatch = html.match(/"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-    const desc = descMatch ? JSON.parse(`"${descMatch[1]}"`) : "";
-    if (desc) {
-      return `# ${title}\n\n## Descripción del video\n\n${desc}\n\n*Este video no tiene subtítulos disponibles. Se muestra la descripción.*`;
-    }
-    throw new Error("Este video de YouTube no tiene subtítulos/transcripción disponibles");
-  }
-
-  let tracks;
+  // Step 1: Get basic info from oEmbed (always works, no auth needed)
+  let title = videoId;
   try {
-    tracks = JSON.parse(captionMatch[1]);
-  } catch {
-    throw new Error("No se pudieron parsear los subtítulos del video");
+    const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+    if (oembedRes.ok) {
+      const oembed = await oembedRes.json();
+      title = oembed.title || videoId;
+    }
+  } catch { /* ignore */ }
+  console.log("Video title:", title);
+
+  // Step 2: Try to get captions via the page HTML
+  let description = "";
+  let captionTracks: any[] | null = null;
+
+  try {
+    const pageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Cookie": "CONSENT=YES+1",
+      },
+    });
+
+    if (pageRes.ok) {
+      const html = await pageRes.text();
+      console.log("HTML length:", html.length);
+
+      // Try to extract ytInitialPlayerResponse JSON
+      const playerMatch = html.match(/var\s+ytInitialPlayerResponse\s*=\s*(\{.+?\});\s*(?:var\s|<\/script>)/s);
+      if (playerMatch) {
+        try {
+          const playerData = JSON.parse(playerMatch[1]);
+          description = playerData?.videoDetails?.shortDescription || "";
+          captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks || null;
+          console.log("Parsed ytInitialPlayerResponse, captions:", captionTracks?.length ?? 0);
+        } catch (e) {
+          console.log("Failed to parse ytInitialPlayerResponse:", e);
+        }
+      }
+
+      // Fallback: try regex patterns directly on HTML
+      if (!captionTracks) {
+        const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
+        if (captionMatch) {
+          try { captionTracks = JSON.parse(captionMatch[1]); } catch { /* ignore */ }
+        }
+      }
+      if (!description) {
+        const descMatch = html.match(/"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (descMatch) {
+          try { description = JSON.parse(`"${descMatch[1]}"`); } catch { /* ignore */ }
+        }
+      }
+    }
+  } catch (e) {
+    console.log("Page fetch failed:", e);
   }
 
-  if (!tracks || tracks.length === 0) {
-    throw new Error("No hay pistas de subtítulos disponibles");
+  // Step 3: If we have caption tracks, fetch the transcript
+  if (captionTracks && captionTracks.length > 0) {
+    console.log("Found", captionTracks.length, "caption tracks");
+    const preferred =
+      captionTracks.find((t: any) => t.languageCode?.startsWith("es")) ||
+      captionTracks.find((t: any) => t.languageCode?.startsWith("en")) ||
+      captionTracks[0];
+
+    const captionUrl = preferred.baseUrl;
+    if (captionUrl) {
+      const captionRes = await fetch(captionUrl);
+      if (captionRes.ok) {
+        const captionXml = await captionRes.text();
+        const lines: string[] = [];
+        const regex = /<text[^>]*>([\s\S]*?)<\/text>/g;
+        let match;
+        while ((match = regex.exec(captionXml)) !== null) {
+          const text = match[1]
+            .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+            .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/\n/g, " ").trim();
+          if (text) lines.push(text);
+        }
+        if (lines.length > 0) {
+          const lang = preferred.languageCode || "desconocido";
+          return `# ${title}\n\n**Idioma de subtítulos:** ${lang}\n\n## Transcripción\n\n${lines.join(" ")}`;
+        }
+      }
+    }
   }
 
-  // Prefer Spanish, then English, then first available
-  const preferred = tracks.find((t: any) => t.languageCode?.startsWith("es"))
-    || tracks.find((t: any) => t.languageCode?.startsWith("en"))
-    || tracks[0];
-
-  const captionUrl = preferred.baseUrl;
-  if (!captionUrl) throw new Error("URL de subtítulos no disponible");
-
-  const captionRes = await fetch(captionUrl);
-  if (!captionRes.ok) throw new Error(`Error al descargar subtítulos: ${captionRes.status}`);
-  const captionXml = await captionRes.text();
-
-  // Parse XML captions to plain text
-  const lines: string[] = [];
-  const regex = /<text[^>]*>([\s\S]*?)<\/text>/g;
-  let match;
-  while ((match = regex.exec(captionXml)) !== null) {
-    const text = match[1]
-      .replace(/&amp;/g, "&")
-      .replace(/&lt;/g, "<")
-      .replace(/&gt;/g, ">")
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      .replace(/\n/g, " ")
-      .trim();
-    if (text) lines.push(text);
+  // Step 4: Fallback to description
+  if (description) {
+    return `# ${title}\n\n## Descripción del video\n\n${description}\n\n*Este video no tiene subtítulos disponibles. Se muestra la descripción.*`;
   }
 
-  if (lines.length === 0) throw new Error("Subtítulos vacíos");
-
-  const lang = preferred.languageCode || "desconocido";
-  return `# ${title}\n\n**Idioma de subtítulos:** ${lang}\n\n## Transcripción\n\n${lines.join(" ")}`;
+  // Step 5: Last resort — return just title + link
+  return `# ${title}\n\nVideo de YouTube: https://www.youtube.com/watch?v=${videoId}\n\n*No se pudieron extraer subtítulos ni descripción de este video.*`;
 }
 
 Deno.serve(async (req) => {
