@@ -138,31 +138,31 @@ export default function GeneratorPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-4 lg:p-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">
+    <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-3 sm:p-4 lg:p-8">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
           {editingPost ? "Editar Post" : "Generador de Posts"}
         </h1>
-        <p className="text-muted-foreground mt-1 break-words">
+        <p className="text-sm text-muted-foreground mt-0.5 break-words">
           {editingPost
             ? "Modifica los parámetros y regenera el contenido"
             : "Selecciona fuentes de referencia y configura tu post"}
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         {/* Left: Config */}
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Source selection */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">
+            <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
+              <CardTitle className="text-xs font-medium sm:text-sm">
                 Fuentes de referencia
               </CardTitle>
             </CardHeader>
-            <CardContent className="min-w-0 space-y-3">
+            <CardContent className="min-w-0 space-y-2 px-3 sm:px-6 sm:space-y-3">
               <CategoryFilter selectedCategoryId={filterCategoryId} onSelect={setFilterCategoryId} />
-              <div className="max-h-[220px] space-y-2 overflow-x-hidden overflow-y-auto">
+              <div className="max-h-[180px] space-y-1.5 overflow-x-hidden overflow-y-auto sm:max-h-[220px] sm:space-y-2">
               {loadingInputs ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -177,17 +177,17 @@ export default function GeneratorPage() {
                   return (
                     <label
                       key={source.id}
-                      className="flex min-w-0 items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-secondary/50"
+                      className="flex min-w-0 items-center gap-2.5 rounded-lg border p-2 transition-colors hover:bg-secondary/50 sm:gap-3 sm:p-3"
                     >
                       <Checkbox
                         checked={selectedSources.includes(source.id)}
                         onCheckedChange={() => toggleSource(source.id)}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium break-words [overflow-wrap:anywhere]">{source.title}</p>
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <Icon className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground capitalize">{source.type}</span>
+                        <p className="text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{source.title}</p>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                          <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span className="text-[10px] text-muted-foreground capitalize">{source.type}</span>
                         </div>
                       </div>
                     </label>
@@ -200,12 +200,12 @@ export default function GeneratorPage() {
 
           {/* Parameters */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium">
+            <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
+              <CardTitle className="text-xs font-medium sm:text-sm">
                 Parámetros de generación
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 px-3 sm:px-6 sm:space-y-4">
               <div className="space-y-2">
                 <Label className="text-xs">Objetivo del post</Label>
                 <Select value={goal} onValueChange={setGoal}>
@@ -341,7 +341,7 @@ export default function GeneratorPage() {
         {/* Right: Result */}
         <div className="space-y-4">
           <Card className="min-h-[400px]">
-            <CardHeader className="pb-3">
+            <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <CardTitle className="text-sm font-medium">Borrador</CardTitle>
                 {content && (
@@ -391,8 +391,8 @@ export default function GeneratorPage() {
           {/* Iteration */}
           {content && !isGenerating && (
             <Card>
-              <CardContent className="p-4">
-                <Label className="text-xs text-muted-foreground mb-2 block">
+              <CardContent className="p-3 sm:p-4">
+                <Label className="text-xs text-muted-foreground mb-1.5 block">
                   Pedir cambios
                 </Label>
                 <div className="flex flex-col gap-2 sm:flex-row">
