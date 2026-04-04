@@ -260,7 +260,7 @@ export default function NewsletterPage() {
                   Aún no has generado newsletters
                 </p>
               ) : (
-                <div className="space-y-1 max-h-[400px] overflow-y-auto">
+                <div className="space-y-1 max-h-[400px] overflow-y-auto overflow-x-hidden">
                     {newsletters.map((nl) => (
                       <div
                         key={nl.id}
