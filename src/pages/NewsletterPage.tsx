@@ -90,13 +90,21 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
-  const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">("idle");
+function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newsletterId: string; savedScript?: string | null; newsletterLang?: string | null }) {
+  const hasSaved = !!savedScript;
+  const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">(hasSaved ? "ready" : "idle");
   const [isPlaying, setIsPlaying] = useState(false);
-  const [script, setScript] = useState<string | null>(null);
-  const [lang, setLang] = useState("es");
+  const [script, setScript] = useState<string | null>(savedScript || null);
+  const [lang, setLang] = useState(newsletterLang || "es");
   const [elapsed, setElapsed] = useState(0);
-  const [estimatedDuration, setEstimatedDuration] = useState(0);
+  const [estimatedDuration, setEstimatedDuration] = useState(() => {
+    if (savedScript) {
+      const wc = savedScript.split(/\s+/).length;
+      const wpm = (newsletterLang || "es") === "en" ? 160 : 150;
+      return Math.round((wc / wpm) * 60);
+    }
+    return 0;
+  });
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(0);
@@ -148,7 +156,6 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
       setScript(data.script);
       setLang(detectedLang);
 
-      // Estimate duration: ~150 words/min for Spanish, ~160 for English
       const wordCount = (data.script || "").split(/\s+/).length;
       const wpm = detectedLang === "en" ? 160 : 150;
       const estSeconds = Math.round((wordCount / wpm) * 60);
@@ -286,7 +293,7 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {newsletter.id && !newsletter.id.startsWith("temp-") && (
-            <PodcastPlayer newsletterId={newsletter.id} />
+            <PodcastPlayer newsletterId={newsletter.id} savedScript={newsletter.podcast_script} newsletterLang={newsletter.language} />
           )}
           {(newsletter.items || []).some(i => !i.imported_to_library) && (
             <Button

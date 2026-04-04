@@ -1,0 +1,1 @@
+ALTER TABLE public.newsletters ADD COLUMN podcast_script text DEFAULT NULL;

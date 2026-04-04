@@ -234,6 +234,7 @@ export type Database = {
           created_at: string
           id: string
           language: string | null
+          podcast_script: string | null
           topic: string
           user_id: string
         }
@@ -242,6 +243,7 @@ export type Database = {
           created_at?: string
           id?: string
           language?: string | null
+          podcast_script?: string | null
           topic: string
           user_id: string
         }
@@ -250,6 +252,7 @@ export type Database = {
           created_at?: string
           id?: string
           language?: string | null
+          podcast_script?: string | null
           topic?: string
           user_id?: string
         }

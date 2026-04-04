@@ -22,6 +22,7 @@ export interface Newsletter {
   topic: string;
   content: string;
   language: string | null;
+  podcast_script: string | null;
   created_at: string;
   items?: NewsletterItem[];
 }
