@@ -126,6 +126,23 @@ export function useCreateInput() {
           }
         });
       }
+
+      // Auto-extract URL content in background
+      if ((data.type === "url" || data.type === "youtube") && data.original_url && !data.extracted_content) {
+        supabase.functions.invoke("extract-url", {
+          body: { input_id: data.id },
+        }).then(({ data: result, error }) => {
+          if (error) {
+            console.error("URL extraction error:", error);
+          } else if (result?.error) {
+            console.error("URL extraction failed:", result.error);
+          } else {
+            queryClient.invalidateQueries({ queryKey: ["inputs"] });
+            queryClient.invalidateQueries({ queryKey: ["input-detail", data.id] });
+            toast.success("Contenido de la URL extraído correctamente");
+          }
+        });
+      }
     },
     onError: (error: Error) => {
       toast.error(`Error al guardar: ${error.message}`);
