@@ -33,17 +33,21 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string> {
   if (!pageRes.ok) throw new Error(`YouTube page fetch failed: ${pageRes.status}`);
   const html = await pageRes.text();
   console.log("YouTube HTML length:", html.length);
+  console.log("HTML preview:", html.substring(0, 500));
 
   // Extract title
   const titleMatch = html.match(/<title>([^<]*)<\/title>/);
   const title = titleMatch ? titleMatch[1].replace(" - YouTube", "").trim() : videoId;
+  console.log("Title:", title);
 
   // Extract description
   const descMatch = html.match(/"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"/);
   const description = descMatch ? JSON.parse(`"${descMatch[1]}"`) : "";
+  console.log("Description length:", description.length);
 
   // Extract captions from playerCaptionsTracklistRenderer
   const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
+  console.log("Caption tracks found:", !!captionMatch);
   const captionTracks = captionMatch ? (() => {
     try { return JSON.parse(captionMatch[1]); } catch { return null; }
   })() : null;
