@@ -270,6 +270,15 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newslett
           <span className="text-[10px] tabular-nums text-muted-foreground">~{formatTime(estimatedDuration)}</span>
         </div>
       </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 w-7 p-0 shrink-0"
+        onClick={() => { window.speechSynthesis.cancel(); setIsPlaying(false); stopTimer(); setElapsed(0); pausedElapsedRef.current = 0; handleGenerate(); }}
+        title="Regenerar podcast"
+      >
+        <RefreshCw className="h-3.5 w-3.5" />
+      </Button>
     </div>
   );
 }
