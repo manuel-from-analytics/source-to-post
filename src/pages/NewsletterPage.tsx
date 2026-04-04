@@ -84,12 +84,39 @@ function NewsletterItemCard({ item, onImport, importing }: {
   );
 }
 
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = Math.floor(seconds % 60);
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
 function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
   const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">("idle");
   const [isPlaying, setIsPlaying] = useState(false);
   const [script, setScript] = useState<string | null>(null);
   const [lang, setLang] = useState("es");
+  const [elapsed, setElapsed] = useState(0);
+  const [estimatedDuration, setEstimatedDuration] = useState(0);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(0);
+  const pausedElapsedRef = useRef<number>(0);
+
+  const startTimer = () => {
+    stopTimer();
+    startTimeRef.current = Date.now() - pausedElapsedRef.current * 1000;
+    timerRef.current = setInterval(() => {
+      const secs = (Date.now() - startTimeRef.current) / 1000;
+      setElapsed(Math.min(secs, estimatedDuration || secs));
+    }, 250);
+  };
+
+  const stopTimer = () => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  };
 
   const handleGenerate = async () => {
     setStatus("generating");
@@ -120,9 +147,14 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
       const detectedLang = data.language || "es";
       setScript(data.script);
       setLang(detectedLang);
-      setStatus("ready");
 
-      // Start speaking
+      // Estimate duration: ~150 words/min for Spanish, ~160 for English
+      const wordCount = (data.script || "").split(/\s+/).length;
+      const wpm = detectedLang === "en" ? 160 : 150;
+      const estSeconds = Math.round((wordCount / wpm) * 60);
+      setEstimatedDuration(estSeconds);
+
+      setStatus("ready");
       speakScript(data.script, detectedLang);
     } catch (e: any) {
       console.error("Podcast error:", e);
@@ -139,35 +171,50 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
     utterance.rate = 1.0;
     utterance.pitch = 1.0;
 
-    // Try to find a good voice for the language
     const voices = window.speechSynthesis.getVoices();
     const langVoice = voices.find(v => v.lang.startsWith(language) && v.localService === false)
       || voices.find(v => v.lang.startsWith(language));
     if (langVoice) utterance.voice = langVoice;
 
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
+    utterance.onend = () => {
+      setIsPlaying(false);
+      stopTimer();
+      // Set elapsed to estimated so it shows full duration
+      setElapsed(prev => prev);
+    };
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      stopTimer();
+    };
     utteranceRef.current = utterance;
 
+    pausedElapsedRef.current = 0;
+    setElapsed(0);
     window.speechSynthesis.speak(utterance);
     setIsPlaying(true);
+    startTimer();
   };
 
   const togglePlay = () => {
     if (isPlaying) {
       window.speechSynthesis.pause();
       setIsPlaying(false);
+      pausedElapsedRef.current = elapsed;
+      stopTimer();
     } else if (window.speechSynthesis.paused) {
       window.speechSynthesis.resume();
       setIsPlaying(true);
+      startTimer();
     } else if (script) {
       speakScript(script, lang);
     }
   };
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => { window.speechSynthesis.cancel(); };
+    return () => {
+      window.speechSynthesis.cancel();
+      stopTimer();
+    };
   }, []);
 
   if (status === "idle") {
@@ -197,15 +244,25 @@ function PodcastPlayer({ newsletterId }: { newsletterId: string }) {
     );
   }
 
+  const progress = estimatedDuration > 0 ? Math.min((elapsed / estimatedDuration) * 100, 100) : 0;
+
   return (
     <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
-      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={togglePlay}>
+      <Button variant="ghost" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={togglePlay}>
         {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
       </Button>
-      <Volume2 className="h-3.5 w-3.5 text-muted-foreground" />
-      <span className="text-xs text-muted-foreground">
-        {isPlaying ? "Reproduciendo..." : "Podcast listo"}
-      </span>
+      <div className="flex-1 min-w-0 space-y-1">
+        <div className="h-1 w-full rounded-full bg-muted-foreground/20 overflow-hidden">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="flex justify-between">
+          <span className="text-[10px] tabular-nums text-muted-foreground">{formatTime(elapsed)}</span>
+          <span className="text-[10px] tabular-nums text-muted-foreground">~{formatTime(estimatedDuration)}</span>
+        </div>
+      </div>
     </div>
   );
 }
