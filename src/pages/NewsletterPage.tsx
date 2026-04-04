@@ -42,15 +42,17 @@ function NewsletterItemCard({ item, onImport, importing }: {
   importing: boolean;
 }) {
   return (
-    <div className="rounded-lg border p-4 space-y-2">
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="font-medium text-sm leading-tight flex-1">{item.title}</h4>
-        <SourceBadge type={item.source_type} />
+    <div className="space-y-2 rounded-lg border p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <h4 className="flex-1 text-sm font-medium leading-tight break-words [overflow-wrap:anywhere]">{item.title}</h4>
+        <div className="self-start shrink-0">
+          <SourceBadge type={item.source_type} />
+        </div>
       </div>
       {item.description && (
-        <p className="text-xs text-muted-foreground leading-relaxed">{item.description}</p>
+        <p className="text-xs leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere]">{item.description}</p>
       )}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <a
           href={item.url}
           target="_blank"
@@ -90,10 +92,10 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-bold">{newsletter.topic}</h2>
+    <div className="min-w-0 space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h2 className="text-lg font-bold break-words [overflow-wrap:anywhere]">{newsletter.topic}</h2>
           <p className="text-xs text-muted-foreground">
             {format(new Date(newsletter.created_at), "d MMM yyyy, HH:mm", { locale: es })}
           </p>
@@ -129,7 +131,7 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
             <CardTitle className="text-sm">Contenido completo</CardTitle>
           </CardHeader>
           <CardContent>
-            <pre className="text-xs whitespace-pre-wrap font-sans leading-relaxed text-foreground">
+            <pre className="text-xs whitespace-pre-wrap font-sans leading-relaxed text-foreground break-words [overflow-wrap:anywhere]">
               {newsletter.content}
             </pre>
           </CardContent>
@@ -178,7 +180,7 @@ export default function NewsletterPage() {
   const activeNewsletter = selectedId ? selectedDetail : generatedNewsletter;
 
   return (
-    <div className="p-4 lg:p-8 max-w-5xl mx-auto overflow-hidden">
+    <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-4 lg:p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight">Newsletter</h1>
         <p className="text-muted-foreground mt-1 break-words">
@@ -198,7 +200,7 @@ export default function NewsletterPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
                   placeholder="Ej: AI agents in enterprise analytics..."
                   value={topic}
@@ -210,7 +212,7 @@ export default function NewsletterPage() {
                   size="sm"
                   onClick={handleGenerate}
                   disabled={isGenerating || !topic.trim()}
-                  className="gap-1 shrink-0"
+                  className="shrink-0 gap-1 self-start sm:self-auto"
                 >
                   {isGenerating ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -231,7 +233,7 @@ export default function NewsletterPage() {
                       <button
                         key={t}
                         onClick={() => handleReuseTopic(t)}
-                        className="text-[11px] px-2 py-1 rounded-full bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors truncate max-w-[180px]"
+                        className="max-w-full truncate rounded-full bg-secondary px-2 py-1 text-[11px] text-secondary-foreground transition-colors hover:bg-secondary/80 sm:max-w-[180px]"
                       >
                         {t}
                       </button>
@@ -264,7 +266,7 @@ export default function NewsletterPage() {
                     {newsletters.map((nl) => (
                       <div
                         key={nl.id}
-                        className={`w-full text-left rounded-lg px-3 py-2.5 transition-colors flex items-center gap-2 ${
+                        className={`flex min-w-0 w-full items-start gap-2 rounded-lg px-3 py-2.5 text-left transition-colors ${
                           selectedId === nl.id
                             ? "bg-primary/10 text-primary"
                             : "hover:bg-secondary/50"
