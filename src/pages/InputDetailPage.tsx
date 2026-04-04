@@ -170,29 +170,29 @@ export default function InputDetailPage() {
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
+      <div className="flex items-start justify-between gap-2 min-w-0">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <Badge variant="secondary" className="text-xs">{typeLabels[input.type] ?? input.type}</Badge>
+            <Badge variant="secondary" className="text-xs flex-shrink-0">{typeLabels[input.type] ?? input.type}</Badge>
           </div>
-          <h1 className="text-xl lg:text-2xl font-bold">{input.title}</h1>
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold break-words">{input.title}</h1>
           {input.original_url && (
             <a
               href={input.original_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-1"
+              className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-1 break-all"
             >
-              <ExternalLink className="h-3.5 w-3.5" />
+              <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
               Ver original
             </a>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button variant="ghost" size="icon" onClick={handleToggleFavorite}>
+        <div className="flex gap-1 flex-shrink-0">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleToggleFavorite}>
             <Star className={`h-4 w-4 ${input.is_favorite ? "fill-accent text-accent" : ""}`} />
           </Button>
-          <Button variant="ghost" size="icon" className="text-destructive" onClick={handleDelete}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={handleDelete}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
