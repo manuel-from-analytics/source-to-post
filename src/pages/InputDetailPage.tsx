@@ -173,7 +173,10 @@ export default function InputDetailPage() {
       <div className="flex items-start justify-between gap-2 min-w-0">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <Badge variant="secondary" className="text-xs flex-shrink-0">{typeLabels[input.type] ?? input.type}</Badge>
+            <Badge variant="secondary" className={`text-xs flex-shrink-0 ${input.type === "youtube" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" : ""}`}>
+              {input.type === "youtube" && <Youtube className="h-3 w-3 mr-1" />}
+              {typeLabels[input.type] ?? input.type}
+            </Badge>
           </div>
           <h1 className="text-lg sm:text-xl lg:text-2xl font-bold break-words">{input.title}</h1>
           {input.original_url && (
