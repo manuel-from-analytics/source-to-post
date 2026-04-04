@@ -21,52 +21,54 @@ function extractYouTubeVideoId(url: string): string | null {
 }
 
 async function fetchYouTubeTranscript(videoId: string): Promise<string> {
-  // Fetch the video page to extract caption tracks from the player response
-  const pageRes = await fetch(`https://www.youtube.com/watch?v=${videoId}`, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-      "Accept-Language": "es,en;q=0.9",
+  // Use YouTube's innertube API to get video info and captions
+  const innertubePayload = {
+    context: {
+      client: {
+        clientName: "WEB",
+        clientVersion: "2.20240101.00.00",
+        hl: "es",
+      },
     },
-  });
+    videoId,
+  };
 
-  if (!pageRes.ok) throw new Error(`YouTube page fetch failed: ${pageRes.status}`);
-  const html = await pageRes.text();
-
-  // Extract title
-  const titleMatch = html.match(/<title>([^<]*)<\/title>/);
-  const title = titleMatch ? titleMatch[1].replace(" - YouTube", "").trim() : "";
-
-  // Extract captions from playerCaptionsTracklistRenderer
-  const captionMatch = html.match(/"captionTracks":\s*(\[.*?\])/);
-  if (!captionMatch) {
-    // No captions available — try to extract description instead
-    const descMatch = html.match(/"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-    const desc = descMatch ? JSON.parse(`"${descMatch[1]}"`) : "";
-    if (desc) {
-      return `# ${title}\n\n## Descripción del video\n\n${desc}\n\n*Este video no tiene subtítulos disponibles. Se muestra la descripción.*`;
+  // First get video metadata and caption info
+  const playerRes = await fetch(
+    "https://www.youtube.com/youtubei/v1/player?prettyPrint=false",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(innertubePayload),
     }
-    throw new Error("Este video de YouTube no tiene subtítulos/transcripción disponibles");
-  }
+  );
 
-  let tracks;
-  try {
-    tracks = JSON.parse(captionMatch[1]);
-  } catch {
-    throw new Error("No se pudieron parsear los subtítulos del video");
-  }
+  if (!playerRes.ok) throw new Error(`YouTube API failed: ${playerRes.status}`);
+  const playerData = await playerRes.json();
 
-  if (!tracks || tracks.length === 0) {
-    throw new Error("No hay pistas de subtítulos disponibles");
+  const title = playerData?.videoDetails?.title || videoId;
+  const description = playerData?.videoDetails?.shortDescription || "";
+  const captionTracks =
+    playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+
+  if (!captionTracks || captionTracks.length === 0) {
+    // No captions — return description as fallback
+    if (description) {
+      return `# ${title}\n\n## Descripción del video\n\n${description}\n\n*Este video no tiene subtítulos disponibles. Se muestra la descripción.*`;
+    }
+    throw new Error("Este video de YouTube no tiene subtítulos ni descripción disponibles");
   }
 
   // Prefer Spanish, then English, then first available
-  const preferred = tracks.find((t: any) => t.languageCode?.startsWith("es"))
-    || tracks.find((t: any) => t.languageCode?.startsWith("en"))
-    || tracks[0];
+  const preferred =
+    captionTracks.find((t: any) => t.languageCode?.startsWith("es")) ||
+    captionTracks.find((t: any) => t.languageCode?.startsWith("en")) ||
+    captionTracks[0];
 
   const captionUrl = preferred.baseUrl;
   if (!captionUrl) throw new Error("URL de subtítulos no disponible");
 
+  console.log("Fetching captions from:", captionUrl);
   const captionRes = await fetch(captionUrl);
   if (!captionRes.ok) throw new Error(`Error al descargar subtítulos: ${captionRes.status}`);
   const captionXml = await captionRes.text();
@@ -87,7 +89,13 @@ async function fetchYouTubeTranscript(videoId: string): Promise<string> {
     if (text) lines.push(text);
   }
 
-  if (lines.length === 0) throw new Error("Subtítulos vacíos");
+  if (lines.length === 0) {
+    // Captions XML was empty — fallback to description
+    if (description) {
+      return `# ${title}\n\n## Descripción del video\n\n${description}\n\n*Los subtítulos estaban vacíos. Se muestra la descripción.*`;
+    }
+    throw new Error("Subtítulos vacíos");
+  }
 
   const lang = preferred.languageCode || "desconocido";
   return `# ${title}\n\n**Idioma de subtítulos:** ${lang}\n\n## Transcripción\n\n${lines.join(" ")}`;
