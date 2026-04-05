@@ -17,8 +17,7 @@ import { useInputs } from "@/hooks/useInputs";
 import { useGeneratePost } from "@/hooks/useGeneratePost";
 import { useUpdatePost } from "@/hooks/usePosts";
 import { CategoryFilter } from "@/components/CategoryWidgets";
-import { useVoiceSamples } from "@/hooks/useVoiceSamples";
-import { Switch } from "@/components/ui/switch";
+import { useVoices } from "@/hooks/useVoices";
 import { toast } from "sonner";
 
 const typeIcons: Record<string, React.ElementType> = {
@@ -51,11 +50,11 @@ export default function GeneratorPage() {
   const [length, setLength] = useState("medium");
   const [cta, setCta] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
-  const [writingStyle, setWritingStyle] = useState("");
-  const [useVoice, setUseVoice] = useState(true);
+  const [contentFocus, setContentFocus] = useState("");
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>("none");
 
   const { data: inputs, isLoading: loadingInputs } = useInputs();
-  const { data: voiceSamples } = useVoiceSamples();
+  const { data: voices } = useVoices();
   const { generate, savePost, isGenerating, content, setContent } = useGeneratePost();
   const updatePost = useUpdatePost();
 
@@ -85,8 +84,8 @@ export default function GeneratorPage() {
       length: length || undefined,
       cta: cta || undefined,
       target_audience: targetAudience || undefined,
-      writing_style: writingStyle || undefined,
-      use_voice: useVoice && (voiceSamples?.length ?? 0) > 0,
+      content_focus: contentFocus || undefined,
+      voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
     });
   };
 
@@ -100,10 +99,10 @@ export default function GeneratorPage() {
       length: length || undefined,
       cta: cta || undefined,
       target_audience: targetAudience || undefined,
-      writing_style: writingStyle || undefined,
+      content_focus: contentFocus || undefined,
       iteration_prompt: iterationPrompt.trim(),
       previous_content: content,
-      use_voice: useVoice && (voiceSamples?.length ?? 0) > 0,
+      voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
     });
     setIterationPrompt("");
   };
@@ -117,14 +116,8 @@ export default function GeneratorPage() {
   const handleSave = () => {
     if (editingPost) {
       updatePost.mutate(
-        {
-          id: editingPost.id,
-          content,
-          title: editingPost.title || undefined,
-        },
-        {
-          onSuccess: () => toast.success("Post actualizado"),
-        }
+        { id: editingPost.id, content, title: editingPost.title || undefined },
+        { onSuccess: () => toast.success("Post actualizado") }
       );
     } else {
       savePost({
@@ -209,9 +202,7 @@ export default function GeneratorPage() {
               <div className="space-y-2">
                 <Label className="text-xs">Objetivo del post</Label>
                 <Select value={goal} onValueChange={setGoal}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona objetivo" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Selecciona objetivo" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="educate">Educar</SelectItem>
                     <SelectItem value="inspire">Inspirar</SelectItem>
@@ -226,9 +217,7 @@ export default function GeneratorPage() {
                 <div className="space-y-2">
                   <Label className="text-xs">Tono</Label>
                   <Select value={tone} onValueChange={setTone}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tono" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Tono" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="professional">Profesional</SelectItem>
                       <SelectItem value="casual">Casual</SelectItem>
@@ -242,9 +231,7 @@ export default function GeneratorPage() {
                 <div className="space-y-2">
                   <Label className="text-xs">Idioma</Label>
                   <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Idioma" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Idioma" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="es">Español</SelectItem>
                       <SelectItem value="en">Inglés</SelectItem>
@@ -258,9 +245,7 @@ export default function GeneratorPage() {
                 <div className="space-y-2">
                   <Label className="text-xs">Longitud</Label>
                   <Select value={length} onValueChange={setLength}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Longitud" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Longitud" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="short">Corto (~100 palabras)</SelectItem>
                       <SelectItem value="medium">Medio (~200 palabras)</SelectItem>
@@ -272,9 +257,7 @@ export default function GeneratorPage() {
                 <div className="space-y-2">
                   <Label className="text-xs">CTA</Label>
                   <Select value={cta} onValueChange={setCta}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Call to action" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Call to action" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="question">Pregunta</SelectItem>
                       <SelectItem value="share">Compartir</SelectItem>
@@ -296,23 +279,27 @@ export default function GeneratorPage() {
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Estilo / Voz</Label>
-                <Input
-                  placeholder="Ej: Como Gary Vee, como un mentor..."
-                  value={writingStyle}
-                  onChange={(e) => setWritingStyle(e.target.value)}
+                <Label className="text-xs">Enfoque del contenido</Label>
+                <Textarea
+                  placeholder="Indica cómo quieres enfocar las fuentes seleccionadas. Ej: 'Centra el post en las estadísticas de adopción', 'Compara los puntos de vista de ambos artículos', 'Extrae los 3 insights más prácticos'..."
+                  value={contentFocus}
+                  onChange={(e) => setContentFocus(e.target.value)}
+                  className="min-h-[60px]"
                 />
               </div>
 
-              {(voiceSamples?.length ?? 0) > 0 && (
-                <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
-                  <div className="min-w-0 space-y-0.5">
-                    <Label className="text-xs font-medium">Usar mi voz</Label>
-                    <p className="text-[10px] text-muted-foreground break-words [overflow-wrap:anywhere]">
-                      {voiceSamples?.length} ejemplo{voiceSamples?.length !== 1 ? "s" : ""} de estilo guardado{voiceSamples?.length !== 1 ? "s" : ""}
-                    </p>
-                  </div>
-                  <Switch checked={useVoice} onCheckedChange={setUseVoice} />
+              {(voices?.length ?? 0) > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-xs">Voz</Label>
+                  <Select value={selectedVoiceId} onValueChange={setSelectedVoiceId}>
+                    <SelectTrigger><SelectValue placeholder="Selecciona una voz" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sin voz (estilo genérico)</SelectItem>
+                      {voices!.map((v) => (
+                        <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
             </CardContent>
@@ -325,15 +312,9 @@ export default function GeneratorPage() {
             size="lg"
           >
             {isGenerating ? (
-              <>
-                <RefreshCw className="h-4 w-4 animate-spin" />
-                Generando...
-              </>
+              <><RefreshCw className="h-4 w-4 animate-spin" />Generando...</>
             ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                {editingPost ? "Regenerar post" : "Generar borrador"}
-              </>
+              <><Sparkles className="h-4 w-4" />{editingPost ? "Regenerar post" : "Generar borrador"}</>
             )}
           </Button>
         </div>
@@ -347,16 +328,14 @@ export default function GeneratorPage() {
                 {content && (
                   <div className="flex flex-wrap gap-1">
                     <Button variant="ghost" size="sm" onClick={handleGenerate} disabled={isGenerating} className="text-xs gap-1">
-                      <RefreshCw className="h-3 w-3" />
-                      Regenerar
+                      <RefreshCw className="h-3 w-3" />Regenerar
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleCopy} className="text-xs gap-1">
                       {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                       {copied ? "Copiado" : "Copiar"}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleSave} className="text-xs gap-1">
-                      <Save className="h-3 w-3" />
-                      {editingPost ? "Actualizar" : "Guardar"}
+                      <Save className="h-3 w-3" />{editingPost ? "Actualizar" : "Guardar"}
                     </Button>
                   </div>
                 )}
@@ -377,24 +356,17 @@ export default function GeneratorPage() {
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <PenTool className="h-10 w-10 text-muted-foreground/40 mb-3" />
-                  <p className="text-sm text-muted-foreground">
-                    Tu borrador aparecerá aquí
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Selecciona fuentes y configura los parámetros
-                  </p>
+                  <p className="text-sm text-muted-foreground">Tu borrador aparecerá aquí</p>
+                  <p className="text-xs text-muted-foreground mt-1">Selecciona fuentes y configura los parámetros</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Iteration */}
           {content && !isGenerating && (
             <Card>
               <CardContent className="p-3 sm:p-4">
-                <Label className="text-xs text-muted-foreground mb-1.5 block">
-                  Pedir cambios
-                </Label>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">Pedir cambios</Label>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
                     placeholder='Ej: "Hazlo más directo", "Añade datos"...'
@@ -404,8 +376,7 @@ export default function GeneratorPage() {
                     className="text-sm"
                   />
                   <Button size="sm" className="gap-1 self-start sm:self-auto" onClick={handleIterate} disabled={isGenerating}>
-                    <Send className="h-3.5 w-3.5" />
-                    Enviar
+                    <Send className="h-3.5 w-3.5" />Enviar
                   </Button>
                 </div>
               </CardContent>

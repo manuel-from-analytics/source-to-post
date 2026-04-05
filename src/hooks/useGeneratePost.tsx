@@ -12,10 +12,10 @@ interface GenerateParams {
   length?: string;
   cta?: string;
   target_audience?: string;
-  writing_style?: string;
+  content_focus?: string;
   iteration_prompt?: string;
   previous_content?: string;
-  use_voice?: boolean;
+  voice_id?: string;
 }
 
 export function useGeneratePost() {
@@ -56,7 +56,7 @@ export function useGeneratePost() {
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let textBuffer = "";
-      let accumulated = params.iteration_prompt ? "" : "";
+      let accumulated = "";
       let streamDone = false;
 
       while (!streamDone) {
@@ -74,18 +74,12 @@ export function useGeneratePost() {
           if (!line.startsWith("data: ")) continue;
 
           const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") {
-            streamDone = true;
-            break;
-          }
+          if (jsonStr === "[DONE]") { streamDone = true; break; }
 
           try {
             const parsed = JSON.parse(jsonStr);
             const delta = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (delta) {
-              accumulated += delta;
-              setContent(accumulated);
-            }
+            if (delta) { accumulated += delta; setContent(accumulated); }
           } catch {
             textBuffer = line + "\n" + textBuffer;
             break;
@@ -93,7 +87,6 @@ export function useGeneratePost() {
         }
       }
 
-      // Final flush
       if (textBuffer.trim()) {
         for (let raw of textBuffer.split("\n")) {
           if (!raw) continue;
@@ -105,10 +98,7 @@ export function useGeneratePost() {
           try {
             const parsed = JSON.parse(jsonStr);
             const delta = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (delta) {
-              accumulated += delta;
-              setContent(accumulated);
-            }
+            if (delta) { accumulated += delta; setContent(accumulated); }
           } catch { /* ignore */ }
         }
       }
