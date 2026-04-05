@@ -316,6 +316,7 @@ export type Database = {
           id: string
           title: string | null
           user_id: string
+          voice_id: string
         }
         Insert: {
           content: string
@@ -323,12 +324,49 @@ export type Database = {
           id?: string
           title?: string | null
           user_id: string
+          voice_id: string
         }
         Update: {
           content?: string
           created_at?: string
           id?: string
           title?: string | null
+          user_id?: string
+          voice_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voice_samples_voice_id_fkey"
+            columns: ["voice_id"]
+            isOneToOne: false
+            referencedRelation: "voices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      voices: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
