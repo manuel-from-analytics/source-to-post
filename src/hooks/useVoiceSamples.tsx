@@ -6,39 +6,39 @@ import { toast } from "sonner";
 export interface VoiceSample {
   id: string;
   user_id: string;
+  voice_id: string;
   title: string | null;
   content: string;
   created_at: string;
 }
 
-export function useVoiceSamples() {
+export function useVoiceSamples(voiceId?: string) {
   const { user } = useAuth();
-
-  const query = useQuery({
-    queryKey: ["voice-samples", user?.id],
+  return useQuery({
+    queryKey: ["voice-samples", user?.id, voiceId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("voice_samples" as any)
+      let query = supabase
+        .from("voice_samples")
         .select("*")
         .order("created_at", { ascending: false });
+      if (voiceId) query = query.eq("voice_id", voiceId);
+      const { data, error } = await query;
       if (error) throw error;
-      return data as unknown as VoiceSample[];
+      return data as VoiceSample[];
     },
     enabled: !!user,
   });
-
-  return query;
 }
 
 export function useAddVoiceSample() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-
   return useMutation({
-    mutationFn: async ({ title, content }: { title?: string; content: string }) => {
+    mutationFn: async ({ title, content, voice_id }: { title?: string; content: string; voice_id: string }) => {
       if (!user) throw new Error("No autenticado");
-      const { error } = await supabase.from("voice_samples" as any).insert({
+      const { error } = await supabase.from("voice_samples").insert({
         user_id: user.id,
+        voice_id,
         title: title || null,
         content,
       } as any);
@@ -54,10 +54,9 @@ export function useAddVoiceSample() {
 
 export function useDeleteVoiceSample() {
   const queryClient = useQueryClient();
-
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("voice_samples" as any).delete().eq("id", id);
+      const { error } = await supabase.from("voice_samples").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {

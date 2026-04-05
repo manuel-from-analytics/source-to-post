@@ -40,63 +40,13 @@ serve(async (req) => {
       });
     }
 
-    // Step 1: Check for recent newsletters on same topic (dedup within 14 days)
-    const { data: recentNewsletters } = await supabase
-      .from("newsletters")
-      .select("id, topic, created_at")
-      .eq("user_id", userId)
-      .gte("created_at", new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString())
-      .ilike("topic", `%${topic.trim()}%`)
-      .limit(5);
-
-    // Step 2: Search web using Firecrawl
-    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
-    if (!FIRECRAWL_API_KEY) {
-      return new Response(JSON.stringify({ error: "Firecrawl not configured" }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    console.log("Searching for:", topic);
-
-    const searchResponse = await fetch("https://api.firecrawl.dev/v1/search", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: `${topic.trim()} research analysis insights ${new Date().getFullYear()}`,
-        limit: 15,
-        scrapeOptions: { formats: ["markdown"] },
-      }),
-    });
-
-    if (!searchResponse.ok) {
-      const errText = await searchResponse.text();
-      console.error("Firecrawl error:", searchResponse.status, errText);
-      if (searchResponse.status === 402) {
-        return new Response(JSON.stringify({ error: "Créditos de búsqueda agotados." }), {
-          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      throw new Error("Search failed");
-    }
-
-    const searchData = await searchResponse.json();
-    const results = searchData.data || [];
-    console.log(`Found ${results.length} search results`);
-
-    // Collect existing links to dedup
-    let existingUrls: string[] = [];
-    if (recentNewsletters && recentNewsletters.length > 0) {
-      const ids = recentNewsletters.map((n: any) => n.id);
-      const { data: existingItems } = await supabase
-        .from("newsletter_items")
-        .select("url")
-        .in("newsletter_id", ids);
-      existingUrls = (existingItems || []).map((i: any) => i.url);
-    }
+    // Step 1: Collect ALL previously used URLs to avoid repetition across newsletters
+    const { data: allExistingItems } = await supabase
+      .from("newsletter_items")
+      .select("url, newsletter_id")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const existingUrls: string[] = (allExistingItems || []).map((i: any) => i.url);
 
     // Step 3: Use Lovable AI to generate structured newsletter
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

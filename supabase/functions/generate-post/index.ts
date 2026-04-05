@@ -14,8 +14,7 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -29,24 +28,14 @@ serve(async (req) => {
     const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
     if (claimsError || !claimsData?.claims) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
 
     const {
-      input_ids,
-      goal,
-      tone,
-      language,
-      length,
-      cta,
-      target_audience,
-      writing_style,
-      iteration_prompt,
-      previous_content,
-      use_voice,
+      input_ids, goal, tone, language, length, cta,
+      target_audience, content_focus, iteration_prompt,
+      previous_content, voice_id,
     } = await req.json();
 
     // Fetch selected inputs
@@ -57,19 +46,19 @@ serve(async (req) => {
         .select("title, raw_content, extracted_content, summary, original_url, type")
         .in("id", input_ids);
       if (inputsError) throw inputsError;
-
       sourceTexts = (inputs || []).map((inp: any) => {
         const content = inp.extracted_content || inp.raw_content || inp.summary || "";
         return `[${inp.type.toUpperCase()}] ${inp.title}\n${content}${inp.original_url ? `\nURL: ${inp.original_url}` : ""}`;
       });
     }
 
-    // Fetch voice samples if requested
+    // Fetch voice samples if a specific voice is selected
     let voiceTexts: string[] = [];
-    if (use_voice) {
+    if (voice_id) {
       const { data: samples, error: samplesError } = await supabase
         .from("voice_samples")
         .select("title, content")
+        .eq("voice_id", voice_id)
         .limit(10);
       if (!samplesError && samples && samples.length > 0) {
         voiceTexts = samples.map((s: any) =>
@@ -79,39 +68,23 @@ serve(async (req) => {
     }
 
     const goalMap: Record<string, string> = {
-      educate: "Educar a la audiencia",
-      inspire: "Inspirar y motivar",
-      promote: "Promocionar un producto o servicio",
-      engage: "Generar engagement y conversación",
+      educate: "Educar a la audiencia", inspire: "Inspirar y motivar",
+      promote: "Promocionar un producto o servicio", engage: "Generar engagement y conversación",
       storytelling: "Contar una historia",
     };
-
     const toneMap: Record<string, string> = {
-      professional: "profesional",
-      casual: "casual y cercano",
-      inspirational: "inspiracional",
-      direct: "directo y conciso",
-      humorous: "con humor",
+      professional: "profesional", casual: "casual y cercano",
+      inspirational: "inspiracional", direct: "directo y conciso", humorous: "con humor",
     };
-
     const lengthMap: Record<string, string> = {
-      short: "corto (~100 palabras)",
-      medium: "medio (~200 palabras)",
-      long: "largo (~300 palabras)",
+      short: "corto (~100 palabras)", medium: "medio (~200 palabras)", long: "largo (~300 palabras)",
     };
-
     const ctaMap: Record<string, string> = {
-      question: "una pregunta abierta al lector",
-      share: "invitar a compartir",
-      follow: "invitar a seguir",
-      link: "invitar a visitar un enlace",
-      none: "sin call to action",
+      question: "una pregunta abierta al lector", share: "invitar a compartir",
+      follow: "invitar a seguir", link: "invitar a visitar un enlace", none: "sin call to action",
     };
-
     const langMap: Record<string, string> = {
-      es: "español",
-      en: "inglés",
-      pt: "portugués",
+      es: "español", en: "inglés", pt: "portugués",
     };
 
     let systemPrompt = `Eres un experto creador de contenido para LinkedIn. 
@@ -148,10 +121,13 @@ ${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}
       if (length && lengthMap[length]) specs.push(`Longitud: ${lengthMap[length]}`);
       if (cta && ctaMap[cta]) specs.push(`CTA: ${ctaMap[cta]}`);
       if (target_audience) specs.push(`Audiencia objetivo: ${target_audience}`);
-      if (writing_style) specs.push(`Estilo / voz: ${writing_style}`);
 
       if (specs.length > 0) {
         userPrompt += `\n\nEspecificaciones:\n${specs.join("\n")}`;
+      }
+
+      if (content_focus) {
+        userPrompt += `\n\nINDICACIONES DE ENFOQUE DEL CONTENIDO:\n${content_focus}`;
       }
 
       userPrompt += "\n\nDevuelve solo el post, sin explicaciones ni metadatos.";
@@ -179,14 +155,12 @@ ${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}
     if (!aiResponse.ok) {
       if (aiResponse.status === 429) {
         return new Response(JSON.stringify({ error: "Límite de solicitudes excedido. Intenta de nuevo en unos minutos." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (aiResponse.status === 402) {
         return new Response(JSON.stringify({ error: "Créditos de IA agotados." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const errText = await aiResponse.text();
