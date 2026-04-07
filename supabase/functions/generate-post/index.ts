@@ -90,7 +90,8 @@ serve(async (req) => {
     let systemPrompt = `Eres un experto creador de contenido para LinkedIn. 
 Generas posts de alta calidad, optimizados para engagement.
 Usa emojis con moderación, formato con saltos de línea y estructura visual clara.
-NO uses markdown (ni asteriscos ni negritas), escribe en texto plano.`;
+NO uses markdown (ni asteriscos ni negritas), escribe en texto plano.
+IMPORTANTE: NO empieces el post con texto entre corchetes como [Título] o [Hook]. Empieza directamente con el contenido del post.`;
 
     if (voiceTexts.length > 0) {
       systemPrompt += `\n\nIMPORTANTE - ESTILO DE ESCRITURA:

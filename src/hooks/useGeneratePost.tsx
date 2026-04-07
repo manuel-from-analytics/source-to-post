@@ -24,6 +24,8 @@ export function useGeneratePost() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [content, setContent] = useState("");
 
+  const cleanLeadingBrackets = (text: string) =>
+    text.replace(/^\s*\[.*?\]\s*/g, "");
   const generate = async (params: GenerateParams) => {
     if (!user) return;
     setIsGenerating(true);
