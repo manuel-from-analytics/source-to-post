@@ -51,22 +51,32 @@ export default function HistoryPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const postStateForGenerator = (post: Post) => ({
+    id: post.id,
+    content: post.content,
+    goal: post.goal,
+    tone: post.tone,
+    target_audience: post.target_audience,
+    input_id: post.input_id,
+    title: post.title,
+    language: (post as any).language,
+    cta: (post as any).cta,
+    length: (post as any).length,
+    content_focus: (post as any).content_focus,
+    voice_id: (post as any).voice_id,
+  });
+
   const handleEdit = (post: Post) => {
     navigate("/generator", {
-      state: {
-        editingPost: {
-          id: post.id,
-          content: post.content,
-          goal: post.goal,
-          tone: post.tone,
-          target_audience: post.target_audience,
-          input_id: post.input_id,
-          title: post.title,
-          language: (post as any).language,
-          cta: (post as any).cta,
-          length: (post as any).length,
-          content_focus: (post as any).content_focus,
-          voice_id: (post as any).voice_id,
+      state: { editingPost: postStateForGenerator(post) },
+    });
+  };
+
+  const handleDuplicate = (post: Post) => {
+    const { id, ...rest } = postStateForGenerator(post);
+    navigate("/generator", {
+      state: { duplicatePost: rest },
+    });
         },
       },
     });
