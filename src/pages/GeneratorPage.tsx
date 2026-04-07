@@ -163,11 +163,13 @@ export default function GeneratorPage() {
     <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-3 sm:p-4 lg:p-8">
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-          {editingPost ? "Editar Post" : "Generador de Posts"}
+          {editingPost ? "Editar Post" : duplicatePost ? "Duplicar Post" : "Generador de Posts"}
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5 break-words">
           {editingPost
             ? "Modifica los parámetros y regenera el contenido"
+            : duplicatePost
+            ? "Ajusta los parámetros y genera una nueva versión"
             : "Selecciona fuentes de referencia y configura tu post"}
         </p>
       </div>

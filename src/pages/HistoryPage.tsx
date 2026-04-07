@@ -73,7 +73,7 @@ export default function HistoryPage() {
   };
 
   const handleDuplicate = (post: Post) => {
-    const { id, ...rest } = postStateForGenerator(post);
+    const { id: _id, ...rest } = postStateForGenerator(post);
     navigate("/generator", {
       state: { duplicatePost: rest },
     });
