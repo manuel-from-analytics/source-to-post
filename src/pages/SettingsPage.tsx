@@ -28,7 +28,7 @@ export default function SettingsPage() {
 
   // Preferences
   const [preferredLanguage, setPreferredLanguage] = useState("es");
-  const [writingStyle, setWritingStyle] = useState("");
+  
   const [defaultVoiceId, setDefaultVoiceId] = useState("none");
   const [defaultLength, setDefaultLength] = useState("none");
   const [defaultCta, setDefaultCta] = useState("none");
@@ -45,7 +45,7 @@ export default function SettingsPage() {
       if (!error && data) {
         setFullName(data.full_name || "");
         setPreferredLanguage(data.preferred_language || "es");
-        setWritingStyle(data.default_writing_style || "");
+        
         setDefaultVoiceId((data as any).default_voice_id || "none");
         setDefaultLength((data as any).default_length || "none");
         setDefaultCta((data as any).default_cta || "none");
@@ -93,7 +93,7 @@ export default function SettingsPage() {
       .from("profiles")
       .update({
         preferred_language: preferredLanguage,
-        default_writing_style: writingStyle.trim() || null,
+        
         default_voice_id: defaultVoiceId !== "none" ? defaultVoiceId : null,
         default_length: defaultLength !== "none" ? defaultLength : null,
         default_cta: defaultCta !== "none" ? defaultCta : null,
@@ -190,10 +190,6 @@ export default function SettingsPage() {
                 <SelectItem value="pt">Portugués</SelectItem>
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Estilo de escritura por defecto</Label>
-            <Input placeholder="Ej: Profesional y directo, como un mentor..." value={writingStyle} onChange={(e) => setWritingStyle(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label>Voz por defecto</Label>
