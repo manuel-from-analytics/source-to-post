@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil } from "lucide-react";
+import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Files } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -51,24 +51,31 @@ export default function HistoryPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const postStateForGenerator = (post: Post) => ({
+    id: post.id,
+    content: post.content,
+    goal: post.goal,
+    tone: post.tone,
+    target_audience: post.target_audience,
+    input_id: post.input_id,
+    title: post.title,
+    language: (post as any).language,
+    cta: (post as any).cta,
+    length: (post as any).length,
+    content_focus: (post as any).content_focus,
+    voice_id: (post as any).voice_id,
+  });
+
   const handleEdit = (post: Post) => {
     navigate("/generator", {
-      state: {
-        editingPost: {
-          id: post.id,
-          content: post.content,
-          goal: post.goal,
-          tone: post.tone,
-          target_audience: post.target_audience,
-          input_id: post.input_id,
-          title: post.title,
-          language: (post as any).language,
-          cta: (post as any).cta,
-          length: (post as any).length,
-          content_focus: (post as any).content_focus,
-          voice_id: (post as any).voice_id,
-        },
-      },
+      state: { editingPost: postStateForGenerator(post) },
+    });
+  };
+
+  const handleDuplicate = (post: Post) => {
+    const { id: _id, ...rest } = postStateForGenerator(post);
+    navigate("/generator", {
+      state: { duplicatePost: rest },
     });
   };
 
@@ -158,6 +165,9 @@ export default function HistoryPage() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(post)} title="Duplicar">
+                      <Files className="h-3.5 w-3.5" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(post)}>
                       {copiedId === post.id ? (
                         <Check className="h-3.5 w-3.5 text-green-500" />
@@ -213,6 +223,9 @@ export default function HistoryPage() {
                   </Select>
                 </div>
                 <div className="flex gap-1">
+                  <Button size="sm" variant="outline" onClick={() => { setSelectedPost(null); handleDuplicate(selectedPost); }} className="gap-1">
+                    <Files className="h-3 w-3" /> Duplicar
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => handleEdit(selectedPost)} className="gap-1">
                     <Pencil className="h-3 w-3" /> Editar
                   </Button>
