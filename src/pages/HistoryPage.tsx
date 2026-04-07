@@ -62,6 +62,11 @@ export default function HistoryPage() {
           target_audience: post.target_audience,
           input_id: post.input_id,
           title: post.title,
+          language: (post as any).language,
+          cta: (post as any).cta,
+          length: (post as any).length,
+          content_focus: (post as any).content_focus,
+          voice_id: (post as any).voice_id,
         },
       },
     });
