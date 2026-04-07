@@ -32,6 +32,11 @@ interface EditingPost {
   target_audience?: string | null;
   input_id?: string | null;
   title?: string | null;
+  language?: string | null;
+  cta?: string | null;
+  length?: string | null;
+  content_focus?: string | null;
+  voice_id?: string | null;
 }
 
 export default function GeneratorPage() {
@@ -66,6 +71,11 @@ export default function GeneratorPage() {
       if (editingPost.tone) setTone(editingPost.tone);
       if (editingPost.target_audience) setTargetAudience(editingPost.target_audience);
       if (editingPost.input_id) setSelectedSources([editingPost.input_id]);
+      if (editingPost.language) setLanguage(editingPost.language);
+      if (editingPost.cta) setCta(editingPost.cta);
+      if (editingPost.length) setLength(editingPost.length);
+      if (editingPost.content_focus) setContentFocus(editingPost.content_focus);
+      if (editingPost.voice_id) setSelectedVoiceId(editingPost.voice_id);
     }
   }, []);
 
@@ -126,6 +136,11 @@ export default function GeneratorPage() {
         goal: goal || undefined,
         tone: tone || undefined,
         target_audience: targetAudience || undefined,
+        language: language || undefined,
+        cta: cta || undefined,
+        length: length || undefined,
+        content_focus: contentFocus || undefined,
+        voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
       });
     }
   };

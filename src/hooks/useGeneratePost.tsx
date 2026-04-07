@@ -116,6 +116,11 @@ export function useGeneratePost() {
     tone?: string;
     target_audience?: string;
     title?: string;
+    language?: string;
+    cta?: string;
+    length?: string;
+    content_focus?: string;
+    voice_id?: string;
   }) => {
     if (!user) return;
     const { error } = await supabase.from("generated_posts").insert({
@@ -126,8 +131,13 @@ export function useGeneratePost() {
       tone: params.tone || null,
       target_audience: params.target_audience || null,
       title: params.title || null,
+      language: params.language || null,
+      cta: params.cta || null,
+      length: params.length || null,
+      content_focus: params.content_focus || null,
+      voice_id: params.voice_id || null,
       status: "draft",
-    });
+    } as any);
     if (error) {
       toast.error("Error al guardar el post");
     } else {
