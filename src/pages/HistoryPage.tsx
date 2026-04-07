@@ -77,9 +77,6 @@ export default function HistoryPage() {
     navigate("/generator", {
       state: { duplicatePost: rest },
     });
-        },
-      },
-    });
   };
 
   const handleDelete = () => {
