@@ -126,7 +126,19 @@ export default function GeneratorPage() {
   const handleSave = () => {
     if (editingPost) {
       updatePost.mutate(
-        { id: editingPost.id, content, title: editingPost.title || undefined },
+        {
+          id: editingPost.id,
+          content,
+          title: editingPost.title || undefined,
+          goal: goal || undefined,
+          tone: tone || undefined,
+          target_audience: targetAudience || undefined,
+          language: language || undefined,
+          cta: cta || undefined,
+          length: length || undefined,
+          content_focus: contentFocus || undefined,
+          voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
+        },
         { onSuccess: () => toast.success("Post actualizado") }
       );
     } else {
