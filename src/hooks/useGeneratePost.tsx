@@ -24,6 +24,8 @@ export function useGeneratePost() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [content, setContent] = useState("");
 
+  const cleanLeadingBrackets = (text: string) =>
+    text.replace(/^\s*\[.*?\]\s*/g, "");
   const generate = async (params: GenerateParams) => {
     if (!user) return;
     setIsGenerating(true);
@@ -79,7 +81,7 @@ export function useGeneratePost() {
           try {
             const parsed = JSON.parse(jsonStr);
             const delta = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (delta) { accumulated += delta; setContent(accumulated); }
+            if (delta) { accumulated += delta; setContent(cleanLeadingBrackets(accumulated)); }
           } catch {
             textBuffer = line + "\n" + textBuffer;
             break;
@@ -98,7 +100,7 @@ export function useGeneratePost() {
           try {
             const parsed = JSON.parse(jsonStr);
             const delta = parsed.choices?.[0]?.delta?.content as string | undefined;
-            if (delta) { accumulated += delta; setContent(accumulated); }
+            if (delta) { accumulated += delta; setContent(cleanLeadingBrackets(accumulated)); }
           } catch { /* ignore */ }
         }
       }
