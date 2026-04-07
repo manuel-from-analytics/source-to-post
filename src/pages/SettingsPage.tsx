@@ -9,10 +9,12 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useVoices } from "@/hooks/useVoices";
 import { toast } from "sonner";
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const { data: voices } = useVoices();
 
   // Profile
   const [fullName, setFullName] = useState("");
@@ -27,6 +29,9 @@ export default function SettingsPage() {
   // Preferences
   const [preferredLanguage, setPreferredLanguage] = useState("es");
   const [writingStyle, setWritingStyle] = useState("");
+  const [defaultVoiceId, setDefaultVoiceId] = useState("none");
+  const [defaultLength, setDefaultLength] = useState("none");
+  const [defaultCta, setDefaultCta] = useState("none");
   const [savingPrefs, setSavingPrefs] = useState(false);
 
   useEffect(() => {
@@ -34,13 +39,16 @@ export default function SettingsPage() {
     (async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, preferred_language, default_writing_style")
+        .select("full_name, preferred_language, default_writing_style, default_voice_id, default_length, default_cta")
         .eq("id", user.id)
         .single();
       if (!error && data) {
         setFullName(data.full_name || "");
         setPreferredLanguage(data.preferred_language || "es");
         setWritingStyle(data.default_writing_style || "");
+        setDefaultVoiceId((data as any).default_voice_id || "none");
+        setDefaultLength((data as any).default_length || "none");
+        setDefaultCta((data as any).default_cta || "none");
       }
       setLoading(false);
     })();
@@ -86,8 +94,11 @@ export default function SettingsPage() {
       .update({
         preferred_language: preferredLanguage,
         default_writing_style: writingStyle.trim() || null,
+        default_voice_id: defaultVoiceId !== "none" ? defaultVoiceId : null,
+        default_length: defaultLength !== "none" ? defaultLength : null,
+        default_cta: defaultCta !== "none" ? defaultCta : null,
         updated_at: new Date().toISOString(),
-      })
+      } as any)
       .eq("id", user.id);
     setSavingPrefs(false);
     if (error) toast.error("Error al guardar preferencias");
@@ -183,6 +194,49 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label>Estilo de escritura por defecto</Label>
             <Input placeholder="Ej: Profesional y directo, como un mentor..." value={writingStyle} onChange={(e) => setWritingStyle(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label>Voz por defecto</Label>
+            <Select value={defaultVoiceId} onValueChange={setDefaultVoiceId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sin voz por defecto" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin voz por defecto</SelectItem>
+                {voices?.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Longitud por defecto</Label>
+            <Select value={defaultLength} onValueChange={setDefaultLength}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sin preferencia" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin preferencia</SelectItem>
+                <SelectItem value="short">Corto (~100 palabras)</SelectItem>
+                <SelectItem value="medium">Medio (~200 palabras)</SelectItem>
+                <SelectItem value="long">Largo (~300 palabras)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Call to Action por defecto</Label>
+            <Select value={defaultCta} onValueChange={setDefaultCta}>
+              <SelectTrigger>
+                <SelectValue placeholder="Sin preferencia" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Sin preferencia</SelectItem>
+                <SelectItem value="question">Pregunta abierta</SelectItem>
+                <SelectItem value="share">Invitar a compartir</SelectItem>
+                <SelectItem value="follow">Invitar a seguir</SelectItem>
+                <SelectItem value="link">Visitar un enlace</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <Button size="sm" onClick={handleSavePreferences} disabled={savingPrefs}>
             {savingPrefs ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Guardando...</> : "Guardar preferencias"}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 import {
   PenTool, Check, Copy, RefreshCw, Send, Sparkles,
   FileText, Save, Loader2, Globe, Youtube, File, Type
@@ -49,6 +50,7 @@ export default function GeneratorPage() {
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
   const [iterationPrompt, setIterationPrompt] = useState("");
   const [copied, setCopied] = useState(false);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   // Config state
   const [goal, setGoal] = useState("");
@@ -65,20 +67,45 @@ export default function GeneratorPage() {
   const { generate, savePost, isGenerating, content, setContent } = useGeneratePost();
   const updatePost = useUpdatePost();
 
-  // Pre-fill from editing or duplicate post
+  // Load profile defaults then overlay editing/duplicate post
   useEffect(() => {
-    if (initialPost) {
-      if (editingPost) setContent(initialPost.content);
-      if (initialPost.goal) setGoal(initialPost.goal);
-      if (initialPost.tone) setTone(initialPost.tone);
-      if (initialPost.target_audience) setTargetAudience(initialPost.target_audience);
-      if (initialPost.input_id) setSelectedSources([initialPost.input_id]);
-      if (initialPost.language) setLanguage(initialPost.language);
-      if (initialPost.cta) setCta(initialPost.cta);
-      if (initialPost.length) setLength(initialPost.length);
-      if (initialPost.content_focus) setContentFocus(initialPost.content_focus);
-      if (initialPost.voice_id) setSelectedVoiceId(initialPost.voice_id);
-    }
+    const load = async () => {
+      // If editing or duplicating, use those values directly
+      if (initialPost) {
+        if (editingPost) setContent(initialPost.content);
+        if (initialPost.goal) setGoal(initialPost.goal);
+        if (initialPost.tone) setTone(initialPost.tone);
+        if (initialPost.target_audience) setTargetAudience(initialPost.target_audience);
+        if (initialPost.input_id) setSelectedSources([initialPost.input_id]);
+        if (initialPost.language) setLanguage(initialPost.language);
+        if (initialPost.cta) setCta(initialPost.cta);
+        if (initialPost.length) setLength(initialPost.length);
+        if (initialPost.content_focus) setContentFocus(initialPost.content_focus);
+        if (initialPost.voice_id) setSelectedVoiceId(initialPost.voice_id);
+        setProfileLoaded(true);
+        return;
+      }
+
+      // Load profile defaults for new posts
+      const { data: session } = await supabase.auth.getSession();
+      const userId = session?.session?.user?.id;
+      if (!userId) { setProfileLoaded(true); return; }
+
+      const { data } = await supabase
+        .from("profiles")
+        .select("preferred_language, default_writing_style, default_voice_id, default_length, default_cta")
+        .eq("id", userId)
+        .single();
+
+      if (data) {
+        if (data.preferred_language) setLanguage(data.preferred_language);
+        if ((data as any).default_length) setLength((data as any).default_length);
+        if ((data as any).default_cta) setCta((data as any).default_cta);
+        if ((data as any).default_voice_id) setSelectedVoiceId((data as any).default_voice_id);
+      }
+      setProfileLoaded(true);
+    };
+    load();
   }, []);
 
   const toggleSource = (id: string) => {
