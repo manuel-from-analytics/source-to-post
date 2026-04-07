@@ -40,8 +40,9 @@ interface EditingPost {
 }
 
 export default function GeneratorPage() {
-  const location = useLocation();
   const editingPost = location.state?.editingPost as EditingPost | undefined;
+  const duplicatePost = location.state?.duplicatePost as Omit<EditingPost, "id"> | undefined;
+  const initialPost = editingPost || duplicatePost;
 
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
