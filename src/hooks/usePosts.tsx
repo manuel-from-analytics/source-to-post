@@ -58,10 +58,27 @@ export function useUpdatePostStatus() {
 export function useUpdatePost() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, content, title }: { id: string; content: string; title?: string }) => {
+    mutationFn: async (params: {
+      id: string;
+      content: string;
+      title?: string;
+      goal?: string;
+      tone?: string;
+      target_audience?: string;
+      language?: string;
+      cta?: string;
+      length?: string;
+      content_focus?: string;
+      voice_id?: string;
+    }) => {
+      const { id, ...rest } = params;
       const { error } = await supabase
         .from("generated_posts")
-        .update({ content, title, updated_at: new Date().toISOString() })
+        .update({
+          ...rest,
+          voice_id: rest.voice_id || null,
+          updated_at: new Date().toISOString(),
+        } as any)
         .eq("id", id);
       if (error) throw error;
     },
