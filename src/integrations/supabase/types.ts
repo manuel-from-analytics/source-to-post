@@ -284,6 +284,9 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          default_cta: string | null
+          default_length: string | null
+          default_voice_id: string | null
           default_writing_style: string | null
           full_name: string | null
           id: string
@@ -293,6 +296,9 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          default_cta?: string | null
+          default_length?: string | null
+          default_voice_id?: string | null
           default_writing_style?: string | null
           full_name?: string | null
           id: string
@@ -302,6 +308,9 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          default_cta?: string | null
+          default_length?: string | null
+          default_voice_id?: string | null
           default_writing_style?: string | null
           full_name?: string | null
           id?: string
