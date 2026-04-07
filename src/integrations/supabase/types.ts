@@ -41,45 +41,60 @@ export type Database = {
       generated_posts: {
         Row: {
           content: string
+          content_focus: string | null
           created_at: string
+          cta: string | null
           goal: string | null
           id: string
           input_id: string | null
           is_favorite: boolean | null
+          language: string | null
+          length: string | null
           status: Database["public"]["Enums"]["post_status"] | null
           target_audience: string | null
           title: string | null
           tone: string | null
           updated_at: string
           user_id: string
+          voice_id: string | null
         }
         Insert: {
           content: string
+          content_focus?: string | null
           created_at?: string
+          cta?: string | null
           goal?: string | null
           id?: string
           input_id?: string | null
           is_favorite?: boolean | null
+          language?: string | null
+          length?: string | null
           status?: Database["public"]["Enums"]["post_status"] | null
           target_audience?: string | null
           title?: string | null
           tone?: string | null
           updated_at?: string
           user_id: string
+          voice_id?: string | null
         }
         Update: {
           content?: string
+          content_focus?: string | null
           created_at?: string
+          cta?: string | null
           goal?: string | null
           id?: string
           input_id?: string | null
           is_favorite?: boolean | null
+          language?: string | null
+          length?: string | null
           status?: Database["public"]["Enums"]["post_status"] | null
           target_audience?: string | null
           title?: string | null
           tone?: string | null
           updated_at?: string
           user_id?: string
+          voice_id?: string | null
         }
         Relationships: [
           {
@@ -87,6 +102,13 @@ export type Database = {
             columns: ["input_id"]
             isOneToOne: false
             referencedRelation: "inputs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "generated_posts_voice_id_fkey"
+            columns: ["voice_id"]
+            isOneToOne: false
+            referencedRelation: "voices"
             referencedColumns: ["id"]
           },
         ]
