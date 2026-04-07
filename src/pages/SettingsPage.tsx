@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { User, Key, Palette, Loader2, Mic } from "lucide-react";
+import { User, Key, Palette, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
