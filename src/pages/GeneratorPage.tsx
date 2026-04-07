@@ -40,6 +40,7 @@ interface EditingPost {
 }
 
 export default function GeneratorPage() {
+  const location = useLocation();
   const editingPost = location.state?.editingPost as EditingPost | undefined;
   const duplicatePost = location.state?.duplicatePost as Omit<EditingPost, "id"> | undefined;
   const initialPost = editingPost || duplicatePost;
@@ -64,19 +65,19 @@ export default function GeneratorPage() {
   const { generate, savePost, isGenerating, content, setContent } = useGeneratePost();
   const updatePost = useUpdatePost();
 
-  // Pre-fill from editing post
+  // Pre-fill from editing or duplicate post
   useEffect(() => {
-    if (editingPost) {
-      setContent(editingPost.content);
-      if (editingPost.goal) setGoal(editingPost.goal);
-      if (editingPost.tone) setTone(editingPost.tone);
-      if (editingPost.target_audience) setTargetAudience(editingPost.target_audience);
-      if (editingPost.input_id) setSelectedSources([editingPost.input_id]);
-      if (editingPost.language) setLanguage(editingPost.language);
-      if (editingPost.cta) setCta(editingPost.cta);
-      if (editingPost.length) setLength(editingPost.length);
-      if (editingPost.content_focus) setContentFocus(editingPost.content_focus);
-      if (editingPost.voice_id) setSelectedVoiceId(editingPost.voice_id);
+    if (initialPost) {
+      if (editingPost) setContent(initialPost.content);
+      if (initialPost.goal) setGoal(initialPost.goal);
+      if (initialPost.tone) setTone(initialPost.tone);
+      if (initialPost.target_audience) setTargetAudience(initialPost.target_audience);
+      if (initialPost.input_id) setSelectedSources([initialPost.input_id]);
+      if (initialPost.language) setLanguage(initialPost.language);
+      if (initialPost.cta) setCta(initialPost.cta);
+      if (initialPost.length) setLength(initialPost.length);
+      if (initialPost.content_focus) setContentFocus(initialPost.content_focus);
+      if (initialPost.voice_id) setSelectedVoiceId(initialPost.voice_id);
     }
   }, []);
 
