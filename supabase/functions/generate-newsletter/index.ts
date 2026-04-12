@@ -78,11 +78,19 @@ serve(async (req) => {
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY is not configured");
 
+    // Calculate dynamic date range for search queries
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed
+    const sixMonthsAgoDate = new Date(currentYear, currentMonth - 6, 1);
+    const sixMonthsAgoYear = sixMonthsAgoDate.getFullYear();
+    const recentYears = [...new Set([currentYear, currentYear - 1, sixMonthsAgoYear])].join(" ");
+
     // Run general search + academic search in parallel
     const [generalResults, academicResults] = await Promise.all([
-      firecrawlSearch(`${topic} latest trends insights 2024 2025`, FIRECRAWL_API_KEY, 8),
+      firecrawlSearch(`${topic} latest trends insights ${recentYears}`, FIRECRAWL_API_KEY, 8),
       firecrawlSearch(
-        `${topic} site:scholar.google.com OR site:arxiv.org OR site:pubmed.ncbi.nlm.nih.gov OR site:researchgate.net OR "research paper" OR "academic study" OR "peer-reviewed"`,
+        `${topic} site:scholar.google.com OR site:arxiv.org OR site:pubmed.ncbi.nlm.nih.gov OR site:researchgate.net OR "research paper" OR "academic study" OR "peer-reviewed" ${recentYears}`,
         FIRECRAWL_API_KEY,
         5
       ),
@@ -115,8 +123,11 @@ serve(async (req) => {
 You create "Kloshletter" style newsletters: readable, skimmable, actionable.
 Output MUST be valid JSON only, no markdown, no explanation outside JSON.`;
 
+    const cutoffDate = `${sixMonthsAgoDate.getFullYear()}-${String(sixMonthsAgoDate.getMonth() + 1).padStart(2, "0")}-${String(sixMonthsAgoDate.getDate()).padStart(2, "0")}`;
+
     const userPrompt = `Create a newsletter about: "${topic}"
-Date: ${today}
+Today's date: ${today}
+HARD CUTOFF DATE: ${cutoffDate} (6 months ago)
 
 SEARCH RESULTS TO USE:
 ${sourceSummaries}
@@ -128,7 +139,7 @@ STRICT RULES:
 2. AT LEAST 1 item MUST be an academic paper, scientific study, or university research (from sources like arxiv.org, scholar.google.com, pubmed, researchgate, university websites, or peer-reviewed journals). Mark these with source_type "academic". If no academic source was found in the search results, use your knowledge to reference a real, existing paper with a valid URL.
 3. At least 2 more must be from independent/non-vendor sources (major media like FT/Economist/HBR/Wired, analyst firms like Gartner/McKinsey/BCG)
 4. Max 2 vendor sources allowed, never from product announcements or marketing pages
-5. Links MUST be ≤6 months old. Be VERY strict about this rule — prioritize recency and state-of-the-art content. The ONLY exception is for truly foundational, seminal works that are essential to understand the topic (mark these as "foundational"). Even then, be extremely restrictive: max 1 foundational item allowed, and only if it is genuinely indispensable.
+5. ALL items MUST have a pub_date on or after ${cutoffDate}. This is a HARD requirement — any item with pub_date before ${cutoffDate} will be automatically rejected. The ONLY exception is exactly 1 item marked as "foundational" — a truly seminal, indispensable work. Be extremely restrictive with this exception.
 6. No repeated links, no duplicate topics from recent 14 days
 7. Each item must have exactly one working link
 8. Detect the language of the topic and write in that same language
@@ -222,9 +233,27 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
     const newsletter = JSON.parse(toolCall.function.arguments);
     console.log("Newsletter generated:", newsletter.subject);
 
+    // Validate dates: reject items older than 6 months (except 1 foundational)
+    const cutoffMs = sixMonthsAgoDate.getTime();
+    let foundationalUsed = false;
+    newsletter.items = (newsletter.items || []).filter((item: any) => {
+      if (!item.pub_date) return true; // keep if no date (AI couldn't determine)
+      const itemDate = new Date(item.pub_date);
+      if (isNaN(itemDate.getTime())) return true;
+      if (itemDate.getTime() >= cutoffMs) return true;
+      // Allow exactly one foundational exception
+      if (item.source_type === "foundational" && !foundationalUsed) {
+        foundationalUsed = true;
+        console.log(`Allowing foundational item before cutoff: ${item.title} (${item.pub_date})`);
+        return true;
+      }
+      console.log(`REJECTED item too old: ${item.title} (${item.pub_date}), cutoff: ${cutoffDate}`);
+      return false;
+    });
+
     // Validate at least 1 academic source
-    const academicCount = (newsletter.items || []).filter((i: any) => i.source_type === "academic").length;
-    console.log(`Academic sources in newsletter: ${academicCount}`);
+    const academicCount = newsletter.items.filter((i: any) => i.source_type === "academic").length;
+    console.log(`Items after date filter: ${newsletter.items.length}, academic: ${academicCount}`);
 
     // Format readable content
     const formattedContent = formatNewsletter(newsletter);
