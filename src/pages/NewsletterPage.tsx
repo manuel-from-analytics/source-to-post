@@ -32,6 +32,7 @@ function SourceBadge({ type }: { type: string }) {
     independent: { label: "Independiente", variant: "default" },
     vendor: { label: "Vendor", variant: "secondary" },
     foundational: { label: "Foundational", variant: "outline" },
+    academic: { label: "🎓 Académico", variant: "default" },
   };
   const c = config[type] || config.independent;
   return <Badge variant={c.variant} className="text-[10px]">{c.label}</Badge>;
