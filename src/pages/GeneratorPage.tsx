@@ -20,6 +20,7 @@ import { useUpdatePost } from "@/hooks/usePosts";
 import { CategoryFilter } from "@/components/CategoryWidgets";
 import { useVoices } from "@/hooks/useVoices";
 import { toast } from "sonner";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const typeIcons: Record<string, React.ElementType> = {
   pdf: File, url: Globe, youtube: Youtube, text: Type,
@@ -41,6 +42,7 @@ interface EditingPost {
 }
 
 export default function GeneratorPage() {
+  const { t } = useLanguage();
   const location = useLocation();
   const editingPost = location.state?.editingPost as EditingPost | undefined;
   const duplicatePost = location.state?.duplicatePost as Omit<EditingPost, "id"> | undefined;
@@ -52,7 +54,6 @@ export default function GeneratorPage() {
   const [copied, setCopied] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
 
-  // Config state
   const [goal, setGoal] = useState("");
   const [tone, setTone] = useState("");
   const [language, setLanguage] = useState("es");
@@ -67,10 +68,8 @@ export default function GeneratorPage() {
   const { generate, savePost, isGenerating, content, setContent } = useGeneratePost();
   const updatePost = useUpdatePost();
 
-  // Load profile defaults then overlay editing/duplicate post
   useEffect(() => {
     const load = async () => {
-      // If editing or duplicating, use those values directly
       if (initialPost) {
         if (editingPost) setContent(initialPost.content);
         if (initialPost.goal) setGoal(initialPost.goal);
@@ -86,7 +85,6 @@ export default function GeneratorPage() {
         return;
       }
 
-      // Load profile defaults for new posts
       const { data: session } = await supabase.auth.getSession();
       const userId = session?.session?.user?.id;
       if (!userId) { setProfileLoaded(true); return; }
@@ -168,7 +166,7 @@ export default function GeneratorPage() {
           content_focus: contentFocus || undefined,
           voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
         },
-        { onSuccess: () => toast.success("Post actualizado") }
+        { onSuccess: () => toast.success(t("generator.postUpdated")) }
       );
     } else {
       savePost({
@@ -190,25 +188,24 @@ export default function GeneratorPage() {
     <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-3 sm:p-4 lg:p-8">
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
-          {editingPost ? "Editar Post" : duplicatePost ? "Duplicar Post" : "Generador de Posts"}
+          {editingPost ? t("generator.editPost") : duplicatePost ? t("generator.duplicatePost") : t("generator.title")}
         </h1>
         <p className="text-sm text-muted-foreground mt-0.5 break-words">
           {editingPost
-            ? "Modifica los parámetros y regenera el contenido"
+            ? t("generator.editSubtitle")
             : duplicatePost
-            ? "Ajusta los parámetros y genera una nueva versión"
-            : "Selecciona fuentes de referencia y configura tu post"}
+            ? t("generator.duplicateSubtitle")
+            : t("generator.defaultSubtitle")}
         </p>
       </div>
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         {/* Left: Config */}
         <div className="space-y-4 sm:space-y-6">
-          {/* Source selection */}
           <Card>
             <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
               <CardTitle className="text-xs font-medium sm:text-sm">
-                Fuentes de referencia
+                {t("generator.referenceSources")}
               </CardTitle>
             </CardHeader>
             <CardContent className="min-w-0 space-y-2 px-3 sm:px-6 sm:space-y-3">
@@ -220,7 +217,7 @@ export default function GeneratorPage() {
                 </div>
               ) : (inputs ?? []).length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  No tienes fuentes guardadas aún
+                  {t("generator.noSources")}
                 </p>
               ) : (
                 (inputs ?? []).filter((s) => !filterCategoryId || s.category_id === filterCategoryId).map((source) => {
@@ -249,51 +246,50 @@ export default function GeneratorPage() {
             </CardContent>
           </Card>
 
-          {/* Parameters */}
           <Card>
             <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
               <CardTitle className="text-xs font-medium sm:text-sm">
-                Parámetros de generación
+                {t("generator.params")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 px-3 sm:px-6 sm:space-y-4">
               <div className="space-y-2">
-                <Label className="text-xs">Objetivo del post</Label>
+                <Label className="text-xs">{t("generator.goal")}</Label>
                 <Select value={goal} onValueChange={setGoal}>
-                  <SelectTrigger><SelectValue placeholder="Selecciona objetivo" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("generator.goalSelect")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="educate">Educar</SelectItem>
-                    <SelectItem value="inspire">Inspirar</SelectItem>
-                    <SelectItem value="promote">Promocionar</SelectItem>
-                    <SelectItem value="engage">Generar engagement</SelectItem>
-                    <SelectItem value="storytelling">Storytelling</SelectItem>
+                    <SelectItem value="educate">{t("generator.educate")}</SelectItem>
+                    <SelectItem value="inspire">{t("generator.inspire")}</SelectItem>
+                    <SelectItem value="promote">{t("generator.promote")}</SelectItem>
+                    <SelectItem value="engage">{t("generator.engage")}</SelectItem>
+                    <SelectItem value="storytelling">{t("generator.storytelling")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-xs">Tono</Label>
+                  <Label className="text-xs">{t("generator.tone")}</Label>
                   <Select value={tone} onValueChange={setTone}>
-                    <SelectTrigger><SelectValue placeholder="Tono" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("generator.tonePlaceholder")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="professional">Profesional</SelectItem>
-                      <SelectItem value="casual">Casual</SelectItem>
-                      <SelectItem value="inspirational">Inspiracional</SelectItem>
-                      <SelectItem value="direct">Directo</SelectItem>
-                      <SelectItem value="humorous">Con humor</SelectItem>
+                      <SelectItem value="professional">{t("generator.professional")}</SelectItem>
+                      <SelectItem value="casual">{t("generator.casual")}</SelectItem>
+                      <SelectItem value="inspirational">{t("generator.inspirational")}</SelectItem>
+                      <SelectItem value="direct">{t("generator.direct")}</SelectItem>
+                      <SelectItem value="humorous">{t("generator.humorous")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs">Idioma</Label>
+                  <Label className="text-xs">{t("generator.language")}</Label>
                   <Select value={language} onValueChange={setLanguage}>
-                    <SelectTrigger><SelectValue placeholder="Idioma" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("generator.languagePlaceholder")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="es">Español</SelectItem>
-                      <SelectItem value="en">Inglés</SelectItem>
-                      <SelectItem value="pt">Portugués</SelectItem>
+                      <SelectItem value="es">{t("common.spanish")}</SelectItem>
+                      <SelectItem value="en">{t("common.english")}</SelectItem>
+                      <SelectItem value="pt">{t("common.portuguese")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -301,45 +297,45 @@ export default function GeneratorPage() {
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-xs">Longitud</Label>
+                  <Label className="text-xs">{t("generator.length")}</Label>
                   <Select value={length} onValueChange={setLength}>
-                    <SelectTrigger><SelectValue placeholder="Longitud" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("generator.lengthPlaceholder")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="short">Corto (~100 palabras)</SelectItem>
-                      <SelectItem value="medium">Medio (~200 palabras)</SelectItem>
-                      <SelectItem value="long">Largo (~300 palabras)</SelectItem>
+                      <SelectItem value="short">{t("generator.short")}</SelectItem>
+                      <SelectItem value="medium">{t("generator.medium")}</SelectItem>
+                      <SelectItem value="long">{t("generator.long")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-xs">CTA</Label>
+                  <Label className="text-xs">{t("generator.cta")}</Label>
                   <Select value={cta} onValueChange={setCta}>
-                    <SelectTrigger><SelectValue placeholder="Call to action" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("generator.ctaPlaceholder")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="question">Pregunta</SelectItem>
-                      <SelectItem value="share">Compartir</SelectItem>
-                      <SelectItem value="follow">Seguir</SelectItem>
-                      <SelectItem value="link">Visitar link</SelectItem>
-                      <SelectItem value="none">Sin CTA</SelectItem>
+                      <SelectItem value="question">{t("generator.question")}</SelectItem>
+                      <SelectItem value="share">{t("generator.share")}</SelectItem>
+                      <SelectItem value="follow">{t("generator.follow")}</SelectItem>
+                      <SelectItem value="link">{t("generator.visitLink")}</SelectItem>
+                      <SelectItem value="none">{t("generator.noCta")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Audiencia objetivo</Label>
+                <Label className="text-xs">{t("generator.audience")}</Label>
                 <Input
-                  placeholder="Ej: Founders, marketers, recruiters..."
+                  placeholder={t("generator.audiencePlaceholder")}
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs">Enfoque del contenido</Label>
+                <Label className="text-xs">{t("generator.focus")}</Label>
                 <Textarea
-                  placeholder="Indica cómo quieres enfocar las fuentes seleccionadas. Ej: 'Centra el post en las estadísticas de adopción', 'Compara los puntos de vista de ambos artículos', 'Extrae los 3 insights más prácticos'..."
+                  placeholder={t("generator.focusPlaceholder")}
                   value={contentFocus}
                   onChange={(e) => setContentFocus(e.target.value)}
                   className="min-h-[60px]"
@@ -348,11 +344,11 @@ export default function GeneratorPage() {
 
               {(voices?.length ?? 0) > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs">Voz</Label>
+                  <Label className="text-xs">{t("generator.voice")}</Label>
                   <Select value={selectedVoiceId} onValueChange={setSelectedVoiceId}>
-                    <SelectTrigger><SelectValue placeholder="Selecciona una voz" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("generator.selectVoice")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Sin voz (estilo genérico)</SelectItem>
+                      <SelectItem value="none">{t("generator.noVoiceGeneric")}</SelectItem>
                       {voices!.map((v) => (
                         <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
                       ))}
@@ -370,9 +366,9 @@ export default function GeneratorPage() {
             size="lg"
           >
             {isGenerating ? (
-              <><RefreshCw className="h-4 w-4 animate-spin" />Generando...</>
+              <><RefreshCw className="h-4 w-4 animate-spin" />{t("generator.generating")}</>
             ) : (
-              <><Sparkles className="h-4 w-4" />{editingPost ? "Regenerar post" : "Generar borrador"}</>
+              <><Sparkles className="h-4 w-4" />{editingPost ? t("generator.regeneratePost") : t("generator.generateDraft")}</>
             )}
           </Button>
         </div>
@@ -382,18 +378,18 @@ export default function GeneratorPage() {
           <Card className="min-h-[400px]">
             <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <CardTitle className="text-sm font-medium">Borrador</CardTitle>
+                <CardTitle className="text-sm font-medium">{t("generator.draft")}</CardTitle>
                 {content && (
                   <div className="flex flex-wrap gap-1">
                     <Button variant="ghost" size="sm" onClick={handleGenerate} disabled={isGenerating} className="text-xs gap-1">
-                      <RefreshCw className="h-3 w-3" />Regenerar
+                      <RefreshCw className="h-3 w-3" />{t("generator.regenerate")}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleCopy} className="text-xs gap-1">
                       {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-                      {copied ? "Copiado" : "Copiar"}
+                      {copied ? t("generator.copied") : t("generator.copy")}
                     </Button>
                     <Button variant="ghost" size="sm" onClick={handleSave} className="text-xs gap-1">
-                      <Save className="h-3 w-3" />{editingPost ? "Actualizar" : "Guardar"}
+                      <Save className="h-3 w-3" />{editingPost ? t("generator.update") : t("generator.save")}
                     </Button>
                   </div>
                 )}
@@ -409,13 +405,13 @@ export default function GeneratorPage() {
               ) : isGenerating ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <Loader2 className="h-10 w-10 animate-spin text-primary mb-3" />
-                  <p className="text-sm text-muted-foreground">Generando tu borrador...</p>
+                  <p className="text-sm text-muted-foreground">{t("generator.generatingDraft")}</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <PenTool className="h-10 w-10 text-muted-foreground/40 mb-3" />
-                  <p className="text-sm text-muted-foreground">Tu borrador aparecerá aquí</p>
-                  <p className="text-xs text-muted-foreground mt-1">Selecciona fuentes y configura los parámetros</p>
+                  <p className="text-sm text-muted-foreground">{t("generator.draftAppears")}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{t("generator.selectAndConfigure")}</p>
                 </div>
               )}
             </CardContent>
@@ -424,17 +420,17 @@ export default function GeneratorPage() {
           {content && !isGenerating && (
             <Card>
               <CardContent className="p-3 sm:p-4">
-                <Label className="text-xs text-muted-foreground mb-1.5 block">Pedir cambios</Label>
+                <Label className="text-xs text-muted-foreground mb-1.5 block">{t("generator.requestChanges")}</Label>
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <Input
-                    placeholder='Ej: "Hazlo más directo", "Añade datos"...'
+                    placeholder={t("generator.iterationExample")}
                     value={iterationPrompt}
                     onChange={(e) => setIterationPrompt(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleIterate()}
                     className="text-sm"
                   />
                   <Button size="sm" className="gap-1 self-start sm:self-auto" onClick={handleIterate} disabled={isGenerating}>
-                    <Send className="h-3.5 w-3.5" />Enviar
+                    <Send className="h-3.5 w-3.5" />{t("generator.send")}
                   </Button>
                 </div>
               </CardContent>

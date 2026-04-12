@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/collapsible";
 import { useVoices, useAddVoice, useDeleteVoice } from "@/hooks/useVoices";
 import { useVoiceSamples, useAddVoiceSample, useDeleteVoiceSample } from "@/hooks/useVoiceSamples";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 export default function VoicePage() {
+  const { t } = useLanguage();
   const { data: voices, isLoading: loadingVoices } = useVoices();
   const { data: allSamples, isLoading: loadingSamples } = useVoiceSamples();
   const addVoice = useAddVoice();
@@ -79,45 +81,43 @@ export default function VoicePage() {
     <div className="p-4 lg:p-8 max-w-4xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Mis Voces</h1>
-          <p className="text-muted-foreground mt-1">
-            Crea perfiles de voz con ejemplos de posts para que el generador imite tu estilo
-          </p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("voice.title")}</h1>
+          <p className="text-muted-foreground mt-1">{t("voice.subtitle")}</p>
         </div>
         <Dialog open={openNewVoice} onOpenChange={setOpenNewVoice}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="h-4 w-4" />
-              Nueva voz
+              {t("voice.newVoice")}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Crear nueva voz</DialogTitle>
+              <DialogTitle>{t("voice.createVoice")}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="space-y-2">
-                <Label className="text-xs">Nombre</Label>
+                <Label className="text-xs">{t("voice.name")}</Label>
                 <Input
-                  placeholder="Ej: Profesional, Casual, Newsletter..."
+                  placeholder={t("voice.namePlaceholder")}
                   value={voiceName}
                   onChange={(e) => setVoiceName(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs">Descripción (opcional)</Label>
+                <Label className="text-xs">{t("voice.description")}</Label>
                 <Input
-                  placeholder="Breve descripción de esta voz..."
+                  placeholder={t("voice.descriptionPlaceholder")}
                   value={voiceDesc}
                   onChange={(e) => setVoiceDesc(e.target.value)}
                 />
               </div>
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+              <DialogClose asChild><Button variant="outline">{t("voice.cancel")}</Button></DialogClose>
               <Button onClick={handleAddVoice} disabled={!voiceName.trim() || addVoice.isPending}>
                 {addVoice.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-                Crear
+                {t("voice.create")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -128,21 +128,21 @@ export default function VoicePage() {
       <Dialog open={openNewSample} onOpenChange={setOpenNewSample}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Nuevo ejemplo de voz</DialogTitle>
+            <DialogTitle>{t("voice.newSample")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label className="text-xs">Título (opcional)</Label>
+              <Label className="text-xs">{t("voice.sampleTitle")}</Label>
               <Input
-                placeholder="Ej: Post sobre liderazgo, Hilo viral..."
+                placeholder={t("voice.sampleTitlePlaceholder")}
                 value={sampleTitle}
                 onChange={(e) => setSampleTitle(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs">Contenido del post</Label>
+              <Label className="text-xs">{t("voice.sampleContent")}</Label>
               <Textarea
-                placeholder="Pega aquí el post de ejemplo..."
+                placeholder={t("voice.samplePlaceholder")}
                 value={sampleContent}
                 onChange={(e) => setSampleContent(e.target.value)}
                 className="min-h-[200px]"
@@ -150,10 +150,10 @@ export default function VoicePage() {
             </div>
           </div>
           <DialogFooter>
-            <DialogClose asChild><Button variant="outline">Cancelar</Button></DialogClose>
+            <DialogClose asChild><Button variant="outline">{t("voice.cancel")}</Button></DialogClose>
             <Button onClick={handleAddSample} disabled={!sampleContent.trim() || addSample.isPending}>
               {addSample.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-              Guardar
+              {t("voice.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -167,10 +167,8 @@ export default function VoicePage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Mic className="h-12 w-12 text-muted-foreground/40 mb-4" />
-            <h3 className="font-medium text-foreground mb-1">Sin voces creadas</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              Crea una voz y añade posts de ejemplo para que el generador aprenda tu estilo
-            </p>
+            <h3 className="font-medium text-foreground mb-1">{t("voice.empty")}</h3>
+            <p className="text-sm text-muted-foreground max-w-sm">{t("voice.emptyDesc")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -193,7 +191,9 @@ export default function VoicePage() {
                         </div>
                       </CollapsibleTrigger>
                       <div className="flex items-center gap-1">
-                        <span className="text-[10px] text-muted-foreground">{samples.length} ejemplo{samples.length !== 1 ? "s" : ""}</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {samples.length} {samples.length !== 1 ? t("voice.examples") : t("voice.example")}
+                        </span>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -201,7 +201,7 @@ export default function VoicePage() {
                           onClick={() => openAddSample(voice.id)}
                         >
                           <Plus className="h-3 w-3" />
-                          Añadir
+                          {t("voice.add")}
                         </Button>
                         <Button
                           variant="ghost"
@@ -218,7 +218,7 @@ export default function VoicePage() {
                     <CardContent className="pt-0">
                       {samples.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-4">
-                          Añade ejemplos de posts para esta voz
+                          {t("voice.noSamples")}
                         </p>
                       ) : (
                         <div className="grid gap-3 sm:grid-cols-2">
@@ -227,7 +227,7 @@ export default function VoicePage() {
                               <div className="flex items-start justify-between mb-1">
                                 <span className="text-xs font-medium flex items-center gap-1.5 truncate">
                                   <FileText className="h-3 w-3 text-muted-foreground shrink-0" />
-                                  {sample.title || "Sin título"}
+                                  {sample.title || t("voice.noTitle")}
                                 </span>
                                 <Button
                                   variant="ghost"

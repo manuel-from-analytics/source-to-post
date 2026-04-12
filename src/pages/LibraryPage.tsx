@@ -19,19 +19,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useInputs, useCreateInput, useToggleFavorite, useDeleteInput, type InputRow } from "@/hooks/useInputs";
 import { useCategories, type CategoryRow } from "@/hooks/useCategories";
 import { CategoryBadge, CategoryPicker, CategoryFilter } from "@/components/CategoryWidgets";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const typeIcons: Record<string, React.ElementType> = {
   pdf: File,
   url: Globe,
   youtube: Youtube,
   text: Type,
-};
-
-const typeLabels: Record<string, string> = {
-  pdf: "PDF",
-  url: "URL",
-  youtube: "YouTube",
-  text: "Texto",
 };
 
 const typeColors: Record<string, string> = {
@@ -42,12 +36,12 @@ const typeColors: Record<string, string> = {
 };
 
 export default function LibraryPage() {
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
   const [newInputOpen, setNewInputOpen] = useState(false);
   const [newInputType, setNewInputType] = useState("url");
 
-  // Form state
   const [urlValue, setUrlValue] = useState("");
   const [titleValue, setTitleValue] = useState("");
   const [textContent, setTextContent] = useState("");
@@ -108,28 +102,35 @@ export default function LibraryPage() {
     }
   };
 
+  const typeLabels: Record<string, string> = {
+    pdf: "PDF",
+    url: "URL",
+    youtube: "YouTube",
+    text: t("library.contentField"),
+  };
+
   return (
     <div className="mx-auto max-w-5xl min-w-0 space-y-4 overflow-hidden p-3 sm:space-y-6 sm:p-4 lg:p-8">
       {/* Header */}
       <div className="flex min-w-0 items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Biblioteca</h1>
+          <h1 className="text-xl font-bold tracking-tight sm:text-2xl">{t("library.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {inputs?.length ?? 0} fuentes guardadas
+            {inputs?.length ?? 0} {t("library.savedSources")}
           </p>
         </div>
         <Dialog open={newInputOpen} onOpenChange={(open) => { setNewInputOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="shrink-0 gap-1.5">
               <Plus className="h-4 w-4" />
-              <span className="hidden sm:inline">Añadir fuente</span>
-              <span className="sm:hidden">Añadir</span>
+              <span className="hidden sm:inline">{t("library.addSource")}</span>
+              <span className="sm:hidden">{t("library.add")}</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
-              <DialogTitle>Añadir nueva fuente</DialogTitle>
-              <DialogDescription>Selecciona el tipo de fuente que quieres guardar</DialogDescription>
+              <DialogTitle>{t("library.newSource")}</DialogTitle>
+              <DialogDescription>{t("library.selectType")}</DialogDescription>
             </DialogHeader>
             <Tabs value={newInputType} onValueChange={setNewInputType}>
               <TabsList className="grid w-full grid-cols-4">
@@ -147,29 +148,29 @@ export default function LibraryPage() {
                 </TabsTrigger>
                 <TabsTrigger value="text" className="text-xs px-1">
                   <Type className="h-3.5 w-3.5 sm:mr-1" />
-                  <span className="hidden sm:inline">Texto</span>
+                  <span className="hidden sm:inline">{t("library.contentField")}</span>
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="url" className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label>URL del artículo</Label>
-                  <Input placeholder="https://ejemplo.com/articulo" value={urlValue} onChange={e => setUrlValue(e.target.value)} />
+                  <Label>{t("library.urlField")}</Label>
+                  <Input placeholder={t("library.urlPlaceholder")} value={urlValue} onChange={e => setUrlValue(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Título (opcional)</Label>
-                  <Input placeholder="Se usará la URL si no lo indicas" value={titleValue} onChange={e => setTitleValue(e.target.value)} />
+                  <Label>{t("library.titleOptional")}</Label>
+                  <Input placeholder={t("library.titleOptionalHint")} value={titleValue} onChange={e => setTitleValue(e.target.value)} />
                 </div>
               </TabsContent>
 
               <TabsContent value="youtube" className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label>URL del video de YouTube</Label>
-                  <Input placeholder="https://youtube.com/watch?v=..." value={urlValue} onChange={e => setUrlValue(e.target.value)} />
+                  <Label>{t("library.youtubeField")}</Label>
+                  <Input placeholder={t("library.youtubePlaceholder")} value={urlValue} onChange={e => setUrlValue(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Título (opcional)</Label>
-                  <Input placeholder="Se usará la URL si no lo indicas" value={titleValue} onChange={e => setTitleValue(e.target.value)} />
+                  <Label>{t("library.titleOptional")}</Label>
+                  <Input placeholder={t("library.titleOptionalHint")} value={titleValue} onChange={e => setTitleValue(e.target.value)} />
                 </div>
               </TabsContent>
 
@@ -193,36 +194,36 @@ export default function LibraryPage() {
                     </>
                   ) : (
                     <>
-                      <p className="text-sm font-medium">Arrastra tu PDF aquí</p>
-                      <p className="text-xs text-muted-foreground mt-1">o haz clic para seleccionar (máx. 20MB)</p>
+                      <p className="text-sm font-medium">{t("library.dragPdf")}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("library.clickToSelect")}</p>
                     </>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label>Título (opcional)</Label>
-                  <Input placeholder="Se usará el nombre del archivo" value={titleValue} onChange={e => setTitleValue(e.target.value)} />
+                  <Label>{t("library.titleOptional")}</Label>
+                  <Input placeholder={t("library.titleOptionalFile")} value={titleValue} onChange={e => setTitleValue(e.target.value)} />
                 </div>
               </TabsContent>
 
               <TabsContent value="text" className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <Label>Título</Label>
-                  <Input placeholder="Título de tu nota" value={titleValue} onChange={e => setTitleValue(e.target.value)} />
+                  <Label>{t("library.titleNote")}</Label>
+                  <Input placeholder={t("library.titleNotePlaceholder")} value={titleValue} onChange={e => setTitleValue(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Contenido</Label>
-                  <Textarea placeholder="Escribe o pega tu texto aquí..." rows={6} value={textContent} onChange={e => setTextContent(e.target.value)} />
+                  <Label>{t("library.contentField")}</Label>
+                  <Textarea placeholder={t("library.contentPlaceholder")} rows={6} value={textContent} onChange={e => setTextContent(e.target.value)} />
                 </div>
               </TabsContent>
             </Tabs>
             <DialogFooter>
               <Button variant="outline" onClick={() => { setNewInputOpen(false); resetForm(); }}>
-                Cancelar
+                {t("library.cancel")}
               </Button>
               <Button onClick={handleSave} disabled={createInput.isPending}>
                 {createInput.isPending ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Guardando...</>
-                ) : "Guardar fuente"}
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t("library.saving")}</>
+                ) : t("library.saveSource")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -233,7 +234,7 @@ export default function LibraryPage() {
       <div className="min-w-0 space-y-2">
         <div className="relative">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Buscar fuentes..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-9 pl-9 text-sm" />
+            <Input placeholder={t("library.search")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-9 pl-9 text-sm" />
         </div>
         <CategoryFilter selectedCategoryId={filterCategoryId} onSelect={setFilterCategoryId} />
       </div>
@@ -251,12 +252,10 @@ export default function LibraryPage() {
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <FileText className="h-10 w-10 text-muted-foreground/50 mb-4" />
             <h3 className="font-semibold mb-1">
-              {searchQuery ? "Sin resultados" : "Tu biblioteca está vacía"}
+              {searchQuery ? t("library.noResults") : t("library.empty")}
             </h3>
             <p className="text-sm text-muted-foreground mb-4">
-              {searchQuery
-                ? "Intenta con otra búsqueda"
-                : "Añade tu primera fuente para empezar a generar contenido"}
+              {searchQuery ? t("library.noResultsHint") : t("library.emptyHint")}
             </p>
           </CardContent>
         </Card>
@@ -288,7 +287,7 @@ export default function LibraryPage() {
                           <CategoryBadge category={categoriesMap.get(input.category_id)!} />
                         )}
                         <span className="text-[10px] text-muted-foreground">
-                          {new Date(input.created_at).toLocaleDateString("es")}
+                          {new Date(input.created_at).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
