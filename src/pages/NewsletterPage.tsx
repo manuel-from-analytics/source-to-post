@@ -357,6 +357,7 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
             item={item}
             onImport={() => importMutation.mutate(item)}
             importing={importMutation.isPending}
+            t={t}
           />
         ))}
       </div>
@@ -378,6 +379,7 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
 }
 
 export default function NewsletterPage() {
+  const { t } = useLanguage();
   const [topic, setTopic] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [generatedNewsletter, setGeneratedNewsletter] = useState<Newsletter | null>(null);
