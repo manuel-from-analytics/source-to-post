@@ -227,11 +227,28 @@ export function useImportToLibrary() {
       if (updateError) throw updateError;
       return input;
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["newsletter-detail"] });
       queryClient.invalidateQueries({ queryKey: ["inputs"] });
       queryClient.invalidateQueries({ queryKey: ["inputs-count"] });
       toast.success("Referencia importada a la biblioteca");
+
+      // Auto-extract URL content in background
+      if (data.original_url) {
+        supabase.functions.invoke("extract-url", {
+          body: { input_id: data.id },
+        }).then(({ data: result, error }) => {
+          if (error) {
+            console.error("URL extraction error:", error);
+          } else if (result?.error) {
+            console.error("URL extraction failed:", result.error);
+          } else {
+            queryClient.invalidateQueries({ queryKey: ["inputs"] });
+            queryClient.invalidateQueries({ queryKey: ["input-detail", data.id] });
+            toast.success("Contenido extraído automáticamente");
+          }
+        });
+      }
     },
     onError: (error: Error) => {
       toast.error(`Error al importar: ${error.message}`);

@@ -42,6 +42,24 @@ serve(async (req) => {
       });
     }
 
+    // Fetch user id from token
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData } = await supabase.auth.getUser(token);
+    const userId = userData?.user?.id;
+
+    // Fetch user's app_language
+    let appLang = "es";
+    if (userId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("app_language")
+        .eq("id", userId)
+        .single();
+      appLang = profile?.app_language || "es";
+    }
+    const langMap: Record<string, string> = { es: "español", en: "English", pt: "português" };
+    const summaryLang = langMap[appLang] || "español";
+
     // Fetch the input
     const { data: input, error: inputError } = await supabase
       .from("inputs")
@@ -70,7 +88,7 @@ ${input.original_url ? `URL: ${input.original_url}` : ""}
 Contenido:
 ${content || "(Sin contenido textual disponible, resume basándote en el título y la URL)"}
 
-Devuelve solo el resumen, sin explicaciones ni metadatos.`;
+IMPORTANT: Write the summary in ${summaryLang}. Devuelve solo el resumen, sin explicaciones ni metadatos.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -81,7 +99,7 @@ Devuelve solo el resumen, sin explicaciones ni metadatos.`;
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "Eres un asistente experto en resumir contenido. Produces resúmenes claros, concisos y bien estructurados en español." },
+          { role: "system", content: `Eres un asistente experto en resumir contenido. Produces resúmenes claros, concisos y bien estructurados en ${summaryLang}.` },
           { role: "user", content: userPrompt },
         ],
       }),

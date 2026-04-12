@@ -285,6 +285,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          app_language: string | null
           avatar_url: string | null
           created_at: string
           default_cta: string | null
@@ -297,6 +298,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          app_language?: string | null
           avatar_url?: string | null
           created_at?: string
           default_cta?: string | null
@@ -309,6 +311,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          app_language?: string | null
           avatar_url?: string | null
           created_at?: string
           default_cta?: string | null
