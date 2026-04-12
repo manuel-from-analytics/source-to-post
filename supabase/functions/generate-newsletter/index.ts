@@ -233,9 +233,27 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
     const newsletter = JSON.parse(toolCall.function.arguments);
     console.log("Newsletter generated:", newsletter.subject);
 
+    // Validate dates: reject items older than 6 months (except 1 foundational)
+    const cutoffMs = sixMonthsAgoDate.getTime();
+    let foundationalUsed = false;
+    newsletter.items = (newsletter.items || []).filter((item: any) => {
+      if (!item.pub_date) return true; // keep if no date (AI couldn't determine)
+      const itemDate = new Date(item.pub_date);
+      if (isNaN(itemDate.getTime())) return true;
+      if (itemDate.getTime() >= cutoffMs) return true;
+      // Allow exactly one foundational exception
+      if (item.source_type === "foundational" && !foundationalUsed) {
+        foundationalUsed = true;
+        console.log(`Allowing foundational item before cutoff: ${item.title} (${item.pub_date})`);
+        return true;
+      }
+      console.log(`REJECTED item too old: ${item.title} (${item.pub_date}), cutoff: ${cutoffDate}`);
+      return false;
+    });
+
     // Validate at least 1 academic source
-    const academicCount = (newsletter.items || []).filter((i: any) => i.source_type === "academic").length;
-    console.log(`Academic sources in newsletter: ${academicCount}`);
+    const academicCount = newsletter.items.filter((i: any) => i.source_type === "academic").length;
+    console.log(`Items after date filter: ${newsletter.items.length}, academic: ${academicCount}`);
 
     // Format readable content
     const formattedContent = formatNewsletter(newsletter);
