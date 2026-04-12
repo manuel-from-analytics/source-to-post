@@ -66,17 +66,18 @@ function FreshnessBadge({ pubDate, t }: { pubDate: string; t: (k: string) => str
   );
 }
 
-function NewsletterItemCard({ item, onImport, importing }: {
+function NewsletterItemCard({ item, onImport, importing, t }: {
   item: NewsletterItem;
   onImport: () => void;
   importing: boolean;
+  t: (k: string) => string;
 }) {
   return (
     <div className="space-y-1.5 rounded-lg border p-3 sm:p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <h4 className="flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{item.title}</h4>
         <div className="flex items-center gap-2 self-start shrink-0">
-          {item.pub_date && <FreshnessBadge pubDate={item.pub_date} />}
+          {item.pub_date && <FreshnessBadge pubDate={item.pub_date} t={t} />}
           <SourceBadge type={item.source_type} />
         </div>
       </div>
@@ -95,7 +96,7 @@ function NewsletterItemCard({ item, onImport, importing }: {
         </a>
         {item.imported_to_library ? (
           <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Check className="h-3 w-3" /> En biblioteca
+            <Check className="h-3 w-3" /> {t("newsletter.imported")}
           </span>
         ) : (
           <Button
@@ -106,7 +107,7 @@ function NewsletterItemCard({ item, onImport, importing }: {
             disabled={importing}
           >
             <Library className="h-3 w-3" />
-            Importar
+            {t("newsletter.import")}
           </Button>
         )}
       </div>
