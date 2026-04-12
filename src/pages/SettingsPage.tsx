@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { User, Key, Palette, Loader2 } from "lucide-react";
+import { User, Key, Palette, Loader2, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,9 +26,12 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // Preferences
+  // App language (UI, summaries, newsletters)
+  const [appLanguage, setAppLanguage] = useState("es");
+  const [savingAppLang, setSavingAppLang] = useState(false);
+
+  // Post generation preferences
   const [preferredLanguage, setPreferredLanguage] = useState("es");
-  
   const [defaultVoiceId, setDefaultVoiceId] = useState("none");
   const [defaultLength, setDefaultLength] = useState("none");
   const [defaultCta, setDefaultCta] = useState("none");
@@ -39,13 +42,13 @@ export default function SettingsPage() {
     (async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, preferred_language, default_writing_style, default_voice_id, default_length, default_cta")
+        .select("full_name, preferred_language, default_writing_style, default_voice_id, default_length, default_cta, app_language")
         .eq("id", user.id)
         .single();
       if (!error && data) {
         setFullName(data.full_name || "");
+        setAppLanguage((data as any).app_language || "es");
         setPreferredLanguage(data.preferred_language || "es");
-        
         setDefaultVoiceId((data as any).default_voice_id || "none");
         setDefaultLength((data as any).default_length || "none");
         setDefaultCta((data as any).default_cta || "none");
@@ -86,6 +89,21 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveAppLanguage = async () => {
+    if (!user) return;
+    setSavingAppLang(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        app_language: appLanguage,
+        updated_at: new Date().toISOString(),
+      } as any)
+      .eq("id", user.id);
+    setSavingAppLang(false);
+    if (error) toast.error("Error al guardar idioma de la app");
+    else toast.success("Idioma de la app actualizado");
+  };
+
   const handleSavePreferences = async () => {
     if (!user) return;
     setSavingPrefs(true);
@@ -93,7 +111,6 @@ export default function SettingsPage() {
       .from("profiles")
       .update({
         preferred_language: preferredLanguage,
-        
         default_voice_id: defaultVoiceId !== "none" ? defaultVoiceId : null,
         default_length: defaultLength !== "none" ? defaultLength : null,
         default_cta: defaultCta !== "none" ? defaultCta : null,
@@ -168,26 +185,55 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Preferences */}
+      {/* App Language */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Idioma de la app
+          </CardTitle>
+          <CardDescription>Afecta a la interfaz, resúmenes de contenido y generación de newsletters</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Idioma</Label>
+            <Select value={appLanguage} onValueChange={setAppLanguage}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona idioma" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="es">Español</SelectItem>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="pt">Português</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button size="sm" onClick={handleSaveAppLanguage} disabled={savingAppLang}>
+            {savingAppLang ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Guardando...</> : "Guardar idioma"}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Post generation preferences */}
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Palette className="h-4 w-4" />
-            Preferencias de generación
+            Preferencias de generación de posts
           </CardTitle>
-          <CardDescription>Valores por defecto para el generador de posts</CardDescription>
+          <CardDescription>Valores por defecto para el generador de posts (puede diferir del idioma de la app)</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Idioma preferido</Label>
+            <Label>Idioma de los posts</Label>
             <Select value={preferredLanguage} onValueChange={setPreferredLanguage}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona idioma" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="es">Español</SelectItem>
-                <SelectItem value="en">Inglés</SelectItem>
-                <SelectItem value="pt">Portugués</SelectItem>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="pt">Português</SelectItem>
               </SelectContent>
             </Select>
           </div>
