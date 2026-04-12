@@ -123,8 +123,11 @@ serve(async (req) => {
 You create "Kloshletter" style newsletters: readable, skimmable, actionable.
 Output MUST be valid JSON only, no markdown, no explanation outside JSON.`;
 
+    const cutoffDate = `${sixMonthsAgoDate.getFullYear()}-${String(sixMonthsAgoDate.getMonth() + 1).padStart(2, "0")}-${String(sixMonthsAgoDate.getDate()).padStart(2, "0")}`;
+
     const userPrompt = `Create a newsletter about: "${topic}"
-Date: ${today}
+Today's date: ${today}
+HARD CUTOFF DATE: ${cutoffDate} (6 months ago)
 
 SEARCH RESULTS TO USE:
 ${sourceSummaries}
@@ -136,7 +139,7 @@ STRICT RULES:
 2. AT LEAST 1 item MUST be an academic paper, scientific study, or university research (from sources like arxiv.org, scholar.google.com, pubmed, researchgate, university websites, or peer-reviewed journals). Mark these with source_type "academic". If no academic source was found in the search results, use your knowledge to reference a real, existing paper with a valid URL.
 3. At least 2 more must be from independent/non-vendor sources (major media like FT/Economist/HBR/Wired, analyst firms like Gartner/McKinsey/BCG)
 4. Max 2 vendor sources allowed, never from product announcements or marketing pages
-5. Links MUST be ≤6 months old. Be VERY strict about this rule — prioritize recency and state-of-the-art content. The ONLY exception is for truly foundational, seminal works that are essential to understand the topic (mark these as "foundational"). Even then, be extremely restrictive: max 1 foundational item allowed, and only if it is genuinely indispensable.
+5. ALL items MUST have a pub_date on or after ${cutoffDate}. This is a HARD requirement — any item with pub_date before ${cutoffDate} will be automatically rejected. The ONLY exception is exactly 1 item marked as "foundational" — a truly seminal, indispensable work. Be extremely restrictive with this exception.
 6. No repeated links, no duplicate topics from recent 14 days
 7. Each item must have exactly one working link
 8. Detect the language of the topic and write in that same language
