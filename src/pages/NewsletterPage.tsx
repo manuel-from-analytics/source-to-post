@@ -28,15 +28,15 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-function SourceBadge({ type }: { type: string }) {
-  const config: Record<string, { label: string; variant: "default" | "secondary" | "outline" }> = {
-    independent: { label: "Independiente", variant: "default" },
-    vendor: { label: "Vendor", variant: "secondary" },
-    foundational: { label: "Foundational", variant: "outline" },
-    academic: { label: "🎓 Académico", variant: "default" },
+function SourceBadge({ type, t }: { type: string; t: (k: string) => string }) {
+  const config: Record<string, { labelKey: string; variant: "default" | "secondary" | "outline" }> = {
+    independent: { labelKey: "newsletter.sourceBadge.independent", variant: "default" },
+    vendor: { labelKey: "newsletter.sourceBadge.vendor", variant: "secondary" },
+    foundational: { labelKey: "newsletter.sourceBadge.foundational", variant: "outline" },
+    academic: { labelKey: "newsletter.sourceBadge.academic", variant: "default" },
   };
   const c = config[type] || config.independent;
-  return <Badge variant={c.variant} className="text-[10px]">{c.label}</Badge>;
+  return <Badge variant={c.variant} className="text-[10px]">{t(c.labelKey)}</Badge>;
 }
 
 function FreshnessBadge({ pubDate, t }: { pubDate: string; t: (k: string) => string }) {
