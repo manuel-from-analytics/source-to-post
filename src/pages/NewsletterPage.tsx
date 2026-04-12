@@ -92,7 +92,7 @@ function NewsletterItemCard({ item, onImport, importing, t }: {
           className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           <ExternalLink className="h-3 w-3" />
-          Ver fuente
+          {t("newsletter.viewSource")}
         </a>
         {item.imported_to_library ? (
           <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -259,7 +259,7 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newslett
     return (
       <Button variant="outline" size="sm" className="text-xs gap-1.5" onClick={handleGenerate}>
         <Headphones className="h-3.5 w-3.5" />
-        Escuchar podcast
+        {t("newsletter.listenPodcast")}
       </Button>
     );
   }
@@ -268,7 +268,7 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newslett
     return (
       <div className="flex items-center gap-2 rounded-lg border bg-muted/50 px-3 py-2">
         <Loader2 className="h-4 w-4 animate-spin text-primary" />
-        <span className="text-xs text-muted-foreground">Generando guion...</span>
+        <span className="text-xs text-muted-foreground">{t("newsletter.generatingScript")}</span>
       </div>
     );
   }
@@ -277,7 +277,7 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newslett
     return (
       <Button variant="outline" size="sm" className="text-xs gap-1.5 text-destructive border-destructive/30" onClick={handleGenerate}>
         <Headphones className="h-3.5 w-3.5" />
-        Reintentar podcast
+        {t("newsletter.retryPodcast")}
       </Button>
     );
   }
@@ -306,7 +306,7 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newslett
         size="sm"
         className="h-7 w-7 p-0 shrink-0"
         onClick={() => { window.speechSynthesis.cancel(); setIsPlaying(false); stopTimer(); setElapsed(0); pausedElapsedRef.current = 0; handleGenerate(); }}
-        title="Regenerar podcast"
+        title={t("newsletter.regeneratePodcast")}
       >
         <RefreshCw className="h-3.5 w-3.5" />
       </Button>
@@ -344,8 +344,8 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
               onClick={handleImportAll}
               disabled={importMutation.isPending}
             >
-              <Library className="h-3.5 w-3.5" />
-              Importar todas
+            <Library className="h-3.5 w-3.5" />
+            {t("newsletter.importAll")}
             </Button>
           )}
         </div>
@@ -366,7 +366,7 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
       {newsletter.content && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Contenido completo</CardTitle>
+            <CardTitle className="text-sm">{t("newsletter.fullContent")}</CardTitle>
           </CardHeader>
           <CardContent>
             <pre className="text-xs whitespace-pre-wrap font-sans leading-relaxed text-foreground break-words [overflow-wrap:anywhere]">
@@ -424,7 +424,7 @@ export default function NewsletterPage() {
       <div className="mb-4 sm:mb-6">
         <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Newsletter</h1>
         <p className="text-sm text-muted-foreground mt-0.5 break-words">
-          Genera newsletters curadas con fuentes verificadas sobre cualquier tema
+          {t("newsletter.subtitle")}
         </p>
       </div>
 
@@ -436,7 +436,7 @@ export default function NewsletterPage() {
             <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
               <CardTitle className="text-xs font-medium flex items-center gap-2 sm:text-sm">
                 <Search className="h-4 w-4" />
-                Buscar tema
+                {t("newsletter.searchTopic")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2 px-3 sm:px-6 sm:space-y-3">
@@ -459,7 +459,7 @@ export default function NewsletterPage() {
                   ) : (
                     <Send className="h-3.5 w-3.5" />
                   )}
-                  <span className="sm:hidden">Generar newsletter</span>
+                  <span className="sm:hidden">{t("newsletter.generateNewsletter")}</span>
                 </Button>
               </div>
 
@@ -467,7 +467,7 @@ export default function NewsletterPage() {
               {pastTopics && pastTopics.length > 0 && (
                 <div className="space-y-1.5">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
-                    Búsquedas recientes
+                    {t("newsletter.recentSearches")}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
                     {pastTopics.slice(0, 8).map((t) => (
@@ -490,7 +490,7 @@ export default function NewsletterPage() {
             <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
               <CardTitle className="text-xs font-medium flex items-center gap-2 sm:text-sm">
                 <Clock className="h-4 w-4" />
-                Historial
+                {t("newsletter.history")}
               </CardTitle>
             </CardHeader>
             <CardContent className="px-3 sm:px-6">
@@ -500,7 +500,7 @@ export default function NewsletterPage() {
                 </div>
               ) : !newsletters || newsletters.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-6">
-                  Aún no has generado newsletters
+                  {t("newsletter.noHistory")}
                 </p>
               ) : (
                 <div className="space-y-1 max-h-[280px] overflow-y-auto overflow-x-hidden sm:max-h-[400px]">
@@ -537,7 +537,7 @@ export default function NewsletterPage() {
                               onClick={() => handleDelete(nl.id)}
                             >
                               <Trash2 className="h-3.5 w-3.5 mr-2" />
-                              Eliminar
+                              {t("newsletter.delete")}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -556,9 +556,9 @@ export default function NewsletterPage() {
               <div className="space-y-3 px-6 text-center">
                 <Loader2 className="h-10 w-10 animate-spin text-primary mx-auto" />
                 <div>
-                  <p className="font-medium text-sm">Generando newsletter...</p>
+                  <p className="font-medium text-sm">{t("newsletter.generating")}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Buscando fuentes verificadas y curando contenido
+                    {t("newsletter.searchingAndCurating")}
                   </p>
                 </div>
               </div>
@@ -570,9 +570,9 @@ export default function NewsletterPage() {
               <div className="space-y-3 px-6 py-10 text-center sm:py-14">
                 <Sparkles className="h-10 w-10 text-muted-foreground/40 mx-auto" />
                 <div>
-                  <p className="font-medium text-sm">Tu newsletter aparecerá aquí</p>
+                  <p className="font-medium text-sm">{t("newsletter.appearHere")}</p>
                   <p className="mx-auto mt-1 max-w-[16rem] text-xs text-muted-foreground break-words [overflow-wrap:anywhere]">
-                    Escribe un tema y genera una newsletter curada con fuentes independientes y verificadas
+                    {t("newsletter.appearHereDesc")}
                   </p>
                 </div>
               </div>
