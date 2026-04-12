@@ -7,6 +7,32 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function firecrawlSearch(query: string, apiKey: string, limit = 5): Promise<any[]> {
+  try {
+    const response = await fetch("https://api.firecrawl.dev/v1/search", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query,
+        limit,
+        scrapeOptions: { formats: ["markdown"] },
+      }),
+    });
+    if (!response.ok) {
+      console.error("Firecrawl search error:", response.status);
+      return [];
+    }
+    const data = await response.json();
+    return data.data || [];
+  } catch (e) {
+    console.error("Firecrawl search failed:", e);
+    return [];
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -40,7 +66,7 @@ serve(async (req) => {
       });
     }
 
-    // Step 1: Collect ALL previously used URLs to avoid repetition across newsletters
+    // Step 1: Collect ALL previously used URLs to avoid repetition
     const { data: allExistingItems } = await supabase
       .from("newsletter_items")
       .select("url, newsletter_id")
@@ -48,13 +74,39 @@ serve(async (req) => {
       .limit(500);
     const existingUrls: string[] = (allExistingItems || []).map((i: any) => i.url);
 
+    // Step 2: Search for content using Firecrawl
+    const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
+    if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY is not configured");
+
+    // Run general search + academic search in parallel
+    const [generalResults, academicResults] = await Promise.all([
+      firecrawlSearch(`${topic} latest trends insights 2024 2025`, FIRECRAWL_API_KEY, 8),
+      firecrawlSearch(
+        `${topic} site:scholar.google.com OR site:arxiv.org OR site:pubmed.ncbi.nlm.nih.gov OR site:researchgate.net OR "research paper" OR "academic study" OR "peer-reviewed"`,
+        FIRECRAWL_API_KEY,
+        5
+      ),
+    ]);
+
+    console.log(`Search results: ${generalResults.length} general, ${academicResults.length} academic`);
+
+    // Merge results, academic first to prioritize them
+    const allResults = [...academicResults, ...generalResults];
+
+    if (allResults.length === 0) {
+      return new Response(JSON.stringify({ error: "No search results found for this topic. Try a different query." }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Step 3: Use Lovable AI to generate structured newsletter
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const sourceSummaries = results.slice(0, 10).map((r: any, i: number) => {
+    const sourceSummaries = allResults.slice(0, 15).map((r: any, i: number) => {
       const snippet = (r.markdown || r.description || "").slice(0, 800);
-      return `[${i + 1}] Title: ${r.title || "Untitled"}\nURL: ${r.url}\nContent: ${snippet}`;
+      const isAcademic = i < academicResults.length;
+      return `[${i + 1}]${isAcademic ? " [ACADEMIC/RESEARCH]" : ""} Title: ${r.title || "Untitled"}\nURL: ${r.url}\nContent: ${snippet}`;
     }).join("\n\n---\n\n");
 
     const today = new Date().toISOString().split("T")[0];
@@ -73,12 +125,13 @@ ${existingUrls.length > 0 ? `ALREADY USED URLs (DO NOT repeat these):\n${existin
 
 STRICT RULES:
 1. Select exactly 5 items
-2. At least 3 must be from independent/non-vendor sources (peer-reviewed, major media like FT/Economist/HBR/Wired, analyst firms like Gartner/McKinsey/BCG, academic institutions)
-3. Max 2 vendor sources allowed, never from product announcements or marketing pages
-4. Links must be ≤12 months old (mark older ones as "Foundational" only if essential)
-5. No repeated links, no duplicate topics from recent 14 days
-6. Each item must have exactly one working link
-7. Detect the language of the topic and write in that same language
+2. AT LEAST 1 item MUST be an academic paper, scientific study, or university research (from sources like arxiv.org, scholar.google.com, pubmed, researchgate, university websites, or peer-reviewed journals). Mark these with source_type "academic". If no academic source was found in the search results, use your knowledge to reference a real, existing paper with a valid URL.
+3. At least 2 more must be from independent/non-vendor sources (major media like FT/Economist/HBR/Wired, analyst firms like Gartner/McKinsey/BCG)
+4. Max 2 vendor sources allowed, never from product announcements or marketing pages
+5. Links must be ≤12 months old (mark older ones as "Foundational" only if essential)
+6. No repeated links, no duplicate topics from recent 14 days
+7. Each item must have exactly one working link
+8. Detect the language of the topic and write in that same language
 
 Return this exact JSON structure:
 {
@@ -89,7 +142,7 @@ Return this exact JSON structure:
       "title": "Item headline",
       "url": "https://...",
       "description": "2-3 sentence summary: what it says, why it matters, what to do with it",
-      "source_type": "independent|vendor|foundational",
+      "source_type": "independent|vendor|foundational|academic",
       "source_name": "Publication/org name"
     }
   ],
@@ -112,7 +165,7 @@ Return this exact JSON structure:
           type: "function",
           function: {
             name: "create_newsletter",
-            description: "Create a structured newsletter with 5 curated items",
+            description: "Create a structured newsletter with 5 curated items including at least 1 academic paper",
             parameters: {
               type: "object",
               properties: {
@@ -126,7 +179,7 @@ Return this exact JSON structure:
                       title: { type: "string" },
                       url: { type: "string" },
                       description: { type: "string" },
-                      source_type: { type: "string", enum: ["independent", "vendor", "foundational"] },
+                      source_type: { type: "string", enum: ["independent", "vendor", "foundational", "academic"] },
                       source_name: { type: "string" },
                     },
                     required: ["title", "url", "description", "source_type", "source_name"],
@@ -165,6 +218,10 @@ Return this exact JSON structure:
     const newsletter = JSON.parse(toolCall.function.arguments);
     console.log("Newsletter generated:", newsletter.subject);
 
+    // Validate at least 1 academic source
+    const academicCount = (newsletter.items || []).filter((i: any) => i.source_type === "academic").length;
+    console.log(`Academic sources in newsletter: ${academicCount}`);
+
     // Format readable content
     const formattedContent = formatNewsletter(newsletter);
 
@@ -196,7 +253,6 @@ Return this exact JSON structure:
 
     if (itemsError) console.error("Error saving items:", itemsError);
 
-    // Return the full newsletter with items
     return new Response(JSON.stringify({
       newsletter: {
         ...savedNewsletter,
@@ -224,7 +280,10 @@ function formatNewsletter(data: any): string {
   let content = `${data.subject}\n\n`;
   
   (data.items || []).forEach((item: any, i: number) => {
-    const badge = item.source_type === "vendor" ? "🏢" : item.source_type === "foundational" ? "📚" : "📰";
+    const badge = item.source_type === "vendor" ? "🏢" 
+      : item.source_type === "foundational" ? "📚" 
+      : item.source_type === "academic" ? "🎓"
+      : "📰";
     content += `${i + 1}. ${badge} ${item.title}\n`;
     content += `   ${item.description}\n`;
     content += `   🔗 ${item.url}\n`;
