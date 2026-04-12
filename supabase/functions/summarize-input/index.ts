@@ -99,7 +99,7 @@ IMPORTANT: Write the summary in ${summaryLang}. Devuelve solo el resumen, sin ex
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: "Eres un asistente experto en resumir contenido. Produces resúmenes claros, concisos y bien estructurados en español." },
+          { role: "system", content: `Eres un asistente experto en resumir contenido. Produces resúmenes claros, concisos y bien estructurados en ${summaryLang}.` },
           { role: "user", content: userPrompt },
         ],
       }),
