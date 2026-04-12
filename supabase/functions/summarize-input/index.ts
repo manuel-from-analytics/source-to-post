@@ -33,7 +33,16 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = userData?.user?.id;
+
+    const { input_id } = await req.json();
+    if (!input_id) {
+      return new Response(JSON.stringify({ error: "input_id is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = userData.user.id;
 
     // Fetch user's app_language
     let appLang = "es";
