@@ -12,22 +12,27 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToggleFavorite, useDeleteInput, type InputRow } from "@/hooks/useInputs";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
-
-const typeLabels: Record<string, string> = {
-  pdf: "PDF", url: "URL", youtube: "YouTube", text: "Texto",
-};
 
 export default function InputDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
   const toggleFavorite = useToggleFavorite();
   const deleteInput = useDeleteInput();
   const queryClient = useQueryClient();
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionStep, setExtractionStep] = useState("");
+
+  const typeLabels: Record<string, string> = {
+    pdf: t("inputDetail.typePdf"),
+    url: t("inputDetail.typeUrl"),
+    youtube: t("inputDetail.typeYoutube"),
+    text: t("inputDetail.typeText"),
+  };
 
   const { data: input, isLoading } = useQuery({
     queryKey: ["input-detail", id],
@@ -58,43 +63,43 @@ export default function InputDetailPage() {
   const handleExtractPdf = async () => {
     if (!input || !input.file_path) return;
     setIsExtracting(true);
-    setExtractionStep("Descargando PDF…");
+    setExtractionStep(t("inputDetail.downloadingPdf"));
     try {
       const { data: fileBlob, error: dlError } = await supabase.storage
         .from("inputs")
         .download(input.file_path);
       
       if (!dlError && fileBlob) {
-        setExtractionStep("Analizando contenido del PDF…");
+        setExtractionStep(t("inputDetail.analyzingPdf"));
         const { extractTextFromPdfFile } = await import("@/lib/pdf");
         const file = new File([fileBlob], "doc.pdf", { type: "application/pdf" });
         const text = await extractTextFromPdfFile(file);
         
         if (text) {
-          setExtractionStep("Guardando texto extraído…");
+          setExtractionStep(t("inputDetail.savingExtracted"));
           const { error: updateError } = await supabase
             .from("inputs")
             .update({ extracted_content: text })
             .eq("id", input.id);
           if (updateError) throw updateError;
-          toast.success("Texto extraído correctamente");
+          toast.success(t("inputDetail.extractedOk"));
           queryClient.invalidateQueries({ queryKey: ["input-detail", id] });
           queryClient.invalidateQueries({ queryKey: ["inputs"] });
           return;
         }
       }
 
-      setExtractionStep("Extrayendo con IA (puede tardar)…");
+      setExtractionStep(t("inputDetail.extractingAI"));
       const { data, error } = await supabase.functions.invoke("extract-pdf", {
         body: { input_id: input.id },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Texto extraído correctamente");
+      toast.success(t("inputDetail.extractedOk"));
       queryClient.invalidateQueries({ queryKey: ["input-detail", id] });
       queryClient.invalidateQueries({ queryKey: ["inputs"] });
     } catch (e: any) {
-      toast.error(e.message || "Error al extraer texto del PDF");
+      toast.error(e.message || t("inputDetail.extractError"));
     } finally {
       setIsExtracting(false);
       setExtractionStep("");
@@ -104,18 +109,18 @@ export default function InputDetailPage() {
   const handleExtractUrl = async () => {
     if (!input || !input.original_url) return;
     setIsExtracting(true);
-    setExtractionStep("Extrayendo contenido de la URL…");
+    setExtractionStep(t("inputDetail.extractingUrl"));
     try {
       const { data, error } = await supabase.functions.invoke("extract-url", {
         body: { input_id: input.id },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Contenido extraído correctamente");
+      toast.success(t("inputDetail.extractUrlOk"));
       queryClient.invalidateQueries({ queryKey: ["input-detail", id] });
       queryClient.invalidateQueries({ queryKey: ["inputs"] });
     } catch (e: any) {
-      toast.error(e.message || "Error al extraer contenido de la URL");
+      toast.error(e.message || t("inputDetail.extractUrlError"));
     } finally {
       setIsExtracting(false);
       setExtractionStep("");
@@ -131,11 +136,11 @@ export default function InputDetailPage() {
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast.success("Resumen generado correctamente");
+      toast.success(t("inputDetail.summaryOk"));
       queryClient.invalidateQueries({ queryKey: ["input-detail", id] });
       queryClient.invalidateQueries({ queryKey: ["inputs"] });
     } catch (e: any) {
-      toast.error(e.message || "Error al generar el resumen");
+      toast.error(e.message || t("inputDetail.summaryError"));
     } finally {
       setIsSummarizing(false);
     }
@@ -152,9 +157,9 @@ export default function InputDetailPage() {
   if (!input) {
     return (
       <div className="p-4 lg:p-8 max-w-4xl mx-auto text-center py-16">
-        <p className="text-muted-foreground">Fuente no encontrada</p>
+        <p className="text-muted-foreground">{t("inputDetail.notFound")}</p>
         <Link to="/library" className="text-primary hover:underline text-sm mt-2 inline-block">
-          Volver a Biblioteca
+          {t("inputDetail.backToLibrary")}
         </Link>
       </div>
     );
@@ -166,7 +171,7 @@ export default function InputDetailPage() {
     <div className="p-3 sm:p-4 lg:p-8 space-y-4 sm:space-y-6 max-w-4xl mx-auto min-w-0 overflow-x-hidden [word-break:break-word]">
       <Link to="/library" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" />
-        Volver a Biblioteca
+        {t("inputDetail.backToLibrary")}
       </Link>
 
       {/* Header */}
@@ -187,7 +192,7 @@ export default function InputDetailPage() {
               className="inline-flex items-center gap-1 text-sm text-primary hover:underline mt-1 break-all"
             >
               <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
-              Ver original
+              {t("inputDetail.viewOriginal")}
             </a>
           )}
         </div>
@@ -202,9 +207,9 @@ export default function InputDetailPage() {
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <span>Creado: {new Date(input.created_at).toLocaleDateString("es")}</span>
+        <span>{t("inputDetail.created")}: {new Date(input.created_at).toLocaleDateString()}</span>
         <span>·</span>
-        <span>Actualizado: {new Date(input.updated_at).toLocaleDateString("es")}</span>
+        <span>{t("inputDetail.updated")}: {new Date(input.updated_at).toLocaleDateString()}</span>
       </div>
 
       <Separator />
@@ -216,10 +221,10 @@ export default function InputDetailPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">
-                  {input.type === "pdf" ? "Extraer texto del PDF" : "Extraer contenido de la URL"}
+                  {input.type === "pdf" ? t("inputDetail.extractPdf") : t("inputDetail.extractUrl")}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {isExtracting ? extractionStep : input.type === "pdf" ? "Extrae el contenido textual del documento" : "Extrae el contenido del artículo"}
+                  {isExtracting ? extractionStep : input.type === "pdf" ? t("inputDetail.extractPdfDesc") : t("inputDetail.extractUrlDesc")}
                 </p>
               </div>
               <Button
@@ -230,9 +235,9 @@ export default function InputDetailPage() {
                 className="gap-1.5"
               >
                 {isExtracting ? (
-                  <><Loader2 className="h-3.5 w-3.5 animate-spin" />Extrayendo...</>
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("inputDetail.extracting")}</>
                 ) : (
-                  <><FileText className="h-3.5 w-3.5" />Extraer contenido</>
+                  <><FileText className="h-3.5 w-3.5" />{t("inputDetail.extractContent")}</>
                 )}
               </Button>
             </div>
@@ -249,7 +254,7 @@ export default function InputDetailPage() {
       <Card className="min-w-0 overflow-hidden">
         <CardHeader className="pb-2 px-3 sm:px-6">
           <div className="flex items-center justify-between gap-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Resumen</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">{t("inputDetail.summary")}</CardTitle>
             <Button
               variant="outline"
               size="sm"
@@ -258,11 +263,11 @@ export default function InputDetailPage() {
               className="gap-1.5 flex-shrink-0 text-xs"
             >
               {isSummarizing ? (
-                <><Loader2 className="h-3.5 w-3.5 animate-spin" />Generando...</>
+                <><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("inputDetail.generating")}</>
               ) : input.summary ? (
-                <><RefreshCw className="h-3.5 w-3.5" />Regenerar</>
+                <><RefreshCw className="h-3.5 w-3.5" />{t("inputDetail.regenerate")}</>
               ) : (
-                <><Sparkles className="h-3.5 w-3.5" /><span className="hidden sm:inline">Generar resumen con IA</span><span className="sm:hidden">Resumir</span></>
+                <><Sparkles className="h-3.5 w-3.5" /><span className="hidden sm:inline">{t("inputDetail.generateSummary")}</span><span className="sm:hidden">{t("inputDetail.generateSummaryShort")}</span></>
               )}
             </Button>
           </div>
@@ -272,7 +277,7 @@ export default function InputDetailPage() {
             <p className="text-sm leading-relaxed break-words [overflow-wrap:anywhere]">{input.summary}</p>
           ) : (
             <p className="text-sm text-muted-foreground italic">
-              Aún no hay resumen. Pulsa el botón para generarlo automáticamente con IA.
+              {t("inputDetail.noSummary")}
             </p>
           )}
         </CardContent>
@@ -283,7 +288,7 @@ export default function InputDetailPage() {
         <Card className="min-w-0 overflow-hidden">
           <CardHeader className="pb-2 px-3 sm:px-6">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              {input.extracted_content ? "Contenido extraído" : "Contenido"}
+              {input.extracted_content ? t("inputDetail.extractedContent") : t("inputDetail.content")}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 sm:px-6">
@@ -301,7 +306,7 @@ export default function InputDetailPage() {
         <Card>
           <CardContent className="py-8 text-center">
             <p className="text-sm text-muted-foreground">
-              Esta fuente aún no tiene contenido extraído.
+              {t("inputDetail.noContent")}
             </p>
           </CardContent>
         </Card>
