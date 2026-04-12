@@ -15,26 +15,26 @@ import {
   Smartphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
-  { icon: Newspaper, label: "Newsletter", path: "/newsletter" },
-  { icon: Library, label: "Biblioteca", path: "/library" },
-  { icon: Mic, label: "Mi Voz", path: "/voice" },
-  { icon: PenTool, label: "Generador", path: "/generator" },
-  { icon: History, label: "Historial", path: "/history" },
-  { icon: Settings, label: "Ajustes", path: "/settings" },
-  { icon: Smartphone, label: "Instalar App", path: "/install" },
+  { icon: LayoutDashboard, labelKey: "nav.dashboard", path: "/dashboard" },
+  { icon: Newspaper, labelKey: "nav.newsletter", path: "/newsletter" },
+  { icon: Library, labelKey: "nav.library", path: "/library" },
+  { icon: Mic, labelKey: "nav.voice", path: "/voice" },
+  { icon: PenTool, labelKey: "nav.generator", path: "/generator" },
+  { icon: History, labelKey: "nav.history", path: "/history" },
+  { icon: Settings, labelKey: "nav.settings", path: "/settings" },
+  { icon: Smartphone, labelKey: "nav.install", path: "/install" },
 ];
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
+  const { t } = useLanguage();
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-foreground/20 backdrop-blur-sm lg:hidden"
@@ -42,7 +42,6 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* Sidebar */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar text-sidebar-foreground transition-transform duration-200 lg:static lg:translate-x-0",
@@ -78,7 +77,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <item.icon className="h-4.5 w-4.5" />
-                {item.label}
+                {t(item.labelKey)}
               </Link>
             );
           })}
@@ -87,14 +86,12 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="border-t border-sidebar-border p-3">
           <button className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors">
             <LogOut className="h-4.5 w-4.5" />
-            Cerrar sesión
+            {t("nav.logout")}
           </button>
         </div>
       </aside>
 
-      {/* Main content */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Mobile header */}
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-4 border-b bg-card px-4 lg:hidden">
           <button onClick={() => setSidebarOpen(true)}>
             <Menu className="h-5 w-5 text-foreground" />

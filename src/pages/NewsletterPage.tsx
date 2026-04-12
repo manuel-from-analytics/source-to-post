@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLanguage } from "@/i18n/LanguageContext";
 import {
   Newspaper, Search, Loader2, Clock, ExternalLink,
   Library, Check, ChevronRight, Sparkles, Send, MoreVertical, Trash2,
@@ -38,7 +39,7 @@ function SourceBadge({ type }: { type: string }) {
   return <Badge variant={c.variant} className="text-[10px]">{c.label}</Badge>;
 }
 
-function FreshnessBadge({ pubDate }: { pubDate: string }) {
+function FreshnessBadge({ pubDate, t }: { pubDate: string; t: (k: string) => string }) {
   const now = new Date();
   const date = new Date(pubDate);
   const diffMs = now.getTime() - date.getTime();
@@ -48,13 +49,13 @@ function FreshnessBadge({ pubDate }: { pubDate: string }) {
   let label: string;
   if (diffDays <= 30) {
     color = "bg-green-500";
-    label = "Muy reciente";
+    label = t("newsletter.veryRecent");
   } else if (diffDays <= 90) {
     color = "bg-yellow-500";
-    label = "Reciente";
+    label = t("newsletter.recent");
   } else {
     color = "bg-red-400";
-    label = "Hace +3 meses";
+    label = t("newsletter.old");
   }
 
   return (
@@ -65,17 +66,18 @@ function FreshnessBadge({ pubDate }: { pubDate: string }) {
   );
 }
 
-function NewsletterItemCard({ item, onImport, importing }: {
+function NewsletterItemCard({ item, onImport, importing, t }: {
   item: NewsletterItem;
   onImport: () => void;
   importing: boolean;
+  t: (k: string) => string;
 }) {
   return (
     <div className="space-y-1.5 rounded-lg border p-3 sm:p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <h4 className="flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{item.title}</h4>
         <div className="flex items-center gap-2 self-start shrink-0">
-          {item.pub_date && <FreshnessBadge pubDate={item.pub_date} />}
+          {item.pub_date && <FreshnessBadge pubDate={item.pub_date} t={t} />}
           <SourceBadge type={item.source_type} />
         </div>
       </div>
@@ -94,7 +96,7 @@ function NewsletterItemCard({ item, onImport, importing }: {
         </a>
         {item.imported_to_library ? (
           <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Check className="h-3 w-3" /> En biblioteca
+            <Check className="h-3 w-3" /> {t("newsletter.imported")}
           </span>
         ) : (
           <Button
@@ -105,7 +107,7 @@ function NewsletterItemCard({ item, onImport, importing }: {
             disabled={importing}
           >
             <Library className="h-3 w-3" />
-            Importar
+            {t("newsletter.import")}
           </Button>
         )}
       </div>
@@ -313,6 +315,7 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newslett
 }
 
 function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
+  const { t } = useLanguage();
   const importMutation = useImportToLibrary();
 
   const handleImportAll = () => {
@@ -355,6 +358,7 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
             item={item}
             onImport={() => importMutation.mutate(item)}
             importing={importMutation.isPending}
+            t={t}
           />
         ))}
       </div>
@@ -376,6 +380,7 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
 }
 
 export default function NewsletterPage() {
+  const { t } = useLanguage();
   const [topic, setTopic] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [generatedNewsletter, setGeneratedNewsletter] = useState<Newsletter | null>(null);

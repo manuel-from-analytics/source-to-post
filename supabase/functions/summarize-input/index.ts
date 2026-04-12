@@ -60,6 +60,25 @@ serve(async (req) => {
     const langMap: Record<string, string> = { es: "español", en: "English", pt: "português" };
     const summaryLang = langMap[appLang] || "español";
 
+    const promptsByLang: Record<string, { system: string; noContent: string; instruction: string }> = {
+      es: {
+        system: "Eres un asistente experto en resumir contenido. Produces resúmenes claros, concisos y bien estructurados en español.",
+        noContent: "(Sin contenido textual disponible, resume basándote en el título y la URL)",
+        instruction: "Resume el siguiente material de forma clara y concisa en 3-5 párrafos cortos. Destaca las ideas principales, datos clave y conclusiones relevantes. Devuelve solo el resumen, sin explicaciones ni metadatos.",
+      },
+      en: {
+        system: "You are an expert content summarizer. You produce clear, concise, and well-structured summaries in English.",
+        noContent: "(No text content available, summarize based on the title and URL)",
+        instruction: "Summarize the following material clearly and concisely in 3-5 short paragraphs. Highlight the main ideas, key data, and relevant conclusions. Return only the summary, no explanations or metadata.",
+      },
+      pt: {
+        system: "Você é um assistente especializado em resumir conteúdo. Produz resumos claros, concisos e bem estruturados em português.",
+        noContent: "(Sem conteúdo textual disponível, resuma com base no título e URL)",
+        instruction: "Resuma o seguinte material de forma clara e concisa em 3-5 parágrafos curtos. Destaque as ideias principais, dados-chave e conclusões relevantes. Retorne apenas o resumo, sem explicações ou metadados.",
+      },
+    };
+    const prompts = promptsByLang[appLang] || promptsByLang.es;
+
     // Fetch the input
     const { data: input, error: inputError } = await supabase
       .from("inputs")
@@ -79,16 +98,14 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const userPrompt = `Resume el siguiente material de forma clara y concisa en 3-5 párrafos cortos. Destaca las ideas principales, datos clave y conclusiones relevantes.
+    const userPrompt = `${prompts.instruction}
 
-Título: ${input.title}
-Tipo: ${input.type}
+Title: ${input.title}
+Type: ${input.type}
 ${input.original_url ? `URL: ${input.original_url}` : ""}
 
-Contenido:
-${content || "(Sin contenido textual disponible, resume basándote en el título y la URL)"}
-
-IMPORTANT: Write the summary in ${summaryLang}. Devuelve solo el resumen, sin explicaciones ni metadatos.`;
+Content:
+${content || prompts.noContent}`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -99,7 +116,7 @@ IMPORTANT: Write the summary in ${summaryLang}. Devuelve solo el resumen, sin ex
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: `Eres un asistente experto en resumir contenido. Produces resúmenes claros, concisos y bien estructurados en ${summaryLang}.` },
+          { role: "system", content: prompts.system },
           { role: "user", content: userPrompt },
         ],
       }),
