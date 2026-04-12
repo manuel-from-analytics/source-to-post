@@ -78,11 +78,19 @@ serve(async (req) => {
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY is not configured");
 
+    // Calculate dynamic date range for search queries
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed
+    const sixMonthsAgoDate = new Date(currentYear, currentMonth - 6, 1);
+    const sixMonthsAgoYear = sixMonthsAgoDate.getFullYear();
+    const recentYears = [...new Set([currentYear, currentYear - 1, sixMonthsAgoYear])].join(" ");
+
     // Run general search + academic search in parallel
     const [generalResults, academicResults] = await Promise.all([
-      firecrawlSearch(`${topic} latest trends insights 2024 2025`, FIRECRAWL_API_KEY, 8),
+      firecrawlSearch(`${topic} latest trends insights ${recentYears}`, FIRECRAWL_API_KEY, 8),
       firecrawlSearch(
-        `${topic} site:scholar.google.com OR site:arxiv.org OR site:pubmed.ncbi.nlm.nih.gov OR site:researchgate.net OR "research paper" OR "academic study" OR "peer-reviewed"`,
+        `${topic} site:scholar.google.com OR site:arxiv.org OR site:pubmed.ncbi.nlm.nih.gov OR site:researchgate.net OR "research paper" OR "academic study" OR "peer-reviewed" ${recentYears}`,
         FIRECRAWL_API_KEY,
         5
       ),
