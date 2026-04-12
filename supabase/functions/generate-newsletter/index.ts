@@ -66,6 +66,16 @@ serve(async (req) => {
       });
     }
 
+    // Fetch user's app_language preference
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("app_language")
+      .eq("id", userId)
+      .single();
+    const appLanguage = profile?.app_language || "es";
+    const langNames: Record<string, string> = { es: "Spanish", en: "English", pt: "Portuguese" };
+    const langName = langNames[appLanguage] || "Spanish";
+
     // Step 1: Collect ALL previously used URLs to avoid repetition
     const { data: allExistingItems } = await supabase
       .from("newsletter_items")
@@ -142,7 +152,7 @@ STRICT RULES:
 5. ALL items MUST have a pub_date on or after ${cutoffDate}. This is a HARD requirement — any item with pub_date before ${cutoffDate} will be automatically rejected. The ONLY exception is exactly 1 item marked as "foundational" — a truly seminal, indispensable work. Be extremely restrictive with this exception.
 6. No repeated links, no duplicate topics from recent 14 days
 7. Each item must have exactly one working link
-8. Detect the language of the topic and write in that same language
+8. Write the newsletter in ${langName} regardless of the topic language
 
 Return this exact JSON structure:
 {
