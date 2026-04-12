@@ -281,10 +281,11 @@ export default function SettingsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">{t("generator.noPreference")}</SelectItem>
-                <SelectItem value="question">{t("generator.ctaQuestion")}</SelectItem>
-                <SelectItem value="share">{t("generator.ctaShare")}</SelectItem>
-                <SelectItem value="follow">{t("generator.ctaFollow")}</SelectItem>
-                <SelectItem value="link">{t("generator.ctaLink")}</SelectItem>
+                <SelectItem value="question">{t("generator.question")}</SelectItem>
+                <SelectItem value="share">{t("generator.share")}</SelectItem>
+                <SelectItem value="follow">{t("generator.follow")}</SelectItem>
+                <SelectItem value="link">{t("generator.visitLink")}</SelectItem>
+                <SelectItem value="none_cta">{t("generator.noCta")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
