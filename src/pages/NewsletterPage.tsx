@@ -54,6 +54,11 @@ function NewsletterItemCard({ item, onImport, importing }: {
       {item.description && (
         <p className="text-[11px] leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere] line-clamp-2">{item.description}</p>
       )}
+      {item.pub_date && (
+        <p className="text-[10px] text-muted-foreground">
+          📅 {item.pub_date}
+        </p>
+      )}
       <div className="flex flex-wrap items-center gap-2">
         <a
           href={item.url}

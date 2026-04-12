@@ -181,8 +181,9 @@ Return this exact JSON structure:
                       description: { type: "string" },
                       source_type: { type: "string", enum: ["independent", "vendor", "foundational", "academic"] },
                       source_name: { type: "string" },
+                      pub_date: { type: "string", description: "Publication date in YYYY-MM-DD format, or approximate if exact date unknown" },
                     },
-                    required: ["title", "url", "description", "source_type", "source_name"],
+                    required: ["title", "url", "description", "source_type", "source_name", "pub_date"],
                   },
                 },
                 closing: { type: "string" },
@@ -245,6 +246,7 @@ Return this exact JSON structure:
       url: item.url,
       description: `[${item.source_name}] ${item.description}`,
       source_type: item.source_type,
+      pub_date: item.pub_date || null,
     }));
 
     const { error: itemsError } = await supabase

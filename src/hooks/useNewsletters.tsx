@@ -13,6 +13,7 @@ export interface NewsletterItem {
   source_type: string;
   imported_to_library: boolean;
   input_id: string | null;
+  pub_date: string | null;
   created_at: string;
 }
 
