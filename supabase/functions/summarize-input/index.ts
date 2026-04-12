@@ -116,7 +116,7 @@ ${content || prompts.noContent}`;
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
         messages: [
-          { role: "system", content: `Eres un asistente experto en resumir contenido. Produces resúmenes claros, concisos y bien estructurados en ${summaryLang}.` },
+          { role: "system", content: prompts.system },
           { role: "user", content: userPrompt },
         ],
       }),
