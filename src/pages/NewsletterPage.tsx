@@ -315,6 +315,7 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newslett
 }
 
 function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
+  const { t } = useLanguage();
   const importMutation = useImportToLibrary();
 
   const handleImportAll = () => {
