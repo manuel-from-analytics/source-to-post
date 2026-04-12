@@ -207,6 +207,7 @@ export type Database = {
           imported_to_library: boolean | null
           input_id: string | null
           newsletter_id: string
+          pub_date: string | null
           source_type: string | null
           title: string
           url: string
@@ -218,6 +219,7 @@ export type Database = {
           imported_to_library?: boolean | null
           input_id?: string | null
           newsletter_id: string
+          pub_date?: string | null
           source_type?: string | null
           title: string
           url: string
@@ -229,6 +231,7 @@ export type Database = {
           imported_to_library?: boolean | null
           input_id?: string | null
           newsletter_id?: string
+          pub_date?: string | null
           source_type?: string | null
           title?: string
           url?: string

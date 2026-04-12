@@ -1,0 +1,1 @@
+ALTER TABLE public.newsletter_items ADD COLUMN pub_date text NULL;

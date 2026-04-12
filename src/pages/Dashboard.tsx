@@ -1,4 +1,4 @@
-import { Library, PenTool, FileText, TrendingUp, Plus, ArrowRight } from "lucide-react";
+import { Library, PenTool, FileText, TrendingUp, Plus, ArrowRight, Newspaper } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,6 +6,7 @@ import { useInputsCount } from "@/hooks/useInputs";
 import { usePostsCount } from "@/hooks/usePosts";
 
 const quickActions = [
+  { label: "Crear newsletter", icon: Newspaper, path: "/newsletter", description: "Genera una newsletter curada sobre cualquier tema" },
   { label: "Añadir fuente", icon: Plus, path: "/library", description: "Sube un PDF, pega un link o escribe texto" },
   { label: "Generar post", icon: PenTool, path: "/generator", description: "Crea un borrador a partir de tus fuentes" },
 ];

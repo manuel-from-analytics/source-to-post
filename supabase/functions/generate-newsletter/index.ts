@@ -143,11 +143,14 @@ Return this exact JSON structure:
       "url": "https://...",
       "description": "2-3 sentence summary: what it says, why it matters, what to do with it",
       "source_type": "independent|vendor|foundational|academic",
-      "source_name": "Publication/org name"
+      "source_name": "Publication/org name",
+      "pub_date": "YYYY-MM-DD"
     }
   ],
   "closing": "One actionable closing thought"
-}`;
+}
+
+IMPORTANT: For pub_date, provide the actual or best-estimate publication date in YYYY-MM-DD format. If the exact date is unknown, estimate based on the content. This is critical for verifying freshness.`;
 
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -181,8 +184,9 @@ Return this exact JSON structure:
                       description: { type: "string" },
                       source_type: { type: "string", enum: ["independent", "vendor", "foundational", "academic"] },
                       source_name: { type: "string" },
+                      pub_date: { type: "string", description: "Publication date in YYYY-MM-DD format, or approximate if exact date unknown" },
                     },
-                    required: ["title", "url", "description", "source_type", "source_name"],
+                    required: ["title", "url", "description", "source_type", "source_name", "pub_date"],
                   },
                 },
                 closing: { type: "string" },
@@ -245,6 +249,7 @@ Return this exact JSON structure:
       url: item.url,
       description: `[${item.source_name}] ${item.description}`,
       source_type: item.source_type,
+      pub_date: item.pub_date || null,
     }));
 
     const { error: itemsError } = await supabase
