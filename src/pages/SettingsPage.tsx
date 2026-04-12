@@ -10,11 +10,14 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useVoices } from "@/hooks/useVoices";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
+import type { AppLanguage } from "@/i18n/translations";
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const { data: voices } = useVoices();
+  const { t, language: currentAppLang, setLanguage: setAppLangContext } = useLanguage();
 
   // Profile
   const [fullName, setFullName] = useState("");
@@ -26,8 +29,8 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
 
-  // App language (UI, summaries, newsletters)
-  const [appLanguage, setAppLanguage] = useState("es");
+  // App language
+  const [appLanguage, setAppLanguage] = useState<AppLanguage>(currentAppLang);
   const [savingAppLang, setSavingAppLang] = useState(false);
 
   // Post generation preferences
@@ -47,7 +50,8 @@ export default function SettingsPage() {
         .single();
       if (!error && data) {
         setFullName(data.full_name || "");
-        setAppLanguage((data as any).app_language || "es");
+        const al = (data as any).app_language || "es";
+        setAppLanguage(al);
         setPreferredLanguage(data.preferred_language || "es");
         setDefaultVoiceId((data as any).default_voice_id || "none");
         setDefaultLength((data as any).default_length || "none");
@@ -65,17 +69,17 @@ export default function SettingsPage() {
       .update({ full_name: fullName.trim(), updated_at: new Date().toISOString() })
       .eq("id", user.id);
     setSaving(false);
-    if (error) toast.error("Error al guardar el perfil");
-    else toast.success("Perfil actualizado");
+    if (error) toast.error(t("common.error"));
+    else toast.success(t("common.success"));
   };
 
   const handleChangePassword = async () => {
     if (newPassword.length < 6) {
-      toast.error("La contraseña debe tener al menos 6 caracteres");
+      toast.error(t("settings.newPasswordPlaceholder"));
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error("Las contraseñas no coinciden");
+      toast.error(t("common.error"));
       return;
     }
     setChangingPassword(true);
@@ -83,7 +87,7 @@ export default function SettingsPage() {
     setChangingPassword(false);
     if (error) toast.error(error.message);
     else {
-      toast.success("Contraseña actualizada");
+      toast.success(t("common.success"));
       setNewPassword("");
       setConfirmPassword("");
     }
@@ -100,8 +104,12 @@ export default function SettingsPage() {
       } as any)
       .eq("id", user.id);
     setSavingAppLang(false);
-    if (error) toast.error("Error al guardar idioma de la app");
-    else toast.success("Idioma de la app actualizado");
+    if (error) {
+      toast.error(t("common.error"));
+    } else {
+      setAppLangContext(appLanguage);
+      toast.success(t("common.success"));
+    }
   };
 
   const handleSavePreferences = async () => {
@@ -118,8 +126,8 @@ export default function SettingsPage() {
       } as any)
       .eq("id", user.id);
     setSavingPrefs(false);
-    if (error) toast.error("Error al guardar preferencias");
-    else toast.success("Preferencias guardadas");
+    if (error) toast.error(t("common.error"));
+    else toast.success(t("common.success"));
   };
 
   if (loading) {
@@ -133,8 +141,8 @@ export default function SettingsPage() {
   return (
     <div className="p-4 lg:p-8 space-y-6 max-w-2xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Ajustes</h1>
-        <p className="text-muted-foreground mt-1">Configura tu perfil y preferencias</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("settings.title")}</h1>
+        <p className="text-muted-foreground mt-1">{t("settings.subtitle")}</p>
       </div>
 
       {/* Profile */}
@@ -142,21 +150,21 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <User className="h-4 w-4" />
-            Perfil
+            {t("settings.profile")}
           </CardTitle>
-          <CardDescription>Tu información personal</CardDescription>
+          <CardDescription>{t("settings.profileDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Nombre completo</Label>
-            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Tu nombre" />
+            <Label>{t("settings.fullName")}</Label>
+            <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t("settings.fullName")} />
           </div>
           <div className="space-y-2">
-            <Label>Email</Label>
+            <Label>{t("settings.email")}</Label>
             <Input type="email" disabled value={user?.email || ""} className="opacity-60" />
           </div>
           <Button size="sm" onClick={handleSaveProfile} disabled={saving}>
-            {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Guardando...</> : "Guardar cambios"}
+            {saving ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t("settings.saving")}</> : t("settings.saveChanges")}
           </Button>
         </CardContent>
       </Card>
@@ -166,21 +174,21 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Key className="h-4 w-4" />
-            Contraseña
+            {t("settings.password")}
           </CardTitle>
-          <CardDescription>Actualiza tu contraseña</CardDescription>
+          <CardDescription>{t("settings.passwordDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Nueva contraseña</Label>
-            <Input type="password" placeholder="Mínimo 6 caracteres" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
+            <Label>{t("settings.newPassword")}</Label>
+            <Input type="password" placeholder={t("settings.newPasswordPlaceholder")} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label>Confirmar contraseña</Label>
-            <Input type="password" placeholder="Repite la contraseña" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            <Label>{t("settings.confirmPassword")}</Label>
+            <Input type="password" placeholder={t("settings.confirmPasswordPlaceholder")} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
           </div>
           <Button size="sm" variant="outline" onClick={handleChangePassword} disabled={changingPassword}>
-            {changingPassword ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Cambiando...</> : "Cambiar contraseña"}
+            {changingPassword ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t("settings.changingPassword")}</> : t("settings.changePassword")}
           </Button>
         </CardContent>
       </Card>
@@ -190,16 +198,16 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Globe className="h-4 w-4" />
-            Idioma de la app
+            {t("settings.appLanguage")}
           </CardTitle>
-          <CardDescription>Afecta a la interfaz, resúmenes de contenido y generación de newsletters</CardDescription>
+          <CardDescription>{t("settings.appLanguageDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Idioma</Label>
-            <Select value={appLanguage} onValueChange={setAppLanguage}>
+            <Label>{t("settings.language")}</Label>
+            <Select value={appLanguage} onValueChange={(v) => setAppLanguage(v as AppLanguage)}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecciona idioma" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="es">Español</SelectItem>
@@ -209,7 +217,7 @@ export default function SettingsPage() {
             </Select>
           </div>
           <Button size="sm" onClick={handleSaveAppLanguage} disabled={savingAppLang}>
-            {savingAppLang ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Guardando...</> : "Guardar idioma"}
+            {savingAppLang ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t("settings.saving")}</> : t("settings.saveLanguage")}
           </Button>
         </CardContent>
       </Card>
@@ -219,32 +227,32 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Palette className="h-4 w-4" />
-            Preferencias de generación de posts
+            {t("settings.postPrefs")}
           </CardTitle>
-          <CardDescription>Valores por defecto para el generador de posts (puede diferir del idioma de la app)</CardDescription>
+          <CardDescription>{t("settings.postPrefsDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Idioma de los posts</Label>
+            <Label>{t("settings.postLanguage")}</Label>
             <Select value={preferredLanguage} onValueChange={setPreferredLanguage}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecciona idioma" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="es">Español</SelectItem>
-                <SelectItem value="en">English</SelectItem>
-                <SelectItem value="pt">Português</SelectItem>
+                <SelectItem value="es">{t("common.spanish")}</SelectItem>
+                <SelectItem value="en">{t("common.english")}</SelectItem>
+                <SelectItem value="pt">{t("common.portuguese")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Voz por defecto</Label>
+            <Label>{t("settings.defaultVoice")}</Label>
             <Select value={defaultVoiceId} onValueChange={setDefaultVoiceId}>
               <SelectTrigger>
-                <SelectValue placeholder="Sin voz por defecto" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Sin voz por defecto</SelectItem>
+                <SelectItem value="none">{t("settings.noDefaultVoice")}</SelectItem>
                 {voices?.map((v) => (
                   <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
                 ))}
@@ -252,36 +260,36 @@ export default function SettingsPage() {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Longitud por defecto</Label>
+            <Label>{t("settings.defaultLength")}</Label>
             <Select value={defaultLength} onValueChange={setDefaultLength}>
               <SelectTrigger>
-                <SelectValue placeholder="Sin preferencia" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Sin preferencia</SelectItem>
-                <SelectItem value="short">Corto (~100 palabras)</SelectItem>
-                <SelectItem value="medium">Medio (~200 palabras)</SelectItem>
-                <SelectItem value="long">Largo (~300 palabras)</SelectItem>
+                <SelectItem value="none">{t("generator.noPreference")}</SelectItem>
+                <SelectItem value="short">{t("generator.short")}</SelectItem>
+                <SelectItem value="medium">{t("generator.medium")}</SelectItem>
+                <SelectItem value="long">{t("generator.long")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Call to Action por defecto</Label>
+            <Label>{t("settings.defaultCta")}</Label>
             <Select value={defaultCta} onValueChange={setDefaultCta}>
               <SelectTrigger>
-                <SelectValue placeholder="Sin preferencia" />
+                <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Sin preferencia</SelectItem>
-                <SelectItem value="question">Pregunta abierta</SelectItem>
-                <SelectItem value="share">Invitar a compartir</SelectItem>
-                <SelectItem value="follow">Invitar a seguir</SelectItem>
-                <SelectItem value="link">Visitar un enlace</SelectItem>
+                <SelectItem value="none">{t("generator.noPreference")}</SelectItem>
+                <SelectItem value="question">{t("generator.ctaQuestion")}</SelectItem>
+                <SelectItem value="share">{t("generator.ctaShare")}</SelectItem>
+                <SelectItem value="follow">{t("generator.ctaFollow")}</SelectItem>
+                <SelectItem value="link">{t("generator.ctaLink")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
           <Button size="sm" onClick={handleSavePreferences} disabled={savingPrefs}>
-            {savingPrefs ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Guardando...</> : "Guardar preferencias"}
+            {savingPrefs ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t("settings.saving")}</> : t("settings.savePrefs")}
           </Button>
         </CardContent>
       </Card>
