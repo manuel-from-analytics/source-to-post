@@ -39,7 +39,7 @@ function SourceBadge({ type }: { type: string }) {
   return <Badge variant={c.variant} className="text-[10px]">{c.label}</Badge>;
 }
 
-function FreshnessBadge({ pubDate }: { pubDate: string }) {
+function FreshnessBadge({ pubDate, t }: { pubDate: string; t: (k: string) => string }) {
   const now = new Date();
   const date = new Date(pubDate);
   const diffMs = now.getTime() - date.getTime();
@@ -49,13 +49,13 @@ function FreshnessBadge({ pubDate }: { pubDate: string }) {
   let label: string;
   if (diffDays <= 30) {
     color = "bg-green-500";
-    label = "Muy reciente";
+    label = t("newsletter.veryRecent");
   } else if (diffDays <= 90) {
     color = "bg-yellow-500";
-    label = "Reciente";
+    label = t("newsletter.recent");
   } else {
     color = "bg-red-400";
-    label = "Hace +3 meses";
+    label = t("newsletter.old");
   }
 
   return (
