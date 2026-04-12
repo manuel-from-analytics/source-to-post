@@ -78,7 +78,7 @@ function NewsletterItemCard({ item, onImport, importing, t }: {
         <h4 className="flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{item.title}</h4>
         <div className="flex items-center gap-2 self-start shrink-0">
           {item.pub_date && <FreshnessBadge pubDate={item.pub_date} t={t} />}
-          <SourceBadge type={item.source_type} />
+          <SourceBadge type={item.source_type} t={t} />
         </div>
       </div>
       {item.description && (
