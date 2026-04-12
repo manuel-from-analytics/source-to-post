@@ -121,7 +121,7 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function PodcastPlayer({ newsletterId, savedScript, newsletterLang }: { newsletterId: string; savedScript?: string | null; newsletterLang?: string | null }) {
+function PodcastPlayer({ newsletterId, savedScript, newsletterLang, t }: { newsletterId: string; savedScript?: string | null; newsletterLang?: string | null; t: (k: string) => string }) {
   const hasSaved = !!savedScript;
   const [status, setStatus] = useState<"idle" | "generating" | "ready" | "error">(hasSaved ? "ready" : "idle");
   const [isPlaying, setIsPlaying] = useState(false);
@@ -334,7 +334,7 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {newsletter.id && !newsletter.id.startsWith("temp-") && (
-            <PodcastPlayer newsletterId={newsletter.id} savedScript={newsletter.podcast_script} newsletterLang={newsletter.language} />
+            <PodcastPlayer newsletterId={newsletter.id} savedScript={newsletter.podcast_script} newsletterLang={newsletter.language} t={t} />
           )}
           {(newsletter.items || []).some(i => !i.imported_to_library) && (
             <Button
