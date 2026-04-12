@@ -128,7 +128,7 @@ STRICT RULES:
 2. AT LEAST 1 item MUST be an academic paper, scientific study, or university research (from sources like arxiv.org, scholar.google.com, pubmed, researchgate, university websites, or peer-reviewed journals). Mark these with source_type "academic". If no academic source was found in the search results, use your knowledge to reference a real, existing paper with a valid URL.
 3. At least 2 more must be from independent/non-vendor sources (major media like FT/Economist/HBR/Wired, analyst firms like Gartner/McKinsey/BCG)
 4. Max 2 vendor sources allowed, never from product announcements or marketing pages
-5. Links must be ≤12 months old (mark older ones as "Foundational" only if essential)
+5. Links MUST be ≤6 months old. Be VERY strict about this rule — prioritize recency and state-of-the-art content. The ONLY exception is for truly foundational, seminal works that are essential to understand the topic (mark these as "foundational"). Even then, be extremely restrictive: max 1 foundational item allowed, and only if it is genuinely indispensable.
 6. No repeated links, no duplicate topics from recent 14 days
 7. Each item must have exactly one working link
 8. Detect the language of the topic and write in that same language
