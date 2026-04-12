@@ -38,6 +38,33 @@ function SourceBadge({ type }: { type: string }) {
   return <Badge variant={c.variant} className="text-[10px]">{c.label}</Badge>;
 }
 
+function FreshnessBadge({ pubDate }: { pubDate: string }) {
+  const now = new Date();
+  const date = new Date(pubDate);
+  const diffMs = now.getTime() - date.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+  let color: string;
+  let label: string;
+  if (diffDays <= 30) {
+    color = "bg-green-500";
+    label = "Muy reciente";
+  } else if (diffDays <= 90) {
+    color = "bg-yellow-500";
+    label = "Reciente";
+  } else {
+    color = "bg-red-400";
+    label = "Hace +3 meses";
+  }
+
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground" title={label}>
+      <span className={`inline-block h-2 w-2 rounded-full ${color}`} />
+      {pubDate}
+    </span>
+  );
+}
+
 function NewsletterItemCard({ item, onImport, importing }: {
   item: NewsletterItem;
   onImport: () => void;
@@ -47,17 +74,13 @@ function NewsletterItemCard({ item, onImport, importing }: {
     <div className="space-y-1.5 rounded-lg border p-3 sm:p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <h4 className="flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{item.title}</h4>
-        <div className="self-start shrink-0">
+        <div className="flex items-center gap-2 self-start shrink-0">
+          {item.pub_date && <FreshnessBadge pubDate={item.pub_date} />}
           <SourceBadge type={item.source_type} />
         </div>
       </div>
       {item.description && (
         <p className="text-[11px] leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere] line-clamp-2">{item.description}</p>
-      )}
-      {item.pub_date && (
-        <p className="text-[10px] text-muted-foreground">
-          📅 {item.pub_date}
-        </p>
       )}
       <div className="flex flex-wrap items-center gap-2">
         <a
