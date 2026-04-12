@@ -17,24 +17,14 @@ import {
 } from "@/components/ui/select";
 import { usePosts, useUpdatePostStatus, useDeletePost } from "@/hooks/usePosts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useLanguage } from "@/i18n/LanguageContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
 type Post = Database["public"]["Tables"]["generated_posts"]["Row"];
 
-const statusLabels: Record<PostStatus, string> = {
-  draft: "Borrador",
-  final: "Listo",
-  published: "Publicado",
-};
-
-const statusColors: Record<PostStatus, string> = {
-  draft: "bg-muted text-muted-foreground",
-  final: "bg-primary/15 text-primary",
-  published: "bg-green-500/15 text-green-700 dark:text-green-400",
-};
-
 export default function HistoryPage() {
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const { data: posts, isLoading } = usePosts();
   const updateStatus = useUpdatePostStatus();
@@ -44,6 +34,18 @@ export default function HistoryPage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const statusLabels: Record<PostStatus, string> = {
+    draft: t("history.draft"),
+    final: t("history.final"),
+    published: t("history.published"),
+  };
+
+  const statusColors: Record<PostStatus, string> = {
+    draft: "bg-muted text-muted-foreground",
+    final: "bg-primary/15 text-primary",
+    published: "bg-green-500/15 text-green-700 dark:text-green-400",
+  };
 
   const handleCopy = (post: Post) => {
     navigator.clipboard.writeText(post.content);
@@ -99,9 +101,9 @@ export default function HistoryPage() {
   return (
     <div className="p-4 lg:p-8 space-y-6 max-w-5xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Historial</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("history.title")}</h1>
         <p className="text-muted-foreground mt-1">
-          {posts?.length ?? 0} posts generados
+          {posts?.length ?? 0} {t("history.postsGenerated")}
         </p>
       </div>
 
@@ -109,7 +111,7 @@ export default function HistoryPage() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar en historial..."
+            placeholder={t("history.search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -120,10 +122,10 @@ export default function HistoryPage() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="draft">Borrador</SelectItem>
-            <SelectItem value="final">Listo</SelectItem>
-            <SelectItem value="published">Publicado</SelectItem>
+            <SelectItem value="all">{t("history.all")}</SelectItem>
+            <SelectItem value="draft">{t("history.draft")}</SelectItem>
+            <SelectItem value="final">{t("history.final")}</SelectItem>
+            <SelectItem value="published">{t("history.published")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -165,7 +167,7 @@ export default function HistoryPage() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(post)} title="Duplicar">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(post)} title={t("history.duplicate")}>
                       <Files className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(post)}>
@@ -191,7 +193,7 @@ export default function HistoryPage() {
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">
-              {selectedPost?.title || "Post generado"}
+              {selectedPost?.title || t("history.generatedPost")}
             </DialogTitle>
           </DialogHeader>
           {selectedPost && (
@@ -204,7 +206,7 @@ export default function HistoryPage() {
 
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Estado:</span>
+                  <span className="text-xs text-muted-foreground">{t("history.status")}</span>
                   <Select
                     value={selectedPost.status ?? "draft"}
                     onValueChange={(v) => {
@@ -216,24 +218,24 @@ export default function HistoryPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="draft">Borrador</SelectItem>
-                      <SelectItem value="final">Listo</SelectItem>
-                      <SelectItem value="published">Publicado</SelectItem>
+                      <SelectItem value="draft">{t("history.draft")}</SelectItem>
+                      <SelectItem value="final">{t("history.final")}</SelectItem>
+                      <SelectItem value="published">{t("history.published")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="flex gap-1">
                   <Button size="sm" variant="outline" onClick={() => { setSelectedPost(null); handleDuplicate(selectedPost); }} className="gap-1">
-                    <Files className="h-3 w-3" /> Duplicar
+                    <Files className="h-3 w-3" /> {t("history.duplicate")}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => handleEdit(selectedPost)} className="gap-1">
-                    <Pencil className="h-3 w-3" /> Editar
+                    <Pencil className="h-3 w-3" /> {t("history.edit")}
                   </Button>
                   <Button size="sm" onClick={() => handleCopy(selectedPost)} className="gap-1">
                     {copiedId === selectedPost.id ? (
-                      <><Check className="h-3 w-3" /> Copiado</>
+                      <><Check className="h-3 w-3" /> {t("history.copied")}</>
                     ) : (
-                      <><Copy className="h-3 w-3" /> Copiar</>
+                      <><Copy className="h-3 w-3" /> {t("history.copy")}</>
                     )}
                   </Button>
                 </div>
@@ -247,15 +249,15 @@ export default function HistoryPage() {
       <AlertDialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar este post?</AlertDialogTitle>
+            <AlertDialogTitle>{t("history.deleteConfirm")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta acción no se puede deshacer.
+              {t("history.deleteDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
+              {t("history.delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -265,7 +267,7 @@ export default function HistoryPage() {
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <FileText className="h-10 w-10 text-muted-foreground/40 mb-3" />
           <p className="text-sm text-muted-foreground">
-            {posts?.length ? "No hay posts que coincidan con tu búsqueda" : "Aún no has generado ningún post"}
+            {posts?.length ? t("history.noResults") : t("history.empty")}
           </p>
         </div>
       )}
