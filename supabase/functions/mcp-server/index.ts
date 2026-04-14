@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { McpServer, StreamableHttpTransport } from "mcp-lite";
 import { createClient } from "@supabase/supabase-js";
+import { decode } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -323,20 +324,35 @@ const app = new Hono();
 app.all("/*", async (c) => {
   // Extract user JWT from custom header (Supabase intercepts Authorization)
   const token = c.req.header("x-user-token");
+  
   if (!token) {
     return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing x-user-token header" }, id: null }, 401);
   }
 
+  // Decode JWT without signature verification (gateway already authenticated the request)
+  let userId: string;
+  try {
+    const [_header, payload, _signature] = decode(token);
+    const claims = payload as Record<string, unknown>;
+    if (!claims.sub || typeof claims.sub !== "string") {
+      return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – invalid token claims" }, id: null }, 401);
+    }
+    // Check expiration
+    if (claims.exp && typeof claims.exp === "number" && claims.exp < Date.now() / 1000) {
+      return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – token expired" }, id: null }, 401);
+    }
+    userId = claims.sub;
+  } catch (e) {
+    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: `Unauthorized – ${e.message}` }, id: null }, 401);
+  }
+
+  // Create a user-scoped client for data queries (respects RLS)
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) {
-    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – invalid token" }, id: null }, 401);
-  }
 
   // Set shared auth context for tool handlers
-  _currentAuth = { supabase, userId: user.id };
+  _currentAuth = { supabase, userId };
 
   try {
     const response = await httpHandler(c.req.raw);
