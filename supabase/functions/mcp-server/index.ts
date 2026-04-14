@@ -321,8 +321,29 @@ const httpHandler = transport.bind(mcp);
 
 const app = new Hono();
 app.all("/*", async (c) => {
-  const response = await httpHandler(c.req.raw);
-  return response;
+  // Extract user JWT from custom header (Supabase intercepts Authorization)
+  const token = c.req.header("x-user-token");
+  if (!token) {
+    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing x-user-token header" }, id: null }, 401);
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data, error } = await supabase.auth.getClaims(token);
+  if (error || !data?.claims) {
+    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – invalid token" }, id: null }, 401);
+  }
+
+  // Set shared auth context for tool handlers
+  _currentAuth = { supabase, userId: data.claims.sub as string };
+
+  try {
+    const response = await httpHandler(c.req.raw);
+    return response;
+  } finally {
+    _currentAuth = null;
+  }
 });
 
 Deno.serve(app.fetch);
