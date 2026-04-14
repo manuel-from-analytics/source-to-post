@@ -329,12 +329,21 @@ app.all("/*", async (c) => {
     return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing x-user-token header" }, id: null }, 401);
   }
 
-  // Use service role to validate the user token (bypasses JWT signature checks)
-  const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
-  const { data: { user }, error: userError } = await adminClient.auth.getUser(token);
-  if (userError || !user) {
-    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: `Unauthorized – ${userError?.message || 'invalid token'}` }, id: null }, 401);
+  // Decode JWT without signature verification (gateway already authenticated the request)
+  let userId: string;
+  try {
+    const [_header, payload, _signature] = decode(token);
+    const claims = payload as Record<string, unknown>;
+    if (!claims.sub || typeof claims.sub !== "string") {
+      return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – invalid token claims" }, id: null }, 401);
+    }
+    // Check expiration
+    if (claims.exp && typeof claims.exp === "number" && claims.exp < Date.now() / 1000) {
+      return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – token expired" }, id: null }, 401);
+    }
+    userId = claims.sub;
+  } catch (e) {
+    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: `Unauthorized – ${e.message}` }, id: null }, 401);
   }
 
   // Create a user-scoped client for data queries (respects RLS)
