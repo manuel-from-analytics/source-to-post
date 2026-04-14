@@ -327,11 +327,20 @@ app.all("/*", async (c) => {
     return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing x-user-token header" }, id: null }, 401);
   }
 
-  // Use a clean client (anon key only) to validate the user token
+  // Validate token locally using getClaims (avoids network call to auth server)
   const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  const { data: { user }, error } = await authClient.auth.getUser(token);
-  if (error || !user) {
-    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: `Unauthorized – invalid token: ${error?.message || 'no user'}` }, id: null }, 401);
+  const { data: claimsData, error: claimsError } = await authClient.auth.getClaims(token);
+  
+  let userId: string;
+  if (claimsError || !claimsData?.claims) {
+    // Fallback: try getUser if getClaims fails
+    const { data: { user }, error: userError } = await authClient.auth.getUser(token);
+    if (userError || !user) {
+      return c.json({ jsonrpc: "2.0", error: { code: -32600, message: `Unauthorized – ${claimsError?.message || userError?.message || 'invalid token'}` }, id: null }, 401);
+    }
+    userId = user.id;
+  } else {
+    userId = claimsData.claims.sub as string;
   }
 
   // Create a user-scoped client for data queries
@@ -340,7 +349,7 @@ app.all("/*", async (c) => {
   });
 
   // Set shared auth context for tool handlers
-  _currentAuth = { supabase, userId: user.id };
+  _currentAuth = { supabase, userId };
 
   try {
     const response = await httpHandler(c.req.raw);
