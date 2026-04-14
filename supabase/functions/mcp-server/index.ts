@@ -7,23 +7,13 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const mcp = new McpServer({ name: "source-to-post", version: "1.0.0" });
 
-// Auth middleware – sets ctx.auth = { supabase, userId }
-// NOTE: Supabase Edge Functions intercept the Authorization header.
-// The user's JWT must be sent via the custom "x-user-token" header,
-// while Authorization carries the Supabase anon key.
-mcp.use(async (ctx: any, next: any) => {
-  const token = ctx.request?.headers?.get?.("x-user-token");
-  if (!token) {
-    throw new Error("Unauthorized – missing x-user-token header");
-  }
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: `Bearer ${token}` } },
-  });
-  const { data, error } = await supabase.auth.getClaims(token);
-  if (error || !data?.claims) throw new Error("Unauthorized – invalid token");
-  ctx.auth = { supabase, userId: data.claims.sub as string };
-  await next();
-});
+// Shared auth context set per-request at the Hono level
+let _currentAuth: { supabase: any; userId: string } | null = null;
+
+function getCurrentAuth() {
+  if (!_currentAuth) throw new Error("Unauthorized – no auth context");
+  return _currentAuth;
+}
 
 // ── INPUTS ──
 
