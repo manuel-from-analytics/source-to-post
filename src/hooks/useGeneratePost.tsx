@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 interface GenerateParams {
   input_ids: string[];
@@ -21,6 +22,7 @@ interface GenerateParams {
 export function useGeneratePost() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
   const [content, setContent] = useState("");
 
@@ -34,7 +36,7 @@ export function useGeneratePost() {
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
-      if (!token) throw new Error("No autenticado");
+      if (!token) throw new Error(t("toast.notAuthenticated"));
 
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-post`,
@@ -49,7 +51,7 @@ export function useGeneratePost() {
       );
 
       if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "Error desconocido" }));
+        const err = await resp.json().catch(() => ({ error: t("toast.unknownError") }));
         throw new Error(err.error || `Error ${resp.status}`);
       }
 
@@ -105,7 +107,7 @@ export function useGeneratePost() {
         }
       }
     } catch (e: any) {
-      toast.error(e.message || "Error al generar el post");
+      toast.error(e.message || t("toast.postGenerateError"));
     } finally {
       setIsGenerating(false);
     }
@@ -141,9 +143,9 @@ export function useGeneratePost() {
       status: "draft",
     } as any);
     if (error) {
-      toast.error("Error al guardar el post");
+      toast.error(t("toast.postSaveError"));
     } else {
-      toast.success("Post guardado como borrador");
+      toast.success(t("toast.postSaved"));
       queryClient.invalidateQueries({ queryKey: ["posts-count"] });
     }
   };
