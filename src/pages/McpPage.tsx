@@ -22,12 +22,16 @@ export default function McpPage() {
   }, [session]);
 
   const refreshToken = async () => {
-    const { data, error } = await supabase.auth.refreshSession();
-    if (error) {
-      toast.error(t("mcp.tokenRefreshError"));
-    } else if (data.session) {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data.session) {
+        toast.error(t("mcp.tokenRefreshError"));
+        return;
+      }
       setToken(data.session.access_token);
       toast.success(t("mcp.tokenRefreshed"));
+    } catch {
+      toast.error(t("mcp.tokenRefreshError"));
     }
   };
 
