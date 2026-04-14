@@ -7,21 +7,13 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 const mcp = new McpServer({ name: "source-to-post", version: "1.0.0" });
 
-// Auth middleware – sets ctx.auth = { supabase, userId }
-mcp.use(async (ctx: any, next: any) => {
-  const authHeader = ctx.request?.headers?.get?.("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    throw new Error("Unauthorized – missing Bearer token");
-  }
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const token = authHeader.replace("Bearer ", "");
-  const { data, error } = await supabase.auth.getClaims(token);
-  if (error || !data?.claims) throw new Error("Unauthorized – invalid token");
-  ctx.auth = { supabase, userId: data.claims.sub as string };
-  await next();
-});
+// Shared auth context set per-request at the Hono level
+let _currentAuth: { supabase: any; userId: string } | null = null;
+
+function getCurrentAuth() {
+  if (!_currentAuth) throw new Error("Unauthorized – no auth context");
+  return _currentAuth;
+}
 
 // ── INPUTS ──
 
@@ -37,7 +29,7 @@ mcp.tool("list_inputs", {
     },
   },
   handler: async (params: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
     let q = supabase.from("inputs").select("id, title, type, original_url, summary, category_id, is_favorite, created_at").order("created_at", { ascending: false }).limit(params.limit || 50);
     if (params.type) q = q.eq("type", params.type);
     if (params.is_favorite !== undefined) q = q.eq("is_favorite", params.is_favorite);
@@ -52,7 +44,7 @@ mcp.tool("get_input", {
   description: "Get full details of a specific source by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
     const { data, error } = await supabase.from("inputs").select("*").eq("id", id).single();
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -72,7 +64,7 @@ mcp.tool("create_input", {
     required: ["title", "type"] as const,
   },
   handler: async (params: any, ctx: any) => {
-    const { supabase, userId } = ctx.auth;
+    const { supabase, userId } = getCurrentAuth();
     const { data, error } = await supabase.from("inputs").insert({
       user_id: userId, title: params.title, type: params.type,
       raw_content: params.raw_content || null, original_url: params.original_url || null,
@@ -86,7 +78,7 @@ mcp.tool("delete_input", {
   description: "Delete a source from the library by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
     const { error } = await supabase.from("inputs").delete().eq("id", id);
     if (error) throw error;
     return { content: [{ type: "text" as const, text: "Deleted successfully" }] };
@@ -106,7 +98,7 @@ mcp.tool("list_posts", {
     },
   },
   handler: async (params: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
     let q = supabase.from("generated_posts").select("id, title, content, status, goal, tone, language, is_favorite, created_at").order("created_at", { ascending: false }).limit(params.limit || 50);
     if (params.status) q = q.eq("status", params.status);
     if (params.is_favorite !== undefined) q = q.eq("is_favorite", params.is_favorite);
@@ -120,7 +112,7 @@ mcp.tool("get_post", {
   description: "Get full details of a generated post by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
     const { data, error } = await supabase.from("generated_posts").select("*").eq("id", id).single();
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -144,7 +136,7 @@ mcp.tool("generate_post", {
     },
   },
   handler: async (params: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
 
     let sourceTexts: string[] = [];
     if (params.input_ids?.length) {
@@ -224,7 +216,7 @@ mcp.tool("save_post", {
     required: ["content"] as const,
   },
   handler: async (params: any, ctx: any) => {
-    const { supabase, userId } = ctx.auth;
+    const { supabase, userId } = getCurrentAuth();
     const { data, error } = await supabase.from("generated_posts").insert({
       user_id: userId, content: params.content, title: params.title || null,
       input_id: params.input_ids?.[0] || null, input_ids: params.input_ids || [],
@@ -260,7 +252,7 @@ mcp.tool("update_post", {
     required: ["id"] as const,
   },
   handler: async (params: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
     const { id, ...updates } = params;
     const cleanUpdates: Record<string, any> = {};
     for (const [k, v] of Object.entries(updates)) {
@@ -277,7 +269,7 @@ mcp.tool("delete_post", {
   description: "Delete a generated post by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
     const { error } = await supabase.from("generated_posts").delete().eq("id", id);
     if (error) throw error;
     return { content: [{ type: "text" as const, text: "Deleted successfully" }] };
@@ -290,7 +282,7 @@ mcp.tool("list_voices", {
   description: "List available writing voice profiles.",
   inputSchema: { type: "object" as const, properties: {} },
   handler: async (_params: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
     const { data, error } = await supabase.from("voices").select("id, name, description, created_at").order("created_at", { ascending: false });
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -303,7 +295,7 @@ mcp.tool("list_newsletters", {
   description: "List generated newsletters. Optional limit (default 20).",
   inputSchema: { type: "object" as const, properties: { limit: { type: "number" as const } } },
   handler: async (params: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
     const { data, error } = await supabase.from("newsletters").select("id, topic, language, created_at").order("created_at", { ascending: false }).limit(params.limit || 20);
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -314,7 +306,7 @@ mcp.tool("get_newsletter", {
   description: "Get full newsletter content by ID, including items.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any, ctx: any) => {
-    const { supabase } = ctx.auth;
+    const { supabase } = getCurrentAuth();
     const { data: newsletter, error } = await supabase.from("newsletters").select("*").eq("id", id).single();
     if (error) throw error;
     const { data: items } = await supabase.from("newsletter_items").select("*").eq("newsletter_id", id).order("created_at");
@@ -329,8 +321,29 @@ const httpHandler = transport.bind(mcp);
 
 const app = new Hono();
 app.all("/*", async (c) => {
-  const response = await httpHandler(c.req.raw);
-  return response;
+  // Extract user JWT from custom header (Supabase intercepts Authorization)
+  const token = c.req.header("x-user-token");
+  if (!token) {
+    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing x-user-token header" }, id: null }, 401);
+  }
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${token}` } },
+  });
+  const { data, error } = await supabase.auth.getClaims(token);
+  if (error || !data?.claims) {
+    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – invalid token" }, id: null }, 401);
+  }
+
+  // Set shared auth context for tool handlers
+  _currentAuth = { supabase, userId: data.claims.sub as string };
+
+  try {
+    const response = await httpHandler(c.req.raw);
+    return response;
+  } finally {
+    _currentAuth = null;
+  }
 });
 
 Deno.serve(app.fetch);
