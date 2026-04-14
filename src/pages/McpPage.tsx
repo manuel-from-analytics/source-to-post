@@ -201,6 +201,7 @@ export default function McpPage() {
               { name: "get_post", desc: "mcp.tool.getPost" },
               { name: "generate_post", desc: "mcp.tool.generatePost" },
               { name: "save_post", desc: "mcp.tool.savePost" },
+              { name: "update_post", desc: "mcp.tool.updatePost" },
               { name: "delete_post", desc: "mcp.tool.deletePost" },
               { name: "list_voices", desc: "mcp.tool.listVoices" },
               { name: "list_newsletters", desc: "mcp.tool.listNewsletters" },
