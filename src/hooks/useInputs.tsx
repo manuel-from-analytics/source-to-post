@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { extractTextFromPdfFile } from "@/lib/pdf";
 
 export type InputType = "pdf" | "url" | "youtube" | "text";
@@ -65,15 +66,15 @@ interface CreateInputParams {
 export function useCreateInput() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   return useMutation({
     mutationFn: async (params: CreateInputParams) => {
-      if (!user) throw new Error("No autenticado");
+      if (!user) throw new Error(t("toast.notAuthenticated"));
 
       let file_path: string | null = null;
       let extracted_content: string | null = null;
 
-      // Upload PDF if provided
       if (params.file && params.type === "pdf") {
         try {
           extracted_content = await extractTextFromPdfFile(params.file);
@@ -110,9 +111,8 @@ export function useCreateInput() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["inputs"] });
       queryClient.invalidateQueries({ queryKey: ["inputs-count"] });
-      toast.success("Fuente guardada correctamente");
+      toast.success(t("toast.sourceSaved"));
 
-      // Auto-extract PDF text in background only if browser parsing didn't get content
       if (data.type === "pdf" && data.file_path && !data.extracted_content) {
         supabase.functions.invoke("extract-pdf", {
           body: { input_id: data.id },
@@ -122,12 +122,11 @@ export function useCreateInput() {
           } else {
             queryClient.invalidateQueries({ queryKey: ["inputs"] });
             queryClient.invalidateQueries({ queryKey: ["input-detail", data.id] });
-            toast.success("Texto del PDF extraído correctamente");
+            toast.success(t("toast.pdfExtracted"));
           }
         });
       }
 
-      // Auto-extract URL content in background
       if ((data.type === "url" || data.type === "youtube") && data.original_url && !data.extracted_content) {
         supabase.functions.invoke("extract-url", {
           body: { input_id: data.id },
@@ -139,30 +138,29 @@ export function useCreateInput() {
           } else {
             queryClient.invalidateQueries({ queryKey: ["inputs"] });
             queryClient.invalidateQueries({ queryKey: ["input-detail", data.id] });
-            toast.success("Contenido de la URL extraído correctamente");
+            toast.success(t("toast.urlExtracted"));
           }
         });
       }
     },
     onError: (error: Error) => {
-      toast.error(`Error al guardar: ${error.message}`);
+      toast.error(`${t("toast.sourceSaveError")}: ${error.message}`);
     },
   });
 }
 
 export function useDeleteInput() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   return useMutation({
     mutationFn: async (input: InputRow) => {
-      // Release newsletter references so deleted materials can be re-imported later
       const { error: newsletterError } = await supabase
         .from("newsletter_items")
         .update({ imported_to_library: false, input_id: null })
         .eq("input_id", input.id);
       if (newsletterError) throw newsletterError;
 
-      // Delete file from storage if exists
       if (input.file_path) {
         await supabase.storage.from("inputs").remove([input.file_path]);
       }
@@ -175,10 +173,10 @@ export function useDeleteInput() {
       queryClient.invalidateQueries({ queryKey: ["inputs-count"] });
       queryClient.invalidateQueries({ queryKey: ["newsletter-detail"] });
       queryClient.invalidateQueries({ queryKey: ["newsletters"] });
-      toast.success("Fuente eliminada");
+      toast.success(t("toast.sourceDeleted"));
     },
     onError: (error: Error) => {
-      toast.error(`Error al eliminar: ${error.message}`);
+      toast.error(`${t("toast.sourceDeleteError")}: ${error.message}`);
     },
   });
 }

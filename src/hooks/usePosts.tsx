@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { useLanguage } from "@/i18n/LanguageContext";
 import type { Database } from "@/integrations/supabase/types";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
@@ -39,6 +40,7 @@ export function usePosts() {
 
 export function useUpdatePostStatus() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: PostStatus }) => {
       const { error } = await supabase
@@ -51,12 +53,13 @@ export function useUpdatePostStatus() {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       queryClient.invalidateQueries({ queryKey: ["posts-count"] });
     },
-    onError: () => toast.error("Error al actualizar el estado"),
+    onError: () => toast.error(t("toast.postStatusError")),
   });
 }
 
 export function useUpdatePost() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   return useMutation({
     mutationFn: async (params: {
       id: string;
@@ -84,14 +87,15 @@ export function useUpdatePost() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
-      toast.success("Post actualizado");
+      toast.success(t("toast.postUpdated"));
     },
-    onError: () => toast.error("Error al actualizar el post"),
+    onError: () => toast.error(t("toast.postUpdateError")),
   });
 }
 
 export function useDeletePost() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
@@ -103,8 +107,8 @@ export function useDeletePost() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["posts"] });
       queryClient.invalidateQueries({ queryKey: ["posts-count"] });
-      toast.success("Post eliminado");
+      toast.success(t("toast.postDeleted"));
     },
-    onError: () => toast.error("Error al eliminar el post"),
+    onError: () => toast.error(t("toast.postDeleteError")),
   });
 }

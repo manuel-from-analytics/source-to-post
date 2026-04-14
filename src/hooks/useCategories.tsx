@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 export interface CategoryRow {
   id: string;
@@ -31,10 +32,11 @@ export function useCategories() {
 export function useCreateCategory() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   return useMutation({
     mutationFn: async ({ name, color }: { name: string; color?: string }) => {
-      if (!user) throw new Error("No autenticado");
+      if (!user) throw new Error(t("toast.notAuthenticated"));
       const { data, error } = await supabase
         .from("categories")
         .insert({ user_id: user.id, name, color: color || null })
@@ -45,7 +47,7 @@ export function useCreateCategory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-      toast.success("Categoría creada");
+      toast.success(t("toast.categoryCreated"));
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -53,6 +55,7 @@ export function useCreateCategory() {
 
 export function useDeleteCategory() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -61,7 +64,7 @@ export function useDeleteCategory() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
-      toast.success("Categoría eliminada");
+      toast.success(t("toast.categoryDeleted"));
     },
     onError: (e: Error) => toast.error(e.message),
   });

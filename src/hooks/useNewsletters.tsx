@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 export interface NewsletterItem {
   id: string;
@@ -62,13 +63,9 @@ export function useNewsletterDetail(id: string | null) {
         .eq("newsletter_id", id)
         .order("created_at", { ascending: true });
 
-      // Check for orphaned imports: imported but input_id is null OR input no longer exists
       const importedItems = (items || []).filter(i => i.imported_to_library);
       if (importedItems.length > 0) {
-        // Items marked imported but with no input_id are definitely orphaned
         const noRefIds = importedItems.filter(i => !i.input_id).map(i => i.id);
-
-        // Items with input_id — verify the input still exists
         const withRef = importedItems.filter(i => i.input_id);
         let missingRefIds: string[] = [];
         if (withRef.length > 0) {
@@ -123,6 +120,7 @@ export function useSearchTopics() {
 export function useGenerateNewsletter() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
 
   const generate = async (topic: string): Promise<Newsletter | null> => {
@@ -131,7 +129,7 @@ export function useGenerateNewsletter() {
     try {
       const session = await supabase.auth.getSession();
       const token = session.data.session?.access_token;
-      if (!token) throw new Error("No autenticado");
+      if (!token) throw new Error(t("toast.notAuthenticated"));
 
       const resp = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-newsletter`,
@@ -146,17 +144,17 @@ export function useGenerateNewsletter() {
       );
 
       if (!resp.ok) {
-        const err = await resp.json().catch(() => ({ error: "Error desconocido" }));
+        const err = await resp.json().catch(() => ({ error: t("toast.unknownError") }));
         throw new Error(err.error || `Error ${resp.status}`);
       }
 
       const data = await resp.json();
       queryClient.invalidateQueries({ queryKey: ["newsletters"] });
       queryClient.invalidateQueries({ queryKey: ["newsletter-topics"] });
-      toast.success("Newsletter generada correctamente");
+      toast.success(t("toast.newsletterGenerated"));
       return data.newsletter as Newsletter;
     } catch (e: any) {
-      toast.error(e.message || "Error al generar la newsletter");
+      toast.error(e.message || t("toast.newsletterGenerateError"));
       return null;
     } finally {
       setIsGenerating(false);
@@ -168,6 +166,7 @@ export function useGenerateNewsletter() {
 
 export function useDeleteNewsletter() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   return useMutation({
     mutationFn: async (id: string) => {
@@ -187,10 +186,10 @@ export function useDeleteNewsletter() {
       queryClient.invalidateQueries({ queryKey: ["newsletters"] });
       queryClient.invalidateQueries({ queryKey: ["newsletter-topics"] });
       queryClient.invalidateQueries({ queryKey: ["newsletter-detail"] });
-      toast.success("Newsletter eliminada");
+      toast.success(t("toast.newsletterDeleted"));
     },
     onError: (error: Error) => {
-      toast.error(`Error al eliminar: ${error.message}`);
+      toast.error(`${t("toast.newsletterDeleteError")}: ${error.message}`);
     },
   });
 }
@@ -198,12 +197,12 @@ export function useDeleteNewsletter() {
 export function useImportToLibrary() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
 
   return useMutation({
     mutationFn: async (item: NewsletterItem) => {
-      if (!user) throw new Error("No autenticado");
+      if (!user) throw new Error(t("toast.notAuthenticated"));
 
-      // Create input in library
       const { data: input, error: inputError } = await supabase
         .from("inputs")
         .insert({
@@ -218,7 +217,6 @@ export function useImportToLibrary() {
 
       if (inputError) throw inputError;
 
-      // Mark as imported
       const { error: updateError } = await supabase
         .from("newsletter_items")
         .update({ imported_to_library: true, input_id: input.id })
@@ -231,9 +229,8 @@ export function useImportToLibrary() {
       queryClient.invalidateQueries({ queryKey: ["newsletter-detail"] });
       queryClient.invalidateQueries({ queryKey: ["inputs"] });
       queryClient.invalidateQueries({ queryKey: ["inputs-count"] });
-      toast.success("Referencia importada a la biblioteca");
+      toast.success(t("toast.importedToLibrary"));
 
-      // Auto-extract URL content in background
       if (data.original_url) {
         supabase.functions.invoke("extract-url", {
           body: { input_id: data.id },
@@ -245,13 +242,13 @@ export function useImportToLibrary() {
           } else {
             queryClient.invalidateQueries({ queryKey: ["inputs"] });
             queryClient.invalidateQueries({ queryKey: ["input-detail", data.id] });
-            toast.success("Contenido extraído automáticamente");
+            toast.success(t("toast.autoExtracted"));
           }
         });
       }
     },
     onError: (error: Error) => {
-      toast.error(`Error al importar: ${error.message}`);
+      toast.error(`${t("toast.importError")}: ${error.message}`);
     },
   });
 }

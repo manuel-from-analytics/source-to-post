@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 export interface Voice {
   id: string;
@@ -31,9 +32,10 @@ export function useVoices() {
 export function useAddVoice() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   return useMutation({
     mutationFn: async ({ name, description }: { name: string; description?: string }) => {
-      if (!user) throw new Error("No autenticado");
+      if (!user) throw new Error(t("toast.notAuthenticated"));
       const { data, error } = await supabase
         .from("voices")
         .insert({ user_id: user.id, name, description: description || null } as any)
@@ -43,25 +45,26 @@ export function useAddVoice() {
       return data as Voice;
     },
     onSuccess: () => {
-      toast.success("Voz creada");
+      toast.success(t("toast.voiceCreated"));
       queryClient.invalidateQueries({ queryKey: ["voices"] });
     },
-    onError: () => toast.error("Error al crear la voz"),
+    onError: () => toast.error(t("toast.voiceCreateError")),
   });
 }
 
 export function useDeleteVoice() {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("voices").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Voz eliminada");
+      toast.success(t("toast.voiceDeleted"));
       queryClient.invalidateQueries({ queryKey: ["voices"] });
       queryClient.invalidateQueries({ queryKey: ["voice-samples"] });
     },
-    onError: () => toast.error("Error al eliminar la voz"),
+    onError: () => toast.error(t("toast.voiceDeleteError")),
   });
 }
