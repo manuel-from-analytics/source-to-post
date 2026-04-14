@@ -330,7 +330,7 @@ app.all("/*", async (c) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  const { data: { user }, error } = await supabase.auth.getUser();
+  const { data: { user }, error } = await supabase.auth.getUser(token);
   if (error || !user) {
     return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – invalid token" }, id: null }, 401);
   }
