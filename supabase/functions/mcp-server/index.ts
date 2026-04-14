@@ -1,7 +1,6 @@
 import { Hono } from "hono";
 import { McpServer, StreamableHttpTransport } from "mcp-lite";
 import { createClient } from "@supabase/supabase-js";
-import { z } from "zod";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -22,22 +21,21 @@ async function authenticate(req: Request) {
   return { supabase, userId: data.claims.sub as string };
 }
 
-const mcp = new McpServer({
-  name: "source-to-post",
-  version: "1.0.0",
-  schemaAdapter: (schema: any) => z.toJSONSchema(schema as z.ZodType),
-});
+const mcp = new McpServer({ name: "source-to-post", version: "1.0.0" });
 
 // ── INPUTS ──
 
 mcp.tool("list_inputs", {
   description: "List sources from the library. Optional filters: type, is_favorite, category_id, limit.",
-  inputSchema: z.object({
-    type: z.enum(["pdf", "url", "youtube", "text"]).optional(),
-    is_favorite: z.boolean().optional(),
-    category_id: z.string().optional(),
-    limit: z.number().optional(),
-  }),
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      type: { type: "string" as const, enum: ["pdf", "url", "youtube", "text"] },
+      is_favorite: { type: "boolean" as const },
+      category_id: { type: "string" as const },
+      limit: { type: "number" as const },
+    },
+  },
   handler: async (params: any, { request }: any) => {
     const { supabase } = await authenticate(request);
     let q = supabase.from("inputs").select("id, title, type, original_url, summary, category_id, is_favorite, created_at").order("created_at", { ascending: false }).limit(params.limit || 50);
@@ -52,7 +50,7 @@ mcp.tool("list_inputs", {
 
 mcp.tool("get_input", {
   description: "Get full details of a specific source by ID.",
-  inputSchema: z.object({ id: z.string() }),
+  inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any, { request }: any) => {
     const { supabase } = await authenticate(request);
     const { data, error } = await supabase.from("inputs").select("*").eq("id", id).single();
@@ -63,12 +61,16 @@ mcp.tool("get_input", {
 
 mcp.tool("create_input", {
   description: "Add a new text or URL source to the library.",
-  inputSchema: z.object({
-    title: z.string(),
-    type: z.enum(["text", "url", "youtube"]),
-    raw_content: z.string().optional(),
-    original_url: z.string().optional(),
-  }),
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      title: { type: "string" as const },
+      type: { type: "string" as const, enum: ["text", "url", "youtube"] },
+      raw_content: { type: "string" as const },
+      original_url: { type: "string" as const },
+    },
+    required: ["title", "type"] as const,
+  },
   handler: async (params: any, { request }: any) => {
     const { supabase, userId } = await authenticate(request);
     const { data, error } = await supabase.from("inputs").insert({
@@ -82,7 +84,7 @@ mcp.tool("create_input", {
 
 mcp.tool("delete_input", {
   description: "Delete a source from the library by ID.",
-  inputSchema: z.object({ id: z.string() }),
+  inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any, { request }: any) => {
     const { supabase } = await authenticate(request);
     const { error } = await supabase.from("inputs").delete().eq("id", id);
@@ -95,11 +97,14 @@ mcp.tool("delete_input", {
 
 mcp.tool("list_posts", {
   description: "List generated posts. Optional filters: status, is_favorite, limit.",
-  inputSchema: z.object({
-    status: z.enum(["draft", "final", "published"]).optional(),
-    is_favorite: z.boolean().optional(),
-    limit: z.number().optional(),
-  }),
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      status: { type: "string" as const, enum: ["draft", "final", "published"] },
+      is_favorite: { type: "boolean" as const },
+      limit: { type: "number" as const },
+    },
+  },
   handler: async (params: any, { request }: any) => {
     const { supabase } = await authenticate(request);
     let q = supabase.from("generated_posts").select("id, title, content, status, goal, tone, language, is_favorite, created_at").order("created_at", { ascending: false }).limit(params.limit || 50);
@@ -113,7 +118,7 @@ mcp.tool("list_posts", {
 
 mcp.tool("get_post", {
   description: "Get full details of a generated post by ID.",
-  inputSchema: z.object({ id: z.string() }),
+  inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any, { request }: any) => {
     const { supabase } = await authenticate(request);
     const { data, error } = await supabase.from("generated_posts").select("*").eq("id", id).single();
@@ -123,18 +128,21 @@ mcp.tool("get_post", {
 });
 
 mcp.tool("generate_post", {
-  description: "Generate a new LinkedIn post from selected sources. Returns the generated content (non-streaming).",
-  inputSchema: z.object({
-    input_ids: z.array(z.string()).optional(),
-    goal: z.enum(["educate", "inspire", "promote", "engage", "storytelling"]).optional(),
-    tone: z.enum(["professional", "casual", "inspirational", "direct", "humorous"]).optional(),
-    language: z.enum(["es", "en", "pt"]).optional(),
-    length: z.enum(["short", "medium", "long"]).optional(),
-    cta: z.enum(["question", "share", "follow", "link", "none"]).optional(),
-    target_audience: z.string().optional(),
-    content_focus: z.string().optional(),
-    voice_id: z.string().optional(),
-  }),
+  description: "Generate a new LinkedIn post from selected sources. Returns generated content (non-streaming).",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      input_ids: { type: "array" as const, items: { type: "string" as const } },
+      goal: { type: "string" as const, enum: ["educate", "inspire", "promote", "engage", "storytelling"] },
+      tone: { type: "string" as const, enum: ["professional", "casual", "inspirational", "direct", "humorous"] },
+      language: { type: "string" as const, enum: ["es", "en", "pt"] },
+      length: { type: "string" as const, enum: ["short", "medium", "long"] },
+      cta: { type: "string" as const, enum: ["question", "share", "follow", "link", "none"] },
+      target_audience: { type: "string" as const },
+      content_focus: { type: "string" as const },
+      voice_id: { type: "string" as const },
+    },
+  },
   handler: async (params: any, { request }: any) => {
     const { supabase } = await authenticate(request);
 
@@ -159,9 +167,9 @@ mcp.tool("generate_post", {
     const ctaMap: Record<string, string> = { question: "una pregunta abierta al lector", share: "invitar a compartir", follow: "invitar a seguir", link: "invitar a visitar un enlace", none: "sin call to action" };
     const langMap: Record<string, string> = { es: "español", en: "inglés", pt: "portugués" };
 
-    let systemPrompt = `Eres un experto creador de contenido para LinkedIn.\nGeneras posts de alta calidad, optimizados para engagement.\nUsa emojis con moderación, formato con saltos de línea y estructura visual clara.\nNO uses markdown (ni asteriscos ni negritas), escribe en texto plano.\nIMPORTANTE: NO empieces el post con texto entre corchetes como [Título] o [Hook]. Empieza directamente con el contenido del post.`;
+    let systemPrompt = `Eres un experto creador de contenido para LinkedIn.\nGeneras posts de alta calidad, optimizados para engagement.\nUsa emojis con moderación, formato con saltos de línea y estructura visual clara.\nNO uses markdown (ni asteriscos ni negritas), escribe en texto plano.\nIMPORTANTE: NO empieces el post con texto entre corchetes.`;
     if (voiceTexts.length > 0) {
-      systemPrompt += `\n\nIMPORTANTE - ESTILO DE ESCRITURA:\nAnaliza estos posts de referencia e imita el estilo fielmente.\n\nEJEMPLOS:\n${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}\n--- Fin ---`;
+      systemPrompt += `\n\nESTILO DE ESCRITURA - Imita este estilo:\n${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}\n--- Fin ---`;
     }
 
     let userPrompt = "Genera un post para LinkedIn";
@@ -197,20 +205,24 @@ mcp.tool("generate_post", {
 
 mcp.tool("save_post", {
   description: "Save a generated post to the database.",
-  inputSchema: z.object({
-    content: z.string(),
-    title: z.string().optional(),
-    input_ids: z.array(z.string()).optional(),
-    goal: z.string().optional(),
-    tone: z.string().optional(),
-    language: z.string().optional(),
-    length: z.string().optional(),
-    cta: z.string().optional(),
-    target_audience: z.string().optional(),
-    content_focus: z.string().optional(),
-    voice_id: z.string().optional(),
-    status: z.enum(["draft", "final", "published"]).optional(),
-  }),
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      content: { type: "string" as const },
+      title: { type: "string" as const },
+      input_ids: { type: "array" as const, items: { type: "string" as const } },
+      goal: { type: "string" as const },
+      tone: { type: "string" as const },
+      language: { type: "string" as const },
+      length: { type: "string" as const },
+      cta: { type: "string" as const },
+      target_audience: { type: "string" as const },
+      content_focus: { type: "string" as const },
+      voice_id: { type: "string" as const },
+      status: { type: "string" as const, enum: ["draft", "final", "published"] },
+    },
+    required: ["content"] as const,
+  },
   handler: async (params: any, { request }: any) => {
     const { supabase, userId } = await authenticate(request);
     const { data, error } = await supabase.from("generated_posts").insert({
@@ -228,7 +240,7 @@ mcp.tool("save_post", {
 
 mcp.tool("delete_post", {
   description: "Delete a generated post by ID.",
-  inputSchema: z.object({ id: z.string() }),
+  inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any, { request }: any) => {
     const { supabase } = await authenticate(request);
     const { error } = await supabase.from("generated_posts").delete().eq("id", id);
@@ -241,7 +253,7 @@ mcp.tool("delete_post", {
 
 mcp.tool("list_voices", {
   description: "List available writing voice profiles.",
-  inputSchema: z.object({}),
+  inputSchema: { type: "object" as const, properties: {} },
   handler: async (_params: any, { request }: any) => {
     const { supabase } = await authenticate(request);
     const { data, error } = await supabase.from("voices").select("id, name, description, created_at").order("created_at", { ascending: false });
@@ -254,7 +266,7 @@ mcp.tool("list_voices", {
 
 mcp.tool("list_newsletters", {
   description: "List generated newsletters. Optional limit (default 20).",
-  inputSchema: z.object({ limit: z.number().optional() }),
+  inputSchema: { type: "object" as const, properties: { limit: { type: "number" as const } } },
   handler: async (params: any, { request }: any) => {
     const { supabase } = await authenticate(request);
     const { data, error } = await supabase.from("newsletters").select("id, topic, language, created_at").order("created_at", { ascending: false }).limit(params.limit || 20);
@@ -265,7 +277,7 @@ mcp.tool("list_newsletters", {
 
 mcp.tool("get_newsletter", {
   description: "Get full newsletter content by ID, including items.",
-  inputSchema: z.object({ id: z.string() }),
+  inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any, { request }: any) => {
     const { supabase } = await authenticate(request);
     const { data: newsletter, error } = await supabase.from("newsletters").select("*").eq("id", id).single();
@@ -281,14 +293,6 @@ const transport = new StreamableHttpTransport();
 const httpHandler = transport.bind(mcp);
 
 const app = new Hono();
-app.all("/mcp-server", async (c) => {
-  const response = await httpHandler(c.req.raw);
-  return response;
-});
-app.all("/mcp-server/*", async (c) => {
-  const response = await httpHandler(c.req.raw);
-  return response;
-});
 app.all("/*", async (c) => {
   const response = await httpHandler(c.req.raw);
   return response;
