@@ -47,6 +47,7 @@ export type Database = {
           goal: string | null
           id: string
           input_id: string | null
+          input_ids: string[] | null
           is_favorite: boolean | null
           language: string | null
           length: string | null
@@ -66,6 +67,7 @@ export type Database = {
           goal?: string | null
           id?: string
           input_id?: string | null
+          input_ids?: string[] | null
           is_favorite?: boolean | null
           language?: string | null
           length?: string | null
@@ -85,6 +87,7 @@ export type Database = {
           goal?: string | null
           id?: string
           input_id?: string | null
+          input_ids?: string[] | null
           is_favorite?: boolean | null
           language?: string | null
           length?: string | null

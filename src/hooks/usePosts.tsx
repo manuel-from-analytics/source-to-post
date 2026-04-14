@@ -73,6 +73,7 @@ export function useUpdatePost() {
       length?: string;
       content_focus?: string;
       voice_id?: string;
+      input_ids?: string[];
     }) => {
       const { id, ...rest } = params;
       const { error } = await supabase
@@ -80,6 +81,8 @@ export function useUpdatePost() {
         .update({
           ...rest,
           voice_id: rest.voice_id || null,
+          input_id: rest.input_ids?.[0] || null,
+          input_ids: rest.input_ids || [],
           updated_at: new Date().toISOString(),
         } as any)
         .eq("id", id);
