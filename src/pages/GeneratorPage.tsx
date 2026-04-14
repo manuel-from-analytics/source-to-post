@@ -170,6 +170,7 @@ export default function GeneratorPage() {
           length: length || undefined,
           content_focus: contentFocus || undefined,
           voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
+          input_ids: selectedSources,
         },
         { onSuccess: () => toast.success(t("generator.postUpdated")) }
       );
