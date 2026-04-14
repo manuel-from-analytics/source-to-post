@@ -1,0 +1,1 @@
+ALTER TABLE public.generated_posts ADD COLUMN input_ids text[] DEFAULT '{}'::text[];
