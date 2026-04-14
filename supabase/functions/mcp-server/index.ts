@@ -25,6 +25,7 @@ async function authenticate(req: Request) {
 const mcp = new McpServer({
   name: "source-to-post",
   version: "1.0.0",
+  schemaAdapter: (schema: any) => z.toJSONSchema(schema as z.ZodType),
 });
 
 // ── INPUTS ──
