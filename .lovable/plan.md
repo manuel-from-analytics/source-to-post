@@ -1,29 +1,54 @@
 
 
-## Plan: Hacer PostFlow instalable como PWA
+# Plan: MCP Server for Source-to-Post
 
-### Resumen
-Configuraremos la app para que sea instalable desde el navegador del móvil, con su propio icono y pantalla completa (sin barra del navegador). No necesita App Store ni Google Play.
+Create an MCP Server as a Supabase Edge Function that exposes the app's main resources (inputs, posts, voices, newsletters) to external AI tools like Claude, Cursor, etc.
 
-### Pasos
+## What is an MCP Server?
 
-1. **Crear `public/manifest.json`** con nombre, colores, iconos y `display: "standalone"` para que el sistema operativo la reconozca como app instalable.
+An MCP (Model Context Protocol) server allows AI tools to interact with your app programmatically. For example, from Claude Desktop or Cursor you could ask "list my saved sources" or "generate a LinkedIn post from my latest article" and it would use your app's API directly.
 
-2. **Crear iconos PWA** en `public/` (192x192 y 512x512 px). Se generarán iconos SVG simples con el logo de Sparkles/PostFlow.
+## Architecture
 
-3. **Actualizar `index.html`** para enlazar el manifest y añadir meta tags de iOS (apple-mobile-web-app-capable, apple-touch-icon, theme-color).
+A single Edge Function (`mcp-server`) using **mcp-lite** + **Hono** that exposes tools for each resource type. Authentication via the user's Supabase JWT token.
 
-4. **Crear página `/install`** con instrucciones visuales para instalar la app según el dispositivo (iOS: Compartir → Añadir a pantalla de inicio; Android: menú del navegador → Instalar). Incluir botón que dispare el prompt nativo de instalación en Android.
+## Tools to expose
 
-5. **Añadir enlace a la página de instalación** en el sidebar de la app.
+| Tool | Description |
+|------|-------------|
+| `list_inputs` | List sources from the library with optional filters (type, category, favorites) |
+| `get_input` | Get full details of a specific source |
+| `create_input` | Add a new text or URL source |
+| `delete_input` | Remove a source |
+| `list_posts` | List generated posts with optional filters (status, favorites) |
+| `get_post` | Get full post content |
+| `generate_post` | Generate a new LinkedIn post from selected sources with parameters (goal, tone, length, CTA, voice) |
+| `save_post` | Save a generated post |
+| `delete_post` | Remove a post |
+| `list_voices` | List available writing voices |
+| `list_newsletters` | List generated newsletters |
+| `get_newsletter` | Get full newsletter content |
 
-### Notas importantes
-- No se usará `vite-plugin-pwa` ni service workers para mantener la compatibilidad con el editor de Lovable.
-- La instalación funcionará solo en la versión publicada, no en el preview del editor.
-- Solo con el manifest y los meta tags, la app ya será instalable en la mayoría de navegadores móviles.
+## Technical details
 
-### Detalle técnico
-- No hay dependencias nuevas
-- Archivos nuevos: `public/manifest.json`, `public/icon-192.svg`, `public/icon-512.svg`, `src/pages/InstallPage.tsx`
-- Archivos modificados: `index.html`, `src/App.tsx`, `src/components/layout/AppLayout.tsx`
+- **File**: `supabase/functions/mcp-server/index.ts`
+- **Dependencies**: `mcp-lite` (^0.10.0), `hono`, `@supabase/supabase-js`
+- **Auth**: JWT validation via `getClaims()` — same pattern as existing edge functions
+- **Config**: Add `deno.json` with import map for mcp-lite
+- **Post generation**: For `generate_post`, call the existing `generate-post` edge function internally (non-streaming) or replicate the AI call logic to return the full result synchronously
+
+## Steps
+
+1. Create `supabase/functions/mcp-server/index.ts` with Hono + mcp-lite setup
+2. Implement all tools with Supabase client queries scoped to the authenticated user
+3. Handle `generate_post` by making an internal call to the AI gateway (synchronous, non-streaming)
+4. Deploy and test the endpoint
+
+## Usage
+
+Users would configure their MCP client (Claude Desktop, Cursor, etc.) with:
+```
+URL: https://ofpnsqvcagowvaavzzxh.supabase.co/functions/v1/mcp-server
+Headers: Authorization: Bearer <user_jwt_token>
+```
 
