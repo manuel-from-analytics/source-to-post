@@ -1,1 +1,4 @@
 project_id = "ofpnsqvcagowvaavzzxh"
+
+[functions.mcp-server]
+import_map = "./supabase/functions/mcp-server/deno.json"
