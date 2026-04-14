@@ -238,6 +238,41 @@ mcp.tool("save_post", {
   },
 });
 
+mcp.tool("update_post", {
+  description: "Update an existing post by ID. Only provided fields will be updated.",
+  inputSchema: {
+    type: "object" as const,
+    properties: {
+      id: { type: "string" as const },
+      content: { type: "string" as const },
+      title: { type: "string" as const },
+      status: { type: "string" as const, enum: ["draft", "final", "published"] },
+      goal: { type: "string" as const },
+      tone: { type: "string" as const },
+      language: { type: "string" as const },
+      length: { type: "string" as const },
+      cta: { type: "string" as const },
+      target_audience: { type: "string" as const },
+      content_focus: { type: "string" as const },
+      voice_id: { type: "string" as const },
+      is_favorite: { type: "boolean" as const },
+    },
+    required: ["id"] as const,
+  },
+  handler: async (params: any, ctx: any) => {
+    const { supabase } = ctx.auth;
+    const { id, ...updates } = params;
+    const cleanUpdates: Record<string, any> = {};
+    for (const [k, v] of Object.entries(updates)) {
+      if (v !== undefined) cleanUpdates[k] = v;
+    }
+    if (Object.keys(cleanUpdates).length === 0) throw new Error("No fields to update");
+    const { data, error } = await supabase.from("generated_posts").update(cleanUpdates).eq("id", id).select().single();
+    if (error) throw error;
+    return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
+  },
+});
+
 mcp.tool("delete_post", {
   description: "Delete a generated post by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
