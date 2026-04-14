@@ -330,13 +330,13 @@ app.all("/*", async (c) => {
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  const { data, error } = await supabase.auth.getClaims(token);
-  if (error || !data?.claims) {
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || !user) {
     return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – invalid token" }, id: null }, 401);
   }
 
   // Set shared auth context for tool handlers
-  _currentAuth = { supabase, userId: data.claims.sub as string };
+  _currentAuth = { supabase, userId: user.id };
 
   try {
     const response = await httpHandler(c.req.raw);
