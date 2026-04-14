@@ -352,7 +352,7 @@ app.all("/*", async (c) => {
   });
 
   // Set shared auth context for tool handlers
-  _currentAuth = { supabase, userId: user.id };
+  _currentAuth = { supabase, userId };
 
   try {
     const response = await httpHandler(c.req.raw);
