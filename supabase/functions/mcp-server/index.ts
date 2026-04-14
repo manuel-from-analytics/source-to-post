@@ -324,7 +324,7 @@ const app = new Hono();
 app.all("/*", async (c) => {
   // Extract user JWT from custom header (Supabase intercepts Authorization)
   const token = c.req.header("x-user-token");
-  console.log("x-user-token present:", !!token, "length:", token?.length, "starts:", token?.substring(0, 20));
+  
   if (!token) {
     return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing x-user-token header" }, id: null }, 401);
   }
