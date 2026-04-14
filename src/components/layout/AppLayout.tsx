@@ -13,6 +13,7 @@ import {
   Mic,
   Newspaper,
   Smartphone,
+  Plug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -25,6 +26,7 @@ const navItems = [
   { icon: PenTool, labelKey: "nav.generator", path: "/generator" },
   { icon: History, labelKey: "nav.history", path: "/history" },
   { icon: Settings, labelKey: "nav.settings", path: "/settings" },
+  { icon: Plug, labelKey: "nav.mcp", path: "/mcp" },
   { icon: Smartphone, labelKey: "nav.install", path: "/install" },
 ];
 

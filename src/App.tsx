@@ -17,6 +17,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import VoicePage from "@/pages/VoicePage";
 import NewsletterPage from "@/pages/NewsletterPage";
 import InstallPage from "@/pages/InstallPage";
+import McpPage from "@/pages/McpPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ function AppRoutes() {
       <Route path="/history" element={<ProtectedRoute><AppLayout><HistoryPage /></AppLayout></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><AppLayout><SettingsPage /></AppLayout></ProtectedRoute>} />
       <Route path="/install" element={<ProtectedRoute><AppLayout><InstallPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/mcp" element={<ProtectedRoute><AppLayout><McpPage /></AppLayout></ProtectedRoute>} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
