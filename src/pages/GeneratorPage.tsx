@@ -176,7 +176,7 @@ export default function GeneratorPage() {
     } else {
       savePost({
         content,
-        input_id: selectedSources[0],
+        input_ids: selectedSources,
         goal: goal || undefined,
         tone: tone || undefined,
         target_audience: targetAudience || undefined,
