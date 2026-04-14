@@ -116,6 +116,7 @@ export function useGeneratePost() {
   const savePost = async (params: {
     content: string;
     input_id?: string;
+    input_ids?: string[];
     goal?: string;
     tone?: string;
     target_audience?: string;
@@ -130,7 +131,8 @@ export function useGeneratePost() {
     const { error } = await supabase.from("generated_posts").insert({
       user_id: user.id,
       content: params.content,
-      input_id: params.input_id || null,
+      input_id: params.input_ids?.[0] || params.input_id || null,
+      input_ids: params.input_ids || (params.input_id ? [params.input_id] : []),
       goal: params.goal || null,
       tone: params.tone || null,
       target_audience: params.target_audience || null,

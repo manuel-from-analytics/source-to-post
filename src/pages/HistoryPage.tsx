@@ -60,6 +60,7 @@ export default function HistoryPage() {
     tone: post.tone,
     target_audience: post.target_audience,
     input_id: post.input_id,
+    input_ids: (post as any).input_ids as string[] | null,
     title: post.title,
     language: (post as any).language,
     cta: (post as any).cta,
@@ -164,8 +165,11 @@ export default function HistoryPage() {
                     </div>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)} title={t("history.view")}>
                       <Eye className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(post)} title={t("history.edit")}>
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDuplicate(post)} title={t("history.duplicate")}>
                       <Files className="h-3.5 w-3.5" />

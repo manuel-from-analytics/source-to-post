@@ -33,6 +33,7 @@ interface EditingPost {
   tone?: string | null;
   target_audience?: string | null;
   input_id?: string | null;
+  input_ids?: string[] | null;
   title?: string | null;
   language?: string | null;
   cta?: string | null;
@@ -75,7 +76,11 @@ export default function GeneratorPage() {
         if (initialPost.goal) setGoal(initialPost.goal);
         if (initialPost.tone) setTone(initialPost.tone);
         if (initialPost.target_audience) setTargetAudience(initialPost.target_audience);
-        if (initialPost.input_id) setSelectedSources([initialPost.input_id]);
+        if (initialPost.input_ids && initialPost.input_ids.length > 0) {
+          setSelectedSources(initialPost.input_ids);
+        } else if (initialPost.input_id) {
+          setSelectedSources([initialPost.input_id]);
+        }
         if (initialPost.language) setLanguage(initialPost.language);
         if (initialPost.cta) setCta(initialPost.cta);
         if (initialPost.length) setLength(initialPost.length);
