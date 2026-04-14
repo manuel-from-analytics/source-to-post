@@ -327,13 +327,17 @@ app.all("/*", async (c) => {
     return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing x-user-token header" }, id: null }, 401);
   }
 
+  // Use a clean client (anon key only) to validate the user token
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const { data: { user }, error } = await authClient.auth.getUser(token);
+  if (error || !user) {
+    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: `Unauthorized – invalid token: ${error?.message || 'no user'}` }, id: null }, 401);
+  }
+
+  // Create a user-scoped client for data queries
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || !user) {
-    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – invalid token" }, id: null }, 401);
-  }
 
   // Set shared auth context for tool handlers
   _currentAuth = { supabase, userId: user.id };
