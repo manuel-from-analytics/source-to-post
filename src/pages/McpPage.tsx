@@ -38,12 +38,15 @@ export default function McpPage() {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
   const claudeConfig = JSON.stringify({
     "mcpServers": {
       "postflow": {
         "url": mcpUrl,
         "headers": {
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${anonKey}`,
+          "x-user-token": token
         }
       }
     }
@@ -54,7 +57,8 @@ export default function McpPage() {
       "postflow": {
         "url": mcpUrl,
         "headers": {
-          "Authorization": `Bearer ${token}`
+          "Authorization": `Bearer ${anonKey}`,
+          "x-user-token": token
         }
       }
     }

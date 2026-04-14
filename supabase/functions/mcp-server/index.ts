@@ -8,15 +8,17 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const mcp = new McpServer({ name: "source-to-post", version: "1.0.0" });
 
 // Auth middleware – sets ctx.auth = { supabase, userId }
+// NOTE: Supabase Edge Functions intercept the Authorization header.
+// The user's JWT must be sent via the custom "x-user-token" header,
+// while Authorization carries the Supabase anon key.
 mcp.use(async (ctx: any, next: any) => {
-  const authHeader = ctx.request?.headers?.get?.("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    throw new Error("Unauthorized – missing Bearer token");
+  const token = ctx.request?.headers?.get?.("x-user-token");
+  if (!token) {
+    throw new Error("Unauthorized – missing x-user-token header");
   }
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: authHeader } },
+    global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  const token = authHeader.replace("Bearer ", "");
   const { data, error } = await supabase.auth.getClaims(token);
   if (error || !data?.claims) throw new Error("Unauthorized – invalid token");
   ctx.auth = { supabase, userId: data.claims.sub as string };
