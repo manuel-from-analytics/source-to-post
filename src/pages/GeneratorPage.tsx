@@ -21,8 +21,7 @@ import { CategoryFilter } from "@/components/CategoryWidgets";
 import { useVoices } from "@/hooks/useVoices";
 import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
-import { PostLabelPicker, PostLabelBadge } from "@/components/PostLabelWidgets";
-import { usePostLabels, usePostLabelAssignments } from "@/hooks/usePostLabels";
+import { PostLabelPicker } from "@/components/PostLabelWidgets";
 
 const typeIcons: Record<string, React.ElementType> = {
   pdf: File, url: Globe, youtube: Youtube, text: Type,
