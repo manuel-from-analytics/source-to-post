@@ -1,18 +1,19 @@
 import { Hono } from "hono";
-import { McpServer, StreamableHttpTransport, type McpContext } from "mcp-lite";
+import { McpServer, StreamableHttpTransport } from "mcp-lite";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { decode } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-// Contexto personalizado por petición — sin variable global mutable
-interface AppMcpContext extends McpContext {
-  supabase: SupabaseClient;
-  userId: string;
+// Per-request context — safe in Deno's single-threaded Edge Function model
+let _ctx: { supabase: SupabaseClient; userId: string } | null = null;
+function getCtx() {
+  if (!_ctx) throw new Error("No request context available");
+  return _ctx;
 }
 
-const mcp = new McpServer<AppMcpContext>({ name: "source-to-post", version: "1.0.0" });
+const mcp = new McpServer({ name: "source-to-post", version: "1.0.0" });
 
 // ── INPUTS ──
 
@@ -27,8 +28,8 @@ mcp.tool("list_inputs", {
       limit: { type: "number" as const },
     },
   },
-  handler: async (params: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async (params: any) => {
+    const { supabase } = getCtx();
     let q = supabase.from("inputs").select("id, title, type, original_url, summary, category_id, is_favorite, created_at").order("created_at", { ascending: false }).limit(params.limit || 50);
     if (params.type) q = q.eq("type", params.type);
     if (params.is_favorite !== undefined) q = q.eq("is_favorite", params.is_favorite);
@@ -42,8 +43,8 @@ mcp.tool("list_inputs", {
 mcp.tool("get_input", {
   description: "Get full details of a specific source by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
-  handler: async ({ id }: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async ({ id }: any) => {
+    const { supabase } = getCtx();
     const { data, error } = await supabase.from("inputs").select("*").eq("id", id).single();
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -62,8 +63,8 @@ mcp.tool("create_input", {
     },
     required: ["title", "type"] as const,
   },
-  handler: async (params: any, ctx: AppMcpContext) => {
-    const { supabase, userId } = ctx;
+  handler: async (params: any) => {
+    const { supabase, userId } = getCtx();
     const { data, error } = await supabase.from("inputs").insert({
       user_id: userId, title: params.title, type: params.type,
       raw_content: params.raw_content || null, original_url: params.original_url || null,
@@ -76,8 +77,8 @@ mcp.tool("create_input", {
 mcp.tool("delete_input", {
   description: "Delete a source from the library by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
-  handler: async ({ id }: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async ({ id }: any) => {
+    const { supabase } = getCtx();
     const { error } = await supabase.from("inputs").delete().eq("id", id);
     if (error) throw error;
     return { content: [{ type: "text" as const, text: "Deleted successfully" }] };
@@ -96,8 +97,8 @@ mcp.tool("list_posts", {
       limit: { type: "number" as const },
     },
   },
-  handler: async (params: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async (params: any) => {
+    const { supabase } = getCtx();
     let q = supabase.from("generated_posts").select("id, title, content, status, goal, tone, language, is_favorite, created_at").order("created_at", { ascending: false }).limit(params.limit || 50);
     if (params.status) q = q.eq("status", params.status);
     if (params.is_favorite !== undefined) q = q.eq("is_favorite", params.is_favorite);
@@ -110,8 +111,8 @@ mcp.tool("list_posts", {
 mcp.tool("get_post", {
   description: "Get full details of a generated post by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
-  handler: async ({ id }: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async ({ id }: any) => {
+    const { supabase } = getCtx();
     const { data, error } = await supabase.from("generated_posts").select("*").eq("id", id).single();
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -134,8 +135,8 @@ mcp.tool("generate_post", {
       voice_id: { type: "string" as const },
     },
   },
-  handler: async (params: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async (params: any) => {
+    const { supabase } = getCtx();
 
     let sourceTexts: string[] = [];
     if (params.input_ids?.length) {
@@ -214,8 +215,8 @@ mcp.tool("save_post", {
     },
     required: ["content"] as const,
   },
-  handler: async (params: any, ctx: AppMcpContext) => {
-    const { supabase, userId } = ctx;
+  handler: async (params: any) => {
+    const { supabase, userId } = getCtx();
     const { data, error } = await supabase.from("generated_posts").insert({
       user_id: userId, content: params.content, title: params.title || null,
       input_id: params.input_ids?.[0] || null, input_ids: params.input_ids || [],
@@ -250,8 +251,8 @@ mcp.tool("update_post", {
     },
     required: ["id"] as const,
   },
-  handler: async (params: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async (params: any) => {
+    const { supabase } = getCtx();
     const { id, ...updates } = params;
     const cleanUpdates: Record<string, any> = {};
     for (const [k, v] of Object.entries(updates)) {
@@ -267,8 +268,8 @@ mcp.tool("update_post", {
 mcp.tool("delete_post", {
   description: "Delete a generated post by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
-  handler: async ({ id }: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async ({ id }: any) => {
+    const { supabase } = getCtx();
     const { error } = await supabase.from("generated_posts").delete().eq("id", id);
     if (error) throw error;
     return { content: [{ type: "text" as const, text: "Deleted successfully" }] };
@@ -280,8 +281,8 @@ mcp.tool("delete_post", {
 mcp.tool("list_voices", {
   description: "List available writing voice profiles.",
   inputSchema: { type: "object" as const, properties: {} },
-  handler: async (_params: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async () => {
+    const { supabase } = getCtx();
     const { data, error } = await supabase.from("voices").select("id, name, description, created_at").order("created_at", { ascending: false });
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -293,8 +294,8 @@ mcp.tool("list_voices", {
 mcp.tool("list_newsletters", {
   description: "List generated newsletters. Optional limit (default 20).",
   inputSchema: { type: "object" as const, properties: { limit: { type: "number" as const } } },
-  handler: async (params: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async (params: any) => {
+    const { supabase } = getCtx();
     const { data, error } = await supabase.from("newsletters").select("id, topic, language, created_at").order("created_at", { ascending: false }).limit(params.limit || 20);
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -304,8 +305,8 @@ mcp.tool("list_newsletters", {
 mcp.tool("get_newsletter", {
   description: "Get full newsletter content by ID, including items.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
-  handler: async ({ id }: any, ctx: AppMcpContext) => {
-    const { supabase } = ctx;
+  handler: async ({ id }: any) => {
+    const { supabase } = getCtx();
     const { data: newsletter, error } = await supabase.from("newsletters").select("*").eq("id", id).single();
     if (error) throw error;
     const { data: items } = await supabase.from("newsletter_items").select("*").eq("newsletter_id", id).order("created_at");
@@ -316,7 +317,6 @@ mcp.tool("get_newsletter", {
 // ── TRANSPORT ──
 
 const transport = new StreamableHttpTransport();
-const httpHandler = transport.bind(mcp);
 
 const app = new Hono();
 app.all("/*", async (c) => {
@@ -326,22 +326,17 @@ app.all("/*", async (c) => {
     return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing x-user-token header" }, id: null }, 401);
   }
 
-  // Cliente Supabase con el token del usuario para respetar RLS
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
   let userId: string;
   try {
-    // Intentar validar con supabase.auth.getUser primero
     const { data: { user }, error: userError } = await supabase.auth.getUser(token);
-    if (userError || !user) {
-      throw new Error(userError?.message ?? "Failed to get user from token");
-    }
+    if (userError || !user) throw new Error(userError?.message ?? "Failed to get user");
     userId = user.id;
   } catch (_e) {
     console.warn("supabase.auth.getUser failed, falling back to manual JWT decoding");
-    // Fallback: decodificar JWT sin verificación de firma
     try {
       const [_header, payload, _signature] = decode(token);
       const claims = payload as Record<string, unknown>;
@@ -357,14 +352,12 @@ app.all("/*", async (c) => {
     }
   }
 
-  // Inyectar contexto aislado por petición
-  transport.setContext({ supabase, userId });
-
+  // Set per-request context (safe: Edge Functions are single-request-per-isolate)
+  _ctx = { supabase, userId };
   try {
-    const response = await httpHandler(c.req.raw);
-    return response;
+    return await transport.handleRequest(c.req.raw, mcp);
   } finally {
-    transport.clearContext();
+    _ctx = null;
   }
 });
 
