@@ -19,6 +19,8 @@ import { usePosts, useUpdatePostStatus, useDeletePost } from "@/hooks/usePosts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/i18n/LanguageContext";
 import type { Database } from "@/integrations/supabase/types";
+import { PostLabelBadge, PostLabelPicker, PostLabelFilter } from "@/components/PostLabelWidgets";
+import { usePostLabels, useAllPostLabelAssignments } from "@/hooks/usePostLabels";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
 type Post = Database["public"]["Tables"]["generated_posts"]["Row"];
@@ -31,9 +33,12 @@ export default function HistoryPage() {
   const deletePost = useDeletePost();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterLabelId, setFilterLabelId] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { data: allLabels } = usePostLabels();
+  const { data: assignmentsMap } = useAllPostLabelAssignments();
 
   const statusLabels: Record<PostStatus, string> = {
     draft: t("history.draft"),
