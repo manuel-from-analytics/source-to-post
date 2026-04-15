@@ -99,6 +99,7 @@ export default function HistoryPage() {
 
   const filtered = (posts ?? []).filter((p) => {
     if (filterStatus !== "all" && p.status !== filterStatus) return false;
+    if (filterLabelId && !(assignmentsMap?.[p.id] ?? []).includes(filterLabelId)) return false;
     if (search && !p.content.toLowerCase().includes(search.toLowerCase()) &&
         !(p.title ?? "").toLowerCase().includes(search.toLowerCase())) return false;
     return true;
