@@ -21,6 +21,7 @@ import { CategoryFilter } from "@/components/CategoryWidgets";
 import { useVoices } from "@/hooks/useVoices";
 import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { PostLabelPicker } from "@/components/PostLabelWidgets";
 
 const typeIcons: Record<string, React.ElementType> = {
   pdf: File, url: Globe, youtube: Youtube, text: Type,
@@ -384,7 +385,10 @@ export default function GeneratorPage() {
           <Card className="min-h-[400px]">
             <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <CardTitle className="text-sm font-medium">{t("generator.draft")}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-sm font-medium">{t("generator.draft")}</CardTitle>
+                  {editingPost && content && <PostLabelPicker postId={editingPost.id} />}
+                </div>
                 {content && (
                   <div className="flex flex-wrap gap-1">
                     <Button variant="ghost" size="sm" onClick={handleGenerate} disabled={isGenerating} className="text-xs gap-1">

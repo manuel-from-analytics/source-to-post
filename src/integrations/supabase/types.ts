@@ -286,6 +286,60 @@ export type Database = {
         }
         Relationships: []
       }
+      post_label_assignments: {
+        Row: {
+          label_id: string
+          post_id: string
+        }
+        Insert: {
+          label_id: string
+          post_id: string
+        }
+        Update: {
+          label_id?: string
+          post_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_label_assignments_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "post_labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_label_assignments_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "generated_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_labels: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           app_language: string | null

@@ -19,6 +19,8 @@ import { usePosts, useUpdatePostStatus, useDeletePost } from "@/hooks/usePosts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/i18n/LanguageContext";
 import type { Database } from "@/integrations/supabase/types";
+import { PostLabelBadge, PostLabelPicker, PostLabelFilter } from "@/components/PostLabelWidgets";
+import { usePostLabels, useAllPostLabelAssignments } from "@/hooks/usePostLabels";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
 type Post = Database["public"]["Tables"]["generated_posts"]["Row"];
@@ -31,9 +33,12 @@ export default function HistoryPage() {
   const deletePost = useDeletePost();
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterLabelId, setFilterLabelId] = useState<string | null>(null);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const { data: allLabels } = usePostLabels();
+  const { data: assignmentsMap } = useAllPostLabelAssignments();
 
   const statusLabels: Record<PostStatus, string> = {
     draft: t("history.draft"),
@@ -94,6 +99,7 @@ export default function HistoryPage() {
 
   const filtered = (posts ?? []).filter((p) => {
     if (filterStatus !== "all" && p.status !== filterStatus) return false;
+    if (filterLabelId && !(assignmentsMap?.[p.id] ?? []).includes(filterLabelId)) return false;
     if (search && !p.content.toLowerCase().includes(search.toLowerCase()) &&
         !(p.title ?? "").toLowerCase().includes(search.toLowerCase())) return false;
     return true;
@@ -131,6 +137,8 @@ export default function HistoryPage() {
         </Select>
       </div>
 
+      <PostLabelFilter selectedLabelId={filterLabelId} onSelect={setFilterLabelId} />
+
       {isLoading ? (
         <div className="space-y-3">
           {[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
@@ -148,23 +156,29 @@ export default function HistoryPage() {
                     <p className="text-sm line-clamp-3 leading-relaxed text-muted-foreground">
                       {post.content}
                     </p>
-                    <div className="flex items-center gap-2 mt-3 flex-wrap">
-                      <Badge className={`text-xs ${statusColors[post.status ?? "draft"]} border-0`}>
-                        {statusLabels[post.status ?? "draft"]}
-                      </Badge>
-                      {post.goal && (
-                        <Badge variant="secondary" className="text-xs capitalize">{post.goal}</Badge>
-                      )}
-                      {post.tone && (
-                        <Badge variant="outline" className="text-xs capitalize">{post.tone}</Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(post.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
+                     <div className="flex items-center gap-2 mt-3 flex-wrap">
+                       <Badge className={`text-xs ${statusColors[post.status ?? "draft"]} border-0`}>
+                         {statusLabels[post.status ?? "draft"]}
+                       </Badge>
+                       {(assignmentsMap?.[post.id] ?? []).map((lid) => {
+                         const lbl = (allLabels ?? []).find((l) => l.id === lid);
+                         if (!lbl) return null;
+                         return <PostLabelBadge key={lid} label={lbl} />;
+                       })}
+                       {post.goal && (
+                         <Badge variant="secondary" className="text-xs capitalize">{post.goal}</Badge>
+                       )}
+                       {post.tone && (
+                         <Badge variant="outline" className="text-xs capitalize">{post.tone}</Badge>
+                       )}
+                       <span className="text-xs text-muted-foreground flex items-center gap-1">
+                         <Calendar className="h-3 w-3" />
+                         {new Date(post.created_at).toLocaleDateString()}
+                       </span>
+                     </div>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
+                    <PostLabelPicker postId={post.id} />
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)} title={t("history.view")}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
