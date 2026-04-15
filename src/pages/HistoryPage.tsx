@@ -178,6 +178,7 @@ export default function HistoryPage() {
                      </div>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
+                    <PostLabelPicker postId={post.id} />
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)} title={t("history.view")}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
