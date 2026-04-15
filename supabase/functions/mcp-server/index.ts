@@ -317,6 +317,7 @@ mcp.tool("get_newsletter", {
 // ── TRANSPORT ──
 
 const transport = new StreamableHttpTransport();
+const httpHandler = transport.bind(mcp);
 
 const app = new Hono();
 app.all("/*", async (c) => {
@@ -352,10 +353,9 @@ app.all("/*", async (c) => {
     }
   }
 
-  // Set per-request context (safe: Edge Functions are single-request-per-isolate)
   _ctx = { supabase, userId };
   try {
-    return await transport.handleRequest(c.req.raw, mcp);
+    return await httpHandler(c.req.raw);
   } finally {
     _ctx = null;
   }
