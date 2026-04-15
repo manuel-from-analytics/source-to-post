@@ -137,6 +137,8 @@ export default function HistoryPage() {
         </Select>
       </div>
 
+      <PostLabelFilter selectedLabelId={filterLabelId} onSelect={setFilterLabelId} />
+
       {isLoading ? (
         <div className="space-y-3">
           {[1,2,3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
@@ -154,21 +156,26 @@ export default function HistoryPage() {
                     <p className="text-sm line-clamp-3 leading-relaxed text-muted-foreground">
                       {post.content}
                     </p>
-                    <div className="flex items-center gap-2 mt-3 flex-wrap">
-                      <Badge className={`text-xs ${statusColors[post.status ?? "draft"]} border-0`}>
-                        {statusLabels[post.status ?? "draft"]}
-                      </Badge>
-                      {post.goal && (
-                        <Badge variant="secondary" className="text-xs capitalize">{post.goal}</Badge>
-                      )}
-                      {post.tone && (
-                        <Badge variant="outline" className="text-xs capitalize">{post.tone}</Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {new Date(post.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
+                     <div className="flex items-center gap-2 mt-3 flex-wrap">
+                       <Badge className={`text-xs ${statusColors[post.status ?? "draft"]} border-0`}>
+                         {statusLabels[post.status ?? "draft"]}
+                       </Badge>
+                       {(assignmentsMap?.[post.id] ?? []).map((lid) => {
+                         const lbl = (allLabels ?? []).find((l) => l.id === lid);
+                         if (!lbl) return null;
+                         return <PostLabelBadge key={lid} label={lbl} />;
+                       })}
+                       {post.goal && (
+                         <Badge variant="secondary" className="text-xs capitalize">{post.goal}</Badge>
+                       )}
+                       {post.tone && (
+                         <Badge variant="outline" className="text-xs capitalize">{post.tone}</Badge>
+                       )}
+                       <span className="text-xs text-muted-foreground flex items-center gap-1">
+                         <Calendar className="h-3 w-3" />
+                         {new Date(post.created_at).toLocaleDateString()}
+                       </span>
+                     </div>
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)} title={t("history.view")}>
