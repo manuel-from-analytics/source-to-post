@@ -1,20 +1,18 @@
 import { Hono } from "hono";
-import { McpServer, StreamableHttpTransport } from "mcp-lite";
-import { createClient } from "@supabase/supabase-js";
+import { McpServer, StreamableHttpTransport, type McpContext } from "mcp-lite";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { decode } from "https://deno.land/x/djwt@v3.0.2/mod.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-const mcp = new McpServer({ name: "source-to-post", version: "1.0.0" });
-
-// Shared auth context set per-request at the Hono level
-let _currentAuth: { supabase: any; userId: string } | null = null;
-
-function getCurrentAuth() {
-  if (!_currentAuth) throw new Error("Unauthorized – no auth context");
-  return _currentAuth;
+// Contexto personalizado por petición — sin variable global mutable
+interface AppMcpContext extends McpContext {
+  supabase: SupabaseClient;
+  userId: string;
 }
+
+const mcp = new McpServer<AppMcpContext>({ name: "source-to-post", version: "1.0.0" });
 
 // ── INPUTS ──
 
@@ -29,8 +27,8 @@ mcp.tool("list_inputs", {
       limit: { type: "number" as const },
     },
   },
-  handler: async (params: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async (params: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
     let q = supabase.from("inputs").select("id, title, type, original_url, summary, category_id, is_favorite, created_at").order("created_at", { ascending: false }).limit(params.limit || 50);
     if (params.type) q = q.eq("type", params.type);
     if (params.is_favorite !== undefined) q = q.eq("is_favorite", params.is_favorite);
@@ -44,8 +42,8 @@ mcp.tool("list_inputs", {
 mcp.tool("get_input", {
   description: "Get full details of a specific source by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
-  handler: async ({ id }: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async ({ id }: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
     const { data, error } = await supabase.from("inputs").select("*").eq("id", id).single();
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -64,8 +62,8 @@ mcp.tool("create_input", {
     },
     required: ["title", "type"] as const,
   },
-  handler: async (params: any, ctx: any) => {
-    const { supabase, userId } = getCurrentAuth();
+  handler: async (params: any, ctx: AppMcpContext) => {
+    const { supabase, userId } = ctx;
     const { data, error } = await supabase.from("inputs").insert({
       user_id: userId, title: params.title, type: params.type,
       raw_content: params.raw_content || null, original_url: params.original_url || null,
@@ -78,8 +76,8 @@ mcp.tool("create_input", {
 mcp.tool("delete_input", {
   description: "Delete a source from the library by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
-  handler: async ({ id }: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async ({ id }: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
     const { error } = await supabase.from("inputs").delete().eq("id", id);
     if (error) throw error;
     return { content: [{ type: "text" as const, text: "Deleted successfully" }] };
@@ -98,8 +96,8 @@ mcp.tool("list_posts", {
       limit: { type: "number" as const },
     },
   },
-  handler: async (params: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async (params: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
     let q = supabase.from("generated_posts").select("id, title, content, status, goal, tone, language, is_favorite, created_at").order("created_at", { ascending: false }).limit(params.limit || 50);
     if (params.status) q = q.eq("status", params.status);
     if (params.is_favorite !== undefined) q = q.eq("is_favorite", params.is_favorite);
@@ -112,8 +110,8 @@ mcp.tool("list_posts", {
 mcp.tool("get_post", {
   description: "Get full details of a generated post by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
-  handler: async ({ id }: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async ({ id }: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
     const { data, error } = await supabase.from("generated_posts").select("*").eq("id", id).single();
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -136,8 +134,8 @@ mcp.tool("generate_post", {
       voice_id: { type: "string" as const },
     },
   },
-  handler: async (params: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async (params: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
 
     let sourceTexts: string[] = [];
     if (params.input_ids?.length) {
@@ -216,8 +214,8 @@ mcp.tool("save_post", {
     },
     required: ["content"] as const,
   },
-  handler: async (params: any, ctx: any) => {
-    const { supabase, userId } = getCurrentAuth();
+  handler: async (params: any, ctx: AppMcpContext) => {
+    const { supabase, userId } = ctx;
     const { data, error } = await supabase.from("generated_posts").insert({
       user_id: userId, content: params.content, title: params.title || null,
       input_id: params.input_ids?.[0] || null, input_ids: params.input_ids || [],
@@ -252,8 +250,8 @@ mcp.tool("update_post", {
     },
     required: ["id"] as const,
   },
-  handler: async (params: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async (params: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
     const { id, ...updates } = params;
     const cleanUpdates: Record<string, any> = {};
     for (const [k, v] of Object.entries(updates)) {
@@ -269,8 +267,8 @@ mcp.tool("update_post", {
 mcp.tool("delete_post", {
   description: "Delete a generated post by ID.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
-  handler: async ({ id }: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async ({ id }: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
     const { error } = await supabase.from("generated_posts").delete().eq("id", id);
     if (error) throw error;
     return { content: [{ type: "text" as const, text: "Deleted successfully" }] };
@@ -282,8 +280,8 @@ mcp.tool("delete_post", {
 mcp.tool("list_voices", {
   description: "List available writing voice profiles.",
   inputSchema: { type: "object" as const, properties: {} },
-  handler: async (_params: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async (_params: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
     const { data, error } = await supabase.from("voices").select("id, name, description, created_at").order("created_at", { ascending: false });
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -295,8 +293,8 @@ mcp.tool("list_voices", {
 mcp.tool("list_newsletters", {
   description: "List generated newsletters. Optional limit (default 20).",
   inputSchema: { type: "object" as const, properties: { limit: { type: "number" as const } } },
-  handler: async (params: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async (params: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
     const { data, error } = await supabase.from("newsletters").select("id, topic, language, created_at").order("created_at", { ascending: false }).limit(params.limit || 20);
     if (error) throw error;
     return { content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }] };
@@ -306,8 +304,8 @@ mcp.tool("list_newsletters", {
 mcp.tool("get_newsletter", {
   description: "Get full newsletter content by ID, including items.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
-  handler: async ({ id }: any, ctx: any) => {
-    const { supabase } = getCurrentAuth();
+  handler: async ({ id }: any, ctx: AppMcpContext) => {
+    const { supabase } = ctx;
     const { data: newsletter, error } = await supabase.from("newsletters").select("*").eq("id", id).single();
     if (error) throw error;
     const { data: items } = await supabase.from("newsletter_items").select("*").eq("newsletter_id", id).order("created_at");
@@ -322,43 +320,51 @@ const httpHandler = transport.bind(mcp);
 
 const app = new Hono();
 app.all("/*", async (c) => {
-  // Extract user JWT from custom header (Supabase intercepts Authorization)
   const token = c.req.header("x-user-token");
-  
+
   if (!token) {
     return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing x-user-token header" }, id: null }, 401);
   }
 
-  // Decode JWT without signature verification (gateway already authenticated the request)
-  let userId: string;
-  try {
-    const [_header, payload, _signature] = decode(token);
-    const claims = payload as Record<string, unknown>;
-    if (!claims.sub || typeof claims.sub !== "string") {
-      return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – invalid token claims" }, id: null }, 401);
-    }
-    // Check expiration
-    if (claims.exp && typeof claims.exp === "number" && claims.exp < Date.now() / 1000) {
-      return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – token expired" }, id: null }, 401);
-    }
-    userId = claims.sub;
-  } catch (e) {
-    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: `Unauthorized – ${e.message}` }, id: null }, 401);
-  }
-
-  // Create a user-scoped client for data queries (respects RLS)
+  // Cliente Supabase con el token del usuario para respetar RLS
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
 
-  // Set shared auth context for tool handlers
-  _currentAuth = { supabase, userId };
+  let userId: string;
+  try {
+    // Intentar validar con supabase.auth.getUser primero
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) {
+      throw new Error(userError?.message ?? "Failed to get user from token");
+    }
+    userId = user.id;
+  } catch (_e) {
+    console.warn("supabase.auth.getUser failed, falling back to manual JWT decoding");
+    // Fallback: decodificar JWT sin verificación de firma
+    try {
+      const [_header, payload, _signature] = decode(token);
+      const claims = payload as Record<string, unknown>;
+      if (!claims.sub || typeof claims.sub !== "string") {
+        return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – invalid token claims" }, id: null }, 401);
+      }
+      if (claims.exp && typeof claims.exp === "number" && claims.exp < Date.now() / 1000) {
+        return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Unauthorized – token expired" }, id: null }, 401);
+      }
+      userId = claims.sub;
+    } catch (decodeErr: any) {
+      return c.json({ jsonrpc: "2.0", error: { code: -32600, message: `Unauthorized – ${decodeErr.message}` }, id: null }, 401);
+    }
+  }
+
+  // Inyectar contexto aislado por petición
+  transport.setContext({ supabase, userId });
 
   try {
     const response = await httpHandler(c.req.raw);
     return response;
   } finally {
-    _currentAuth = null;
+    transport.clearContext();
   }
 });
 
