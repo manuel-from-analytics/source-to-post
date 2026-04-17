@@ -163,6 +163,26 @@ export default function GeneratorPage() {
     load();
   }, []);
 
+  // Reset "added" state when textarea is fully cleared
+  useEffect(() => {
+    if (contentFocus.trim() === "" && addedNoteIds.size > 0) {
+      setAddedNoteIds(new Set());
+    }
+  }, [contentFocus]);
+
+  // Drop "added" markers when their source gets deselected
+  useEffect(() => {
+    if (addedNoteIds.size === 0 || !sourceNotes) return;
+    const validIds = new Set(sourceNotes.map((n) => n.id));
+    let changed = false;
+    const next = new Set<string>();
+    addedNoteIds.forEach((id) => {
+      if (validIds.has(id)) next.add(id);
+      else changed = true;
+    });
+    if (changed) setAddedNoteIds(next);
+  }, [sortedSourceKey, sourceNotes]);
+
   const toggleSource = (id: string) => {
     setSelectedSources((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
