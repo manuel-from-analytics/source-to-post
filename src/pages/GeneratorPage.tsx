@@ -491,13 +491,17 @@ export default function GeneratorPage() {
                                       <Button
                                         type="button"
                                         size="sm"
-                                        variant={added ? "ghost" : "outline"}
-                                        disabled={added}
-                                        onClick={() => handleAddNote(note.id, note.content)}
+                                        variant="outline"
+                                        onClick={() =>
+                                          added
+                                            ? handleRemoveNote(note.id, note.content)
+                                            : handleAddNote(note.id, note.content)
+                                        }
                                         className="h-6 shrink-0 gap-1 px-2 text-[10px]"
+                                        title={added ? t("generator.removeNote") : t("generator.addNote")}
                                       >
                                         {added ? (
-                                          <><Check className="h-3 w-3" />{t("generator.noteAdded")}</>
+                                          <><X className="h-3 w-3" />{t("generator.removeNote")}</>
                                         ) : (
                                           <><Plus className="h-3 w-3" />{t("generator.addNote")}</>
                                         )}
