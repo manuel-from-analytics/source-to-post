@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToggleFavorite, useDeleteInput, type InputRow } from "@/hooks/useInputs";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
+import { InputNotes } from "@/components/InputNotes";
 
 export default function InputDetailPage() {
   const { id } = useParams();
@@ -249,6 +250,9 @@ export default function InputDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Notes (above summary) */}
+      <InputNotes inputId={input.id} />
 
       {/* Summary */}
       <Card className="min-w-0 overflow-hidden">

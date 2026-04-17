@@ -290,6 +290,23 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "inputDetail.typeYoutube": "YouTube",
     "inputDetail.typeText": "Texto",
 
+    // Input notes
+    "inputNotes.title": "Notas",
+    "inputNotes.add": "Añadir nota",
+    "inputNotes.placeholder": "Escribe una nota sobre esta fuente...",
+    "inputNotes.empty": "Aún no hay notas. Añade la primera para tener tus apuntes a mano.",
+    "inputNotes.save": "Guardar",
+    "inputNotes.cancel": "Cancelar",
+    "inputNotes.edit": "Editar",
+    "inputNotes.delete": "Eliminar",
+    "inputNotes.edited": "editada",
+    "inputNotes.added": "Nota añadida",
+    "inputNotes.updated": "Nota actualizada",
+    "inputNotes.deleted": "Nota eliminada",
+
+    // Generator extras
+    "generator.onlyFavorites": "Solo favoritos",
+
     // Common
     "common.spanish": "Español",
     "common.english": "Inglés",
@@ -661,6 +678,23 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "inputDetail.typeYoutube": "YouTube",
     "inputDetail.typeText": "Text",
 
+    // Input notes
+    "inputNotes.title": "Notes",
+    "inputNotes.add": "Add note",
+    "inputNotes.placeholder": "Write a note about this source...",
+    "inputNotes.empty": "No notes yet. Add the first one to keep your thoughts handy.",
+    "inputNotes.save": "Save",
+    "inputNotes.cancel": "Cancel",
+    "inputNotes.edit": "Edit",
+    "inputNotes.delete": "Delete",
+    "inputNotes.edited": "edited",
+    "inputNotes.added": "Note added",
+    "inputNotes.updated": "Note updated",
+    "inputNotes.deleted": "Note deleted",
+
+    // Generator extras
+    "generator.onlyFavorites": "Favorites only",
+
     // Common
     "common.spanish": "Spanish",
     "common.english": "English",
@@ -1031,6 +1065,23 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "inputDetail.typeUrl": "URL",
     "inputDetail.typeYoutube": "YouTube",
     "inputDetail.typeText": "Texto",
+
+    // Input notes
+    "inputNotes.title": "Notas",
+    "inputNotes.add": "Adicionar nota",
+    "inputNotes.placeholder": "Escreva uma nota sobre esta fonte...",
+    "inputNotes.empty": "Ainda não há notas. Adicione a primeira para ter seus apontamentos à mão.",
+    "inputNotes.save": "Salvar",
+    "inputNotes.cancel": "Cancelar",
+    "inputNotes.edit": "Editar",
+    "inputNotes.delete": "Excluir",
+    "inputNotes.edited": "editada",
+    "inputNotes.added": "Nota adicionada",
+    "inputNotes.updated": "Nota atualizada",
+    "inputNotes.deleted": "Nota excluída",
+
+    // Generator extras
+    "generator.onlyFavorites": "Apenas favoritos",
 
     // Common
     "common.spanish": "Espanhol",

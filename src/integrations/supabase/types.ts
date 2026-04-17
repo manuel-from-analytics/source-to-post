@@ -119,6 +119,41 @@ export type Database = {
           },
         ]
       }
+      input_notes: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          input_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          input_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          input_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "input_notes_input_id_fkey"
+            columns: ["input_id"]
+            isOneToOne: false
+            referencedRelation: "inputs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       input_tags: {
         Row: {
           input_id: string

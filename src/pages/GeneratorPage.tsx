@@ -3,7 +3,7 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import {
   PenTool, Check, Copy, RefreshCw, Send, Sparkles,
-  FileText, Save, Loader2, Globe, Youtube, File, Type
+  FileText, Save, Loader2, Globe, Youtube, File, Type, Star
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -52,6 +52,7 @@ export default function GeneratorPage() {
 
   const [selectedSources, setSelectedSources] = useState<string[]>([]);
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [iterationPrompt, setIterationPrompt] = useState("");
   const [copied, setCopied] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
@@ -216,7 +217,20 @@ export default function GeneratorPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="min-w-0 space-y-2 px-3 sm:px-6 sm:space-y-3">
-              <CategoryFilter selectedCategoryId={filterCategoryId} onSelect={setFilterCategoryId} />
+              <div className="flex flex-wrap items-center gap-2">
+                <CategoryFilter selectedCategoryId={filterCategoryId} onSelect={setFilterCategoryId} />
+                <Button
+                  type="button"
+                  variant={onlyFavorites ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setOnlyFavorites((v) => !v)}
+                  className="h-7 gap-1 text-xs"
+                  aria-pressed={onlyFavorites}
+                >
+                  <Star className={`h-3.5 w-3.5 ${onlyFavorites ? "fill-current" : ""}`} />
+                  {t("generator.onlyFavorites")}
+                </Button>
+              </div>
               <div className="max-h-[180px] space-y-1.5 overflow-x-hidden overflow-y-auto sm:max-h-[220px] sm:space-y-2">
               {loadingInputs ? (
                 <div className="flex justify-center py-4">
@@ -227,7 +241,10 @@ export default function GeneratorPage() {
                   {t("generator.noSources")}
                 </p>
               ) : (
-                (inputs ?? []).filter((s) => !filterCategoryId || s.category_id === filterCategoryId).map((source) => {
+                (inputs ?? [])
+                  .filter((s) => !filterCategoryId || s.category_id === filterCategoryId)
+                  .filter((s) => !onlyFavorites || s.is_favorite)
+                  .map((source) => {
                   const Icon = typeIcons[source.type] || FileText;
                   return (
                     <label
