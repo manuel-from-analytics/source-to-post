@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   PenTool, Check, Copy, RefreshCw, Send, Sparkles,
   FileText, Save, Loader2, Globe, Youtube, File, Type, Star,
-  ChevronDown, Plus, StickyNote
+  ChevronDown, Plus, StickyNote, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
