@@ -45,6 +45,15 @@ export function InputNotes({ inputId }: Props) {
     setEditContent("");
   };
 
+  const handleCopy = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success(t("inputNotes.copied"));
+    } catch {
+      toast.error(t("inputNotes.copyError"));
+    }
+  };
+
   return (
     <Card className="min-w-0 overflow-hidden">
       <CardHeader className="pb-2 px-3 sm:px-6">
