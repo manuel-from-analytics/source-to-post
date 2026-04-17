@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
   PenTool, Check, Copy, RefreshCw, Send, Sparkles,
-  FileText, Save, Loader2, Globe, Youtube, File, Type, Star
+  FileText, Save, Loader2, Globe, Youtube, File, Type, Star,
+  ChevronDown, Plus, StickyNote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useInputs } from "@/hooks/useInputs";
 import { useGeneratePost } from "@/hooks/useGeneratePost";
 import { useUpdatePost } from "@/hooks/usePosts";
