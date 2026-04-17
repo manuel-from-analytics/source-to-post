@@ -51,6 +51,7 @@ export type Database = {
           is_favorite: boolean | null
           language: string | null
           length: string | null
+          published_at: string | null
           status: Database["public"]["Enums"]["post_status"] | null
           target_audience: string | null
           title: string | null
@@ -71,6 +72,7 @@ export type Database = {
           is_favorite?: boolean | null
           language?: string | null
           length?: string | null
+          published_at?: string | null
           status?: Database["public"]["Enums"]["post_status"] | null
           target_audience?: string | null
           title?: string | null
@@ -91,6 +93,7 @@ export type Database = {
           is_favorite?: boolean | null
           language?: string | null
           length?: string | null
+          published_at?: string | null
           status?: Database["public"]["Enums"]["post_status"] | null
           target_audience?: string | null
           title?: string | null
