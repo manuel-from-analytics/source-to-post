@@ -556,6 +556,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "history.draft": "Draft",
     "history.final": "Ready",
     "history.published": "Published",
+    "history.publishedOn": "Published on",
     "history.delete": "Delete",
     "history.deleteConfirm": "Delete this post?",
     "history.deleteDesc": "This action cannot be undone.",
