@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Plus, Search, Star, FileText,
   Youtube, File,
@@ -39,7 +39,14 @@ export default function LibraryPage() {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
-  const [onlyFavorites, setOnlyFavorites] = useState(false);
+  const [onlyFavorites, setOnlyFavorites] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("library.onlyFavorites") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("library.onlyFavorites", String(onlyFavorites));
+  }, [onlyFavorites]);
   const [newInputOpen, setNewInputOpen] = useState(false);
   const [newInputType, setNewInputType] = useState("url");
 
