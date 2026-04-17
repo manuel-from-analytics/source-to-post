@@ -121,6 +121,23 @@ export default function GeneratorPage() {
     });
   };
 
+  const handleRemoveNote = (noteId: string, noteContent: string) => {
+    setContentFocus((prev) => {
+      // Remove the exact note content; clean surrounding newlines
+      const idx = prev.indexOf(noteContent);
+      if (idx === -1) return prev;
+      const before = prev.slice(0, idx).replace(/\n+$/, "");
+      const after = prev.slice(idx + noteContent.length).replace(/^\n+/, "");
+      if (before && after) return `${before}\n${after}`;
+      return before || after;
+    });
+    setAddedNoteIds((prev) => {
+      const next = new Set(prev);
+      next.delete(noteId);
+      return next;
+    });
+  };
+
   useEffect(() => {
     const load = async () => {
       if (initialPost) {
