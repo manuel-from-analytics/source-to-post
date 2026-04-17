@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   PenTool, Check, Copy, RefreshCw, Send, Sparkles,
   FileText, Save, Loader2, Globe, Youtube, File, Type, Star,
-  ChevronDown, Plus, StickyNote
+  ChevronDown, Plus, StickyNote, X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -117,6 +117,23 @@ export default function GeneratorPage() {
     setAddedNoteIds((prev) => {
       const next = new Set(prev);
       next.add(noteId);
+      return next;
+    });
+  };
+
+  const handleRemoveNote = (noteId: string, noteContent: string) => {
+    setContentFocus((prev) => {
+      // Remove the exact note content; clean surrounding newlines
+      const idx = prev.indexOf(noteContent);
+      if (idx === -1) return prev;
+      const before = prev.slice(0, idx).replace(/\n+$/, "");
+      const after = prev.slice(idx + noteContent.length).replace(/^\n+/, "");
+      if (before && after) return `${before}\n${after}`;
+      return before || after;
+    });
+    setAddedNoteIds((prev) => {
+      const next = new Set(prev);
+      next.delete(noteId);
       return next;
     });
   };
@@ -474,13 +491,17 @@ export default function GeneratorPage() {
                                       <Button
                                         type="button"
                                         size="sm"
-                                        variant={added ? "ghost" : "outline"}
-                                        disabled={added}
-                                        onClick={() => handleAddNote(note.id, note.content)}
+                                        variant="outline"
+                                        onClick={() =>
+                                          added
+                                            ? handleRemoveNote(note.id, note.content)
+                                            : handleAddNote(note.id, note.content)
+                                        }
                                         className="h-6 shrink-0 gap-1 px-2 text-[10px]"
+                                        title={added ? t("generator.removeNote") : t("generator.addNote")}
                                       >
                                         {added ? (
-                                          <><Check className="h-3 w-3" />{t("generator.noteAdded")}</>
+                                          <><X className="h-3 w-3" />{t("generator.removeNote")}</>
                                         ) : (
                                           <><Plus className="h-3 w-3" />{t("generator.addNote")}</>
                                         )}
