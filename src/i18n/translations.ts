@@ -308,6 +308,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "inputNotes.added": "Nota añadida",
     "inputNotes.updated": "Nota actualizada",
     "inputNotes.deleted": "Nota eliminada",
+    "inputNotes.copy": "Copiar nota",
+    "inputNotes.copied": "Nota copiada",
+    "inputNotes.copyError": "No se pudo copiar",
 
     // Generator extras
     "generator.onlyFavorites": "Solo favoritos",
@@ -701,6 +704,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "inputNotes.added": "Note added",
     "inputNotes.updated": "Note updated",
     "inputNotes.deleted": "Note deleted",
+    "inputNotes.copy": "Copy note",
+    "inputNotes.copied": "Note copied",
+    "inputNotes.copyError": "Could not copy",
 
     // Generator extras
     "generator.onlyFavorites": "Favorites only",
@@ -1094,6 +1100,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "inputNotes.added": "Nota adicionada",
     "inputNotes.updated": "Nota atualizada",
     "inputNotes.deleted": "Nota excluída",
+    "inputNotes.copy": "Copiar nota",
+    "inputNotes.copied": "Nota copiada",
+    "inputNotes.copyError": "Não foi possível copiar",
 
     // Generator extras
     "generator.onlyFavorites": "Apenas favoritos",

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Plus, Pencil, Trash2, Check, X, Loader2, StickyNote } from "lucide-react";
+import { Plus, Pencil, Trash2, Check, X, Loader2, StickyNote, Copy } from "lucide-react";
+import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -42,6 +43,15 @@ export function InputNotes({ inputId }: Props) {
     await updateNote.mutateAsync({ id: editingId, content: editContent.trim() });
     setEditingId(null);
     setEditContent("");
+  };
+
+  const handleCopy = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success(t("inputNotes.copied"));
+    } catch {
+      toast.error(t("inputNotes.copyError"));
+    }
   };
 
   return (
@@ -158,20 +168,27 @@ export function InputNotes({ inputId }: Props) {
                     {new Date(note.created_at).toLocaleDateString()}
                     {note.updated_at !== note.created_at && ` · ${t("inputNotes.edited")}`}
                   </span>
-                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => handleCopy(note.content)}
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground"
+                      aria-label={t("inputNotes.copy")}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
                     <button
                       onClick={() => startEdit(note.id, note.content)}
-                      className="p-1 rounded hover:bg-secondary text-muted-foreground"
+                      className="p-1.5 rounded hover:bg-secondary text-muted-foreground"
                       aria-label={t("inputNotes.edit")}
                     >
-                      <Pencil className="h-3 w-3" />
+                      <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button
                       onClick={() => deleteNote.mutate({ id: note.id, input_id: inputId })}
-                      className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                      className="ml-3 p-1.5 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
                       aria-label={t("inputNotes.delete")}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
