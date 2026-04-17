@@ -927,6 +927,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "history.draft": "Rascunho",
     "history.final": "Pronto",
     "history.published": "Publicado",
+    "history.publishedOn": "Publicado em",
     "history.delete": "Excluir",
     "history.deleteConfirm": "Excluir este post?",
     "history.deleteDesc": "Esta ação não pode ser desfeita.",
