@@ -704,6 +704,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "inputNotes.added": "Note added",
     "inputNotes.updated": "Note updated",
     "inputNotes.deleted": "Note deleted",
+    "inputNotes.copy": "Copy note",
+    "inputNotes.copied": "Note copied",
+    "inputNotes.copyError": "Could not copy",
 
     // Generator extras
     "generator.onlyFavorites": "Favorites only",
