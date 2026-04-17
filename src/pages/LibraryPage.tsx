@@ -59,7 +59,8 @@ export default function LibraryPage() {
 
   const filteredInputs = (inputs ?? [])
     .filter((input) => input.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    .filter((input) => !filterCategoryId || input.category_id === filterCategoryId);
+    .filter((input) => !filterCategoryId || input.category_id === filterCategoryId)
+    .filter((input) => !onlyFavorites || input.is_favorite);
 
   const resetForm = () => {
     setUrlValue("");
