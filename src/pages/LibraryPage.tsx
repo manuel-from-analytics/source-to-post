@@ -238,7 +238,20 @@ export default function LibraryPage() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder={t("library.search")} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="h-9 pl-9 text-sm" />
         </div>
-        <CategoryFilter selectedCategoryId={filterCategoryId} onSelect={setFilterCategoryId} />
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant={onlyFavorites ? "default" : "outline"}
+            size="sm"
+            onClick={() => setOnlyFavorites((v) => !v)}
+            className="h-7 gap-1 text-xs"
+            aria-pressed={onlyFavorites}
+          >
+            <Star className={`h-3.5 w-3.5 ${onlyFavorites ? "fill-current" : ""}`} />
+            {t("generator.onlyFavorites")}
+          </Button>
+          <CategoryFilter selectedCategoryId={filterCategoryId} onSelect={setFilterCategoryId} />
+        </div>
       </div>
 
       {/* Loading */}
