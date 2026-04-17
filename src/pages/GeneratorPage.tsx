@@ -428,6 +428,75 @@ export default function GeneratorPage() {
 
               <div className="space-y-2">
                 <Label className="text-xs">{t("generator.focus")}</Label>
+
+                {totalAvailableNotes > 0 && (
+                  <Collapsible open={notesPanelOpen} onOpenChange={setNotesPanelOpen}>
+                    <div className="rounded-md border border-border bg-muted/30">
+                      <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 px-2.5 py-2 text-left">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <StickyNote className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-xs font-medium truncate">
+                            {t("generator.importFromNotes")}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground shrink-0">
+                            ({t("generator.notesAvailable").replace("{count}", String(totalAvailableNotes))})
+                          </span>
+                        </div>
+                        <ChevronDown
+                          className={`h-3.5 w-3.5 text-muted-foreground transition-transform shrink-0 ${notesPanelOpen ? "rotate-180" : ""}`}
+                        />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="max-h-[200px] space-y-2 overflow-y-auto border-t border-border px-2.5 py-2">
+                          {notesGrouped.map((group) => (
+                            <div key={group.inputId} className="space-y-1">
+                              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground break-words [overflow-wrap:anywhere]">
+                                {group.title}
+                              </p>
+                              <div className="space-y-1">
+                                {group.notes.map((note) => {
+                                  const added = addedNoteIds.has(note.id);
+                                  const preview =
+                                    note.content.length > 80
+                                      ? `${note.content.slice(0, 80).trim()}…`
+                                      : note.content;
+                                  return (
+                                    <div
+                                      key={note.id}
+                                      className="flex items-start gap-2 rounded border border-border/60 bg-background p-1.5"
+                                    >
+                                      <p
+                                        className="flex-1 min-w-0 text-[11px] leading-snug text-foreground/80 break-words [overflow-wrap:anywhere]"
+                                        title={note.content}
+                                      >
+                                        {preview}
+                                      </p>
+                                      <Button
+                                        type="button"
+                                        size="sm"
+                                        variant={added ? "ghost" : "outline"}
+                                        disabled={added}
+                                        onClick={() => handleAddNote(note.id, note.content)}
+                                        className="h-6 shrink-0 gap-1 px-2 text-[10px]"
+                                      >
+                                        {added ? (
+                                          <><Check className="h-3 w-3" />{t("generator.noteAdded")}</>
+                                        ) : (
+                                          <><Plus className="h-3 w-3" />{t("generator.addNote")}</>
+                                        )}
+                                      </Button>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </CollapsibleContent>
+                    </div>
+                  </Collapsible>
+                )}
+
                 <Textarea
                   placeholder={t("generator.focusPlaceholder")}
                   value={contentFocus}
