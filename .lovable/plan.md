@@ -1,54 +1,53 @@
 
 
-# Plan: MCP Server for Source-to-Post
+## Plan: Importar notas en Content Focus
 
-Create an MCP Server as a Supabase Edge Function that exposes the app's main resources (inputs, posts, voices, newsletters) to external AI tools like Claude, Cursor, etc.
+### Comportamiento confirmado
+- **Inserción**: solo el texto de la nota, sin encabezado ni etiqueta. Si el textarea ya tiene contenido, se añade un salto de línea antes.
+- **Reinserción**: tras añadir una nota, su botón se deshabilita y muestra "Añadida". Si el usuario cambia el texto del textarea manualmente, el estado "añadida" se mantiene (es un control para evitar doble click, no un seguimiento de contenido).
+- **Reset del estado "añadida"**: si el usuario desmarca la fuente y la vuelve a marcar, las notas reaparecen disponibles. Si limpia completamente el textarea, también se reinicia.
 
-## What is an MCP Server?
+### UI
 
-An MCP (Model Context Protocol) server allows AI tools to interact with your app programmatically. For example, from Claude Desktop or Cursor you could ask "list my saved sources" or "generate a LinkedIn post from my latest article" and it would use your app's API directly.
+Encima del textarea de Content Focus, dentro del mismo bloque, aparece un panel colapsable **solo cuando hay fuentes seleccionadas con notas**:
 
-## Architecture
-
-A single Edge Function (`mcp-server`) using **mcp-lite** + **Hono** that exposes tools for each resource type. Authentication via the user's Supabase JWT token.
-
-## Tools to expose
-
-| Tool | Description |
-|------|-------------|
-| `list_inputs` | List sources from the library with optional filters (type, category, favorites) |
-| `get_input` | Get full details of a specific source |
-| `create_input` | Add a new text or URL source |
-| `delete_input` | Remove a source |
-| `list_posts` | List generated posts with optional filters (status, favorites) |
-| `get_post` | Get full post content |
-| `generate_post` | Generate a new LinkedIn post from selected sources with parameters (goal, tone, length, CTA, voice) |
-| `save_post` | Save a generated post |
-| `delete_post` | Remove a post |
-| `list_voices` | List available writing voices |
-| `list_newsletters` | List generated newsletters |
-| `get_newsletter` | Get full newsletter content |
-
-## Technical details
-
-- **File**: `supabase/functions/mcp-server/index.ts`
-- **Dependencies**: `mcp-lite` (^0.10.0), `hono`, `@supabase/supabase-js`
-- **Auth**: JWT validation via `getClaims()` — same pattern as existing edge functions
-- **Config**: Add `deno.json` with import map for mcp-lite
-- **Post generation**: For `generate_post`, call the existing `generate-post` edge function internally (non-streaming) or replicate the AI call logic to return the full result synchronously
-
-## Steps
-
-1. Create `supabase/functions/mcp-server/index.ts` with Hono + mcp-lite setup
-2. Implement all tools with Supabase client queries scoped to the authenticated user
-3. Handle `generate_post` by making an internal call to the AI gateway (synchronous, non-streaming)
-4. Deploy and test the endpoint
-
-## Usage
-
-Users would configure their MCP client (Claude Desktop, Cursor, etc.) with:
+```text
+Content Focus
+┌─────────────────────────────────────────┐
+│ ▼ Importar desde mis notas (3)          │
+│   Article X                             │
+│     "Lorem ipsum dolor sit..."  [+ Añadir]│
+│     "Otra nota breve..."        [Añadida]│
+│   PDF Y                                 │
+│     "Texto de la nota..."       [+ Añadir]│
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│ Textarea editable libremente            │
+└─────────────────────────────────────────┘
 ```
-URL: https://ofpnsqvcagowvaavzzxh.supabase.co/functions/v1/mcp-server
-Headers: Authorization: Bearer <user_jwt_token>
-```
+
+- Panel abierto por defecto cuando hay notas
+- Notas agrupadas por título de fuente
+- Preview de la nota truncado (~80 chars) con `title` HTML para ver completa al hover
+- Si no hay fuentes seleccionadas o ninguna tiene notas → panel oculto
+
+### Cambios técnicos
+
+**Sin cambios en backend ni base de datos.** Las notas viajan dentro del propio `content_focus` como texto libre que ya envía el edge function `generate-post`.
+
+Archivos a modificar:
+1. `src/pages/GeneratorPage.tsx`
+   - Query a `input_notes` filtrando por las fuentes en `selectedSources` (vía Supabase, agrupando resultados por `input_id`)
+   - Estado local `addedNoteIds: Set<string>` para marcar notas ya insertadas
+   - Handler `handleAddNote(noteContent, noteId)`: añade el texto al final de `contentFocus` con `\n` separador si ya hay contenido
+   - Componente colapsable usando `Collapsible` (ya disponible en el UI kit)
+2. `src/i18n/translations.ts` — claves nuevas en ES/EN/PT:
+   - `generator.importFromNotes` ("Importar desde mis notas")
+   - `generator.addNote` ("Añadir")
+   - `generator.noteAdded` ("Añadida")
+   - `generator.notesAvailable` ("{count} disponibles")
+
+### Consideración de rendimiento
+
+La query a `input_notes` se ejecuta solo cuando `selectedSources.length > 0` y se invalida cada vez que cambia la lista de fuentes seleccionadas. Cacheo vía TanStack Query con clave `["input-notes-for-sources", selectedSources.sort().join(",")]`.
 
