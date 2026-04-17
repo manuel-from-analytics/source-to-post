@@ -68,11 +68,58 @@ export default function GeneratorPage() {
   const [targetAudience, setTargetAudience] = useState("");
   const [contentFocus, setContentFocus] = useState("");
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>("none");
+  const [addedNoteIds, setAddedNoteIds] = useState<Set<string>>(new Set());
+  const [notesPanelOpen, setNotesPanelOpen] = useState(true);
 
   const { data: inputs, isLoading: loadingInputs } = useInputs();
   const { data: voices } = useVoices();
   const { generate, savePost, isGenerating, content, setContent } = useGeneratePost();
   const updatePost = useUpdatePost();
+
+  // Fetch notes for currently selected sources
+  const sortedSourceKey = useMemo(() => [...selectedSources].sort().join(","), [selectedSources]);
+  const { data: sourceNotes } = useQuery({
+    queryKey: ["input-notes-for-sources", sortedSourceKey],
+    enabled: selectedSources.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("input_notes")
+        .select("id, content, input_id, created_at")
+        .in("input_id", selectedSources)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Group notes by source title
+  const notesGrouped = useMemo(() => {
+    if (!sourceNotes || !inputs) return [];
+    const inputMap = new Map(inputs.map((i) => [i.id, i.title]));
+    const groups = new Map<string, { inputId: string; title: string; notes: typeof sourceNotes }>();
+    for (const note of sourceNotes) {
+      const title = inputMap.get(note.input_id) || "—";
+      if (!groups.has(note.input_id)) {
+        groups.set(note.input_id, { inputId: note.input_id, title, notes: [] });
+      }
+      groups.get(note.input_id)!.notes.push(note);
+    }
+    return Array.from(groups.values());
+  }, [sourceNotes, inputs]);
+
+  const totalAvailableNotes = sourceNotes?.length ?? 0;
+
+  const handleAddNote = (noteId: string, noteContent: string) => {
+    setContentFocus((prev) => {
+      const trimmed = prev.trimEnd();
+      return trimmed.length === 0 ? noteContent : `${trimmed}\n${noteContent}`;
+    });
+    setAddedNoteIds((prev) => {
+      const next = new Set(prev);
+      next.add(noteId);
+      return next;
+    });
+  };
 
   useEffect(() => {
     const load = async () => {
