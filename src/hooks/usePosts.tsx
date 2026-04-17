@@ -43,9 +43,15 @@ export function useUpdatePostStatus() {
   const { t } = useLanguage();
   return useMutation({
     mutationFn: async ({ id, status }: { id: string; status: PostStatus }) => {
+      const updates: { status: PostStatus; published_at?: string | null } = { status };
+      if (status === "published") {
+        updates.published_at = new Date().toISOString();
+      } else {
+        updates.published_at = null;
+      }
       const { error } = await supabase
         .from("generated_posts")
-        .update({ status })
+        .update(updates as any)
         .eq("id", id);
       if (error) throw error;
     },
