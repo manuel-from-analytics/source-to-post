@@ -1100,6 +1100,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "inputNotes.added": "Nota adicionada",
     "inputNotes.updated": "Nota atualizada",
     "inputNotes.deleted": "Nota excluída",
+    "inputNotes.copy": "Copiar nota",
+    "inputNotes.copied": "Nota copiada",
+    "inputNotes.copyError": "Não foi possível copiar",
 
     // Generator extras
     "generator.onlyFavorites": "Apenas favoritos",
