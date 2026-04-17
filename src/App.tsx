@@ -22,10 +22,19 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function RootRedirect() {
+  // If OAuth tokens are in the URL hash, wait for Supabase to process them
+  // before navigating away (otherwise the hash is lost and the session never persists).
+  if (typeof window !== "undefined" && window.location.hash.includes("access_token")) {
+    return null;
+  }
+  return <Navigate to="/dashboard" replace />;
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<RootRedirect />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/dashboard" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
