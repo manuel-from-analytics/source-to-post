@@ -39,6 +39,7 @@ export default function LibraryPage() {
   const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategoryId, setFilterCategoryId] = useState<string | null>(null);
+  const [onlyFavorites, setOnlyFavorites] = useState(false);
   const [newInputOpen, setNewInputOpen] = useState(false);
   const [newInputType, setNewInputType] = useState("url");
 
