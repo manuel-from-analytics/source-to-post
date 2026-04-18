@@ -420,15 +420,15 @@ export default function NewsletterPage() {
   const hasHistory = Boolean(newsletters && newsletters.length > 0);
 
   return (
-    <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-3 sm:p-4 lg:p-8">
-      <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Newsletter</h1>
+    <div className="mx-auto w-full max-w-5xl min-w-0 overflow-x-hidden p-3 sm:p-4 lg:p-8">
+      <div className="mb-4 sm:mb-6 min-w-0">
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl break-words">Newsletter</h1>
         <p className="text-sm text-muted-foreground mt-0.5 break-words">
           {t("newsletter.subtitle")}
         </p>
       </div>
 
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_1.5fr]">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] min-w-0">
         {/* Left: Search + History */}
         <div className="space-y-3 sm:space-y-4">
           {/* Search */}
