@@ -59,14 +59,14 @@ serve(async (req) => {
     }
     const userId = claimsData.claims.sub;
 
-    const { topic } = await req.json();
+    const { topic, profile_id } = await req.json();
     if (!topic || typeof topic !== "string" || topic.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Topic is required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch user profile: app_language + newsletter preferences
+    // Fetch user profile: app_language + legacy newsletter preferences toggle
     const { data: profile } = await supabase
       .from("profiles")
       .select("app_language, newsletter_preferences, newsletter_preferences_enabled")
@@ -75,8 +75,32 @@ serve(async (req) => {
     const appLanguage = profile?.app_language || "es";
     const langNames: Record<string, string> = { es: "Spanish", en: "English", pt: "Portuguese" };
     const langName = langNames[appLanguage] || "Spanish";
-    const userPreferences: string = (profile as any)?.newsletter_preferences || "";
     const preferencesEnabled: boolean = (profile as any)?.newsletter_preferences_enabled !== false;
+
+    // Resolve which preference profile to use:
+    // - If profile_id provided → use that profile
+    // - Else → use the user's default profile from newsletter_preference_profiles
+    // - Else fallback → legacy profiles.newsletter_preferences text
+    let userPreferences: string = "";
+    if (preferencesEnabled) {
+      if (profile_id) {
+        const { data: prof } = await supabase
+          .from("newsletter_preference_profiles")
+          .select("preferences")
+          .eq("id", profile_id)
+          .eq("user_id", userId)
+          .maybeSingle();
+        userPreferences = (prof as any)?.preferences || "";
+      } else {
+        const { data: defaultProf } = await supabase
+          .from("newsletter_preference_profiles")
+          .select("preferences")
+          .eq("user_id", userId)
+          .eq("is_default", true)
+          .maybeSingle();
+        userPreferences = (defaultProf as any)?.preferences || (profile as any)?.newsletter_preferences || "";
+      }
+    }
 
     // Step 1: Collect ALL previously used URLs to avoid repetition
     const { data: allExistingItems } = await supabase
