@@ -420,17 +420,17 @@ export default function NewsletterPage() {
   const hasHistory = Boolean(newsletters && newsletters.length > 0);
 
   return (
-    <div className="mx-auto max-w-5xl min-w-0 overflow-hidden p-3 sm:p-4 lg:p-8">
-      <div className="mb-4 sm:mb-6">
-        <h1 className="text-xl font-bold tracking-tight sm:text-2xl">Newsletter</h1>
+    <div className="mx-auto w-full max-w-5xl min-w-0 overflow-x-hidden p-3 sm:p-4 lg:p-8">
+      <div className="mb-4 sm:mb-6 min-w-0">
+        <h1 className="text-xl font-bold tracking-tight sm:text-2xl break-words">Newsletter</h1>
         <p className="text-sm text-muted-foreground mt-0.5 break-words">
           {t("newsletter.subtitle")}
         </p>
       </div>
 
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[1fr_1.5fr]">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] min-w-0">
         {/* Left: Search + History */}
-        <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-3 sm:space-y-4 min-w-0">
           {/* Search */}
           <Card>
             <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
@@ -465,16 +465,17 @@ export default function NewsletterPage() {
 
               {/* Past topics */}
               {pastTopics && pastTopics.length > 0 && (
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 min-w-0 w-full">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
                     {t("newsletter.recentSearches")}
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1.5 min-w-0 w-full">
                     {pastTopics.slice(0, 8).map((t) => (
                       <button
                         key={t}
                         onClick={() => handleReuseTopic(t)}
-                        className="max-w-full truncate rounded-full bg-secondary px-2.5 py-1 text-[11px] text-secondary-foreground transition-colors hover:bg-secondary/80 sm:max-w-[180px]"
+                        className="block max-w-full truncate rounded-full bg-secondary px-2.5 py-1 text-[11px] text-secondary-foreground transition-colors hover:bg-secondary/80 sm:max-w-[180px]"
+                        title={t}
                       >
                         {t}
                       </button>
