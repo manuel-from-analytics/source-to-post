@@ -13,6 +13,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Plus, Pencil, Star, StarOff } from "lucide-react";
 import {
   useNewsletters,
   useNewsletterDetail,
@@ -21,8 +28,14 @@ import {
   useDeleteNewsletter,
   useSearchTopics,
   useNewsletterPreferences,
+  useNewsletterProfiles,
+  useCreateNewsletterProfile,
+  useUpdateNewsletterProfile,
+  useDeleteNewsletterProfile,
+  useSetDefaultNewsletterProfile,
   type Newsletter,
   type NewsletterItem,
+  type NewsletterPreferenceProfile,
 } from "@/hooks/useNewsletters";
 import {
   DropdownMenu,
