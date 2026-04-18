@@ -162,6 +162,12 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "newsletter.sourceBadge.vendor": "Vendor",
     "newsletter.sourceBadge.foundational": "Foundational",
     "newsletter.sourceBadge.academic": "🎓 Académico",
+    "newsletter.preferences": "Preferencias de la newsletter",
+    "newsletter.preferencesDesc": "Reglas editoriales personalizadas (tipos de fuentes, frescura, ángulo, etc.) que se inyectan al generar.",
+    "newsletter.preferencesApply": "Aplicar al generar",
+    "newsletter.preferencesPlaceholder": "Escribe tus preferencias: tipos de fuentes preferidas, frescura, ángulo editorial, restricciones, etc.",
+    "newsletter.preferencesSave": "Guardar preferencias",
+    "newsletter.preferencesSaved": "Preferencias guardadas",
 
     // Install
     "install.title": "Instalar PostFlow",
@@ -558,6 +564,12 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "newsletter.sourceBadge.vendor": "Vendor",
     "newsletter.sourceBadge.foundational": "Foundational",
     "newsletter.sourceBadge.academic": "🎓 Academic",
+    "newsletter.preferences": "Newsletter preferences",
+    "newsletter.preferencesDesc": "Custom editorial rules (source types, freshness, angle, etc.) injected when generating.",
+    "newsletter.preferencesApply": "Apply when generating",
+    "newsletter.preferencesPlaceholder": "Write your preferences: preferred source types, freshness, editorial angle, constraints, etc.",
+    "newsletter.preferencesSave": "Save preferences",
+    "newsletter.preferencesSaved": "Preferences saved",
 
     // Install
     "install.title": "Install PostFlow",
@@ -954,6 +966,12 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "newsletter.sourceBadge.vendor": "Vendor",
     "newsletter.sourceBadge.foundational": "Foundational",
     "newsletter.sourceBadge.academic": "🎓 Acadêmico",
+    "newsletter.preferences": "Preferências da newsletter",
+    "newsletter.preferencesDesc": "Regras editoriais personalizadas (tipos de fontes, frescor, ângulo, etc.) injetadas ao gerar.",
+    "newsletter.preferencesApply": "Aplicar ao gerar",
+    "newsletter.preferencesPlaceholder": "Escreva suas preferências: tipos de fontes preferidas, frescor, ângulo editorial, restrições, etc.",
+    "newsletter.preferencesSave": "Salvar preferências",
+    "newsletter.preferencesSaved": "Preferências salvas",
 
     // Install
     "install.title": "Instalar PostFlow",
