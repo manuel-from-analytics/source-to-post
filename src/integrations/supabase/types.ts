@@ -389,6 +389,8 @@ export type Database = {
           default_writing_style: string | null
           full_name: string | null
           id: string
+          newsletter_preferences: string | null
+          newsletter_preferences_enabled: boolean | null
           preferred_language: string | null
           updated_at: string
         }
@@ -402,6 +404,8 @@ export type Database = {
           default_writing_style?: string | null
           full_name?: string | null
           id: string
+          newsletter_preferences?: string | null
+          newsletter_preferences_enabled?: boolean | null
           preferred_language?: string | null
           updated_at?: string
         }
@@ -415,6 +419,8 @@ export type Database = {
           default_writing_style?: string | null
           full_name?: string | null
           id?: string
+          newsletter_preferences?: string | null
+          newsletter_preferences_enabled?: boolean | null
           preferred_language?: string | null
           updated_at?: string
         }
