@@ -46,46 +46,106 @@ import {
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
-function NewsletterPreferencesCard() {
+interface NewsletterPreferencesCardProps {
+  selectedProfileId: string | null;
+  onSelectProfile: (id: string | null) => void;
+}
+
+function NewsletterPreferencesCard({ selectedProfileId, onSelectProfile }: NewsletterPreferencesCardProps) {
   const { t } = useLanguage();
-  const { data, isLoading, update } = useNewsletterPreferences();
+  const { data: legacy, isLoading: loadingLegacy, update: updateLegacy } = useNewsletterPreferences();
+  const { data: profiles, isLoading: loadingProfiles } = useNewsletterProfiles();
+  const createProfile = useCreateNewsletterProfile();
+  const updateProfile = useUpdateNewsletterProfile();
+  const deleteProfile = useDeleteNewsletterProfile();
+  const setDefault = useSetDefaultNewsletterProfile();
+
   const [open, setOpen] = useState(false);
-  const [text, setText] = useState("");
   const [enabled, setEnabled] = useState(true);
-  const [dirty, setDirty] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editText, setEditText] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
 
   useEffect(() => {
-    if (data) {
-      setText(data.preferences || "");
-      setEnabled(data.enabled);
-      setDirty(false);
-    }
-  }, [data]);
+    if (legacy) setEnabled(legacy.enabled);
+  }, [legacy]);
 
-  const handleSave = async () => {
-    await update.mutateAsync({ preferences: text, enabled });
-    setDirty(false);
+  // Auto-select default profile when profiles load
+  useEffect(() => {
+    if (!profiles || profiles.length === 0) return;
+    if (selectedProfileId && profiles.some(p => p.id === selectedProfileId)) return;
+    const def = profiles.find(p => p.is_default) || profiles[0];
+    onSelectProfile(def.id);
+  }, [profiles, selectedProfileId, onSelectProfile]);
+
+  const editing = profiles?.find(p => p.id === editingId) || null;
+
+  const startEdit = (p: NewsletterPreferenceProfile) => {
+    setEditingId(p.id);
+    setEditName(p.name);
+    setEditText(p.preferences);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditName("");
+    setEditText("");
+  };
+
+  const saveEdit = async () => {
+    if (!editingId) return;
+    await updateProfile.mutateAsync({ id: editingId, name: editName.trim() || "Sin nombre", preferences: editText });
     const { toast } = await import("sonner");
     toast.success(t("newsletter.preferencesSaved"));
+    cancelEdit();
+  };
+
+  const handleCreate = async () => {
+    const name = newName.trim();
+    if (!name) return;
+    const created = await createProfile.mutateAsync({ name, preferences: "" });
+    setCreating(false);
+    setNewName("");
+    onSelectProfile(created.id);
+    startEdit(created);
+  };
+
+  const handleDelete = async (id: string) => {
+    await deleteProfile.mutateAsync(id);
+    if (selectedProfileId === id) {
+      const remaining = (profiles || []).filter(p => p.id !== id);
+      onSelectProfile(remaining[0]?.id || null);
+    }
+    if (editingId === id) cancelEdit();
   };
 
   const handleToggle = async (val: boolean) => {
     setEnabled(val);
-    await update.mutateAsync({ enabled: val });
+    await updateLegacy.mutateAsync({ enabled: val });
   };
+
+  const selectedProfile = profiles?.find(p => p.id === selectedProfileId) || null;
+  const isLoading = loadingLegacy || loadingProfiles;
 
   return (
     <Card className="min-w-0 overflow-hidden">
       <Collapsible open={open} onOpenChange={setOpen}>
         <CollapsibleTrigger asChild>
           <button className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left sm:px-6 sm:py-4">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <Settings2 className="h-4 w-4 shrink-0 text-muted-foreground" />
               <span className="text-xs font-medium sm:text-sm truncate">{t("newsletter.preferences")}</span>
               {!isLoading && (
-                <Badge variant={enabled ? "default" : "secondary"} className="text-[10px] shrink-0">
-                  {enabled ? "ON" : "OFF"}
-                </Badge>
+                <>
+                  <Badge variant={enabled ? "default" : "secondary"} className="text-[10px] shrink-0">
+                    {enabled ? "ON" : "OFF"}
+                  </Badge>
+                  {enabled && selectedProfile && (
+                    <span className="text-[11px] text-muted-foreground truncate">· {selectedProfile.name}</span>
+                  )}
+                </>
               )}
             </div>
             <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
@@ -96,6 +156,7 @@ function NewsletterPreferencesCard() {
             <p className="text-[11px] text-muted-foreground break-words">
               {t("newsletter.preferencesDesc")}
             </p>
+
             <div className="flex items-center gap-2">
               <Switch
                 id="newsletter-prefs-toggle"
@@ -107,23 +168,144 @@ function NewsletterPreferencesCard() {
                 {t("newsletter.preferencesApply")}
               </Label>
             </div>
-            <Textarea
-              value={text}
-              onChange={(e) => { setText(e.target.value); setDirty(true); }}
-              placeholder={t("newsletter.preferencesPlaceholder")}
-              className="min-h-[200px] text-xs leading-relaxed font-mono resize-y"
-              disabled={isLoading || !enabled}
-            />
-            <div className="flex justify-end">
-              <Button
-                size="sm"
-                onClick={handleSave}
-                disabled={!dirty || update.isPending || isLoading}
-                className="text-xs h-8"
-              >
-                {update.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("newsletter.preferencesSave")}
-              </Button>
+
+            {/* Profile selector + actions */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex-1 min-w-0">
+                <Select
+                  value={selectedProfileId || ""}
+                  onValueChange={(v) => onSelectProfile(v)}
+                  disabled={!enabled || isLoading || !profiles || profiles.length === 0}
+                >
+                  <SelectTrigger className="h-9 text-xs">
+                    <SelectValue placeholder={t("newsletter.profileSelectPlaceholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(profiles || []).map(p => (
+                      <SelectItem key={p.id} value={p.id} className="text-xs">
+                        {p.is_default ? "★ " : ""}{p.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {selectedProfile && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-9 text-xs gap-1"
+                      onClick={() => startEdit(selectedProfile)}
+                      disabled={editingId === selectedProfile.id}
+                    >
+                      <Pencil className="h-3 w-3" /> {t("newsletter.profileEdit")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-9 text-xs gap-1"
+                      onClick={() => setDefault.mutate(selectedProfile.id)}
+                      disabled={selectedProfile.is_default || setDefault.isPending}
+                      title={t("newsletter.profileSetDefault")}
+                    >
+                      {selectedProfile.is_default ? <Star className="h-3 w-3 fill-current" /> : <StarOff className="h-3 w-3" />}
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="h-9 text-xs text-destructive border-destructive/30 gap-1">
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>{t("newsletter.profileDeleteConfirm")}</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            {t("newsletter.profileDeleteConfirmDesc")} <strong>{selectedProfile.name}</strong>
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>{t("newsletter.cancel")}</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDelete(selectedProfile.id)}>
+                            {t("newsletter.delete")}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-9 text-xs gap-1"
+                  onClick={() => setCreating(v => !v)}
+                >
+                  <Plus className="h-3 w-3" /> {t("newsletter.profileNew")}
+                </Button>
+              </div>
             </div>
+
+            {/* New profile form */}
+            {creating && (
+              <div className="flex flex-col gap-2 rounded-lg border bg-muted/30 p-2 sm:flex-row">
+                <Input
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  placeholder={t("newsletter.profileNamePlaceholder")}
+                  className="h-9 text-xs flex-1"
+                  onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+                  autoFocus
+                />
+                <div className="flex gap-1">
+                  <Button size="sm" className="h-9 text-xs" onClick={handleCreate} disabled={!newName.trim() || createProfile.isPending}>
+                    {createProfile.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : t("newsletter.profileCreate")}
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-9 text-xs" onClick={() => { setCreating(false); setNewName(""); }}>
+                    {t("newsletter.cancel")}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Inline editor for selected profile */}
+            {editing && (
+              <div className="space-y-2 rounded-lg border bg-muted/30 p-2 sm:p-3">
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder={t("newsletter.profileNamePlaceholder")}
+                  className="h-9 text-xs font-medium"
+                />
+                <Textarea
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  placeholder={t("newsletter.preferencesPlaceholder")}
+                  className="min-h-[200px] text-xs leading-relaxed font-mono resize-y"
+                />
+                <div className="flex justify-end gap-1">
+                  <Button size="sm" variant="ghost" className="text-xs h-8" onClick={cancelEdit}>
+                    {t("newsletter.cancel")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={saveEdit}
+                    disabled={updateProfile.isPending}
+                    className="text-xs h-8"
+                  >
+                    {updateProfile.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("newsletter.preferencesSave")}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Read-only preview when not editing */}
+            {!editing && selectedProfile && (
+              <div className="rounded-lg border bg-muted/20 p-2 sm:p-3">
+                <pre className="max-h-[160px] overflow-y-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed font-mono text-muted-foreground">
+                  {selectedProfile.preferences || t("newsletter.profileEmpty")}
+                </pre>
+              </div>
+            )}
           </div>
         </CollapsibleContent>
       </Collapsible>
