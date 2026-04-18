@@ -518,6 +518,10 @@ export default function NewsletterPage() {
         </p>
       </div>
 
+      <div className="mb-4 sm:mb-6 min-w-0">
+        <NewsletterPreferencesCard />
+      </div>
+
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] min-w-0">
         {/* Left: Search + History */}
         <div className="space-y-3 sm:space-y-4 min-w-0">
