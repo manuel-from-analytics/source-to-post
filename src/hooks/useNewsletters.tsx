@@ -321,6 +321,8 @@ export function useSetDefaultNewsletterProfile() {
     onError: (e: Error) => toast.error(e.message),
   });
 }
+
+export function useDeleteNewsletter() {
   const queryClient = useQueryClient();
   const { t } = useLanguage();
 
