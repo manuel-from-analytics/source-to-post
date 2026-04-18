@@ -123,7 +123,7 @@ export function useGenerateNewsletter() {
   const { t } = useLanguage();
   const [isGenerating, setIsGenerating] = useState(false);
 
-  const generate = async (topic: string): Promise<Newsletter | null> => {
+  const generate = async (topic: string, profileId?: string | null): Promise<Newsletter | null> => {
     if (!user) return null;
     setIsGenerating(true);
     try {
@@ -139,7 +139,7 @@ export function useGenerateNewsletter() {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ topic }),
+          body: JSON.stringify({ topic, profile_id: profileId ?? null }),
         }
       );
 
