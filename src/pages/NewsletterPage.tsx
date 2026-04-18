@@ -73,10 +73,10 @@ function NewsletterItemCard({ item, onImport, importing, t }: {
   t: (k: string) => string;
 }) {
   return (
-    <div className="space-y-1.5 rounded-lg border p-3 sm:p-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <h4 className="flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{item.title}</h4>
-        <div className="flex items-center gap-2 self-start shrink-0">
+    <div className="min-w-0 space-y-1.5 rounded-lg border p-3 sm:p-4 overflow-hidden">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between min-w-0">
+        <h4 className="min-w-0 flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{item.title}</h4>
+        <div className="flex flex-wrap items-center gap-2 self-start shrink-0 max-w-full">
           {item.pub_date && <FreshnessBadge pubDate={item.pub_date} t={t} />}
           <SourceBadge type={item.source_type} t={t} />
         </div>
@@ -324,15 +324,15 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
   };
 
   return (
-    <div className="min-w-0 space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+    <div className="min-w-0 space-y-4 overflow-hidden">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold break-words [overflow-wrap:anywhere]">{newsletter.topic}</h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground break-words">
             {format(new Date(newsletter.created_at), "d MMM yyyy, HH:mm", { locale: es })}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 max-w-full sm:shrink-0">
           {newsletter.id && !newsletter.id.startsWith("temp-") && (
             <PodcastPlayer newsletterId={newsletter.id} savedScript={newsletter.podcast_script} newsletterLang={newsletter.language} t={t} />
           )}
@@ -364,12 +364,12 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
       </div>
 
       {newsletter.content && (
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{t("newsletter.fullContent")}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <pre className="text-xs whitespace-pre-wrap font-sans leading-relaxed text-foreground break-words [overflow-wrap:anywhere]">
+          <CardContent className="min-w-0 overflow-hidden">
+            <pre className="max-w-full text-xs whitespace-pre-wrap font-sans leading-relaxed text-foreground break-words [overflow-wrap:anywhere]">
               {newsletter.content}
             </pre>
           </CardContent>
@@ -550,7 +550,7 @@ export default function NewsletterPage() {
         </div>
 
         {/* Right: Newsletter display */}
-          <div className="min-w-0">
+          <div className="min-w-0 overflow-hidden">
           {isGenerating ? (
             <Card className="flex min-h-[240px] items-center justify-center sm:min-h-[400px]">
               <div className="space-y-3 px-6 text-center">
