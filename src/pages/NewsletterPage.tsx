@@ -669,6 +669,7 @@ export default function NewsletterPage() {
   const [topic, setTopic] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [generatedNewsletter, setGeneratedNewsletter] = useState<Newsletter | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
 
   const { data: newsletters, isLoading: loadingHistory } = useNewsletters();
   const { data: pastTopics } = useSearchTopics();
@@ -686,7 +687,7 @@ export default function NewsletterPage() {
   const handleGenerate = async () => {
     if (!topic.trim()) return;
     setSelectedId(null);
-    const result = await generate(topic.trim());
+    const result = await generate(topic.trim(), selectedProfileId);
     if (result) {
       setGeneratedNewsletter(result);
     }
@@ -714,7 +715,10 @@ export default function NewsletterPage() {
       </div>
 
       <div className="mb-4 sm:mb-6 min-w-0">
-        <NewsletterPreferencesCard />
+        <NewsletterPreferencesCard
+          selectedProfileId={selectedProfileId}
+          onSelectProfile={setSelectedProfileId}
+        />
       </div>
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] min-w-0">
