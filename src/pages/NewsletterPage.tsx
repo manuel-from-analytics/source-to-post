@@ -550,7 +550,7 @@ export default function NewsletterPage() {
         </div>
 
         {/* Right: Newsletter display */}
-          <div className="min-w-0">
+          <div className="min-w-0 overflow-hidden">
           {isGenerating ? (
             <Card className="flex min-h-[240px] items-center justify-center sm:min-h-[400px]">
               <div className="space-y-3 px-6 text-center">
