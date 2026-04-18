@@ -324,15 +324,15 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
   };
 
   return (
-    <div className="min-w-0 space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
+    <div className="min-w-0 space-y-4 overflow-hidden">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between min-w-0">
+        <div className="min-w-0 flex-1">
           <h2 className="text-lg font-bold break-words [overflow-wrap:anywhere]">{newsletter.topic}</h2>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground break-words">
             {format(new Date(newsletter.created_at), "d MMM yyyy, HH:mm", { locale: es })}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 max-w-full sm:shrink-0">
           {newsletter.id && !newsletter.id.startsWith("temp-") && (
             <PodcastPlayer newsletterId={newsletter.id} savedScript={newsletter.podcast_script} newsletterLang={newsletter.language} t={t} />
           )}
