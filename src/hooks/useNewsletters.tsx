@@ -210,7 +210,117 @@ export function useNewsletterPreferences() {
   return { ...query, update };
 }
 
-export function useDeleteNewsletter() {
+export interface NewsletterPreferenceProfile {
+  id: string;
+  user_id: string;
+  name: string;
+  preferences: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useNewsletterProfiles() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["newsletter-preference-profiles", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("newsletter_preference_profiles")
+        .select("*")
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return (data || []) as NewsletterPreferenceProfile[];
+    },
+    enabled: !!user,
+  });
+}
+
+export function useCreateNewsletterProfile() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { t } = useLanguage();
+  return useMutation({
+    mutationFn: async (input: { name: string; preferences: string }) => {
+      if (!user) throw new Error(t("toast.notAuthenticated"));
+      const { data, error } = await supabase
+        .from("newsletter_preference_profiles")
+        .insert({ user_id: user.id, name: input.name, preferences: input.preferences })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as NewsletterPreferenceProfile;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["newsletter-preference-profiles"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useUpdateNewsletterProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; name?: string; preferences?: string }) => {
+      const payload: Record<string, any> = {};
+      if (input.name !== undefined) payload.name = input.name;
+      if (input.preferences !== undefined) payload.preferences = input.preferences;
+      const { error } = await supabase
+        .from("newsletter_preference_profiles")
+        .update(payload)
+        .eq("id", input.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["newsletter-preference-profiles"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useDeleteNewsletterProfile() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("newsletter_preference_profiles")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["newsletter-preference-profiles"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useSetDefaultNewsletterProfile() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { t } = useLanguage();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!user) throw new Error(t("toast.notAuthenticated"));
+      // Unset all then set one
+      const { error: e1 } = await supabase
+        .from("newsletter_preference_profiles")
+        .update({ is_default: false })
+        .eq("user_id", user.id);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase
+        .from("newsletter_preference_profiles")
+        .update({ is_default: true })
+        .eq("id", id);
+      if (e2) throw e2;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["newsletter-preference-profiles"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
   const queryClient = useQueryClient();
   const { t } = useLanguage();
 
