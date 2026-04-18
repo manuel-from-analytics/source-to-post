@@ -364,12 +364,12 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
       </div>
 
       {newsletter.content && (
-        <Card>
+        <Card className="min-w-0 overflow-hidden">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm">{t("newsletter.fullContent")}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <pre className="text-xs whitespace-pre-wrap font-sans leading-relaxed text-foreground break-words [overflow-wrap:anywhere]">
+          <CardContent className="min-w-0 overflow-hidden">
+            <pre className="max-w-full text-xs whitespace-pre-wrap font-sans leading-relaxed text-foreground break-words [overflow-wrap:anywhere]">
               {newsletter.content}
             </pre>
           </CardContent>
