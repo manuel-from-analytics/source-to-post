@@ -73,10 +73,10 @@ function NewsletterItemCard({ item, onImport, importing, t }: {
   t: (k: string) => string;
 }) {
   return (
-    <div className="space-y-1.5 rounded-lg border p-3 sm:p-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-        <h4 className="flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{item.title}</h4>
-        <div className="flex items-center gap-2 self-start shrink-0">
+    <div className="min-w-0 space-y-1.5 rounded-lg border p-3 sm:p-4 overflow-hidden">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between min-w-0">
+        <h4 className="min-w-0 flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{item.title}</h4>
+        <div className="flex flex-wrap items-center gap-2 self-start shrink-0 max-w-full">
           {item.pub_date && <FreshnessBadge pubDate={item.pub_date} t={t} />}
           <SourceBadge type={item.source_type} t={t} />
         </div>
