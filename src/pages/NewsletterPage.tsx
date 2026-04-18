@@ -465,16 +465,17 @@ export default function NewsletterPage() {
 
               {/* Past topics */}
               {pastTopics && pastTopics.length > 0 && (
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 min-w-0 w-full">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
                     {t("newsletter.recentSearches")}
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1.5 min-w-0 w-full">
                     {pastTopics.slice(0, 8).map((t) => (
                       <button
                         key={t}
                         onClick={() => handleReuseTopic(t)}
-                        className="max-w-full truncate rounded-full bg-secondary px-2.5 py-1 text-[11px] text-secondary-foreground transition-colors hover:bg-secondary/80 sm:max-w-[180px]"
+                        className="block max-w-full truncate rounded-full bg-secondary px-2.5 py-1 text-[11px] text-secondary-foreground transition-colors hover:bg-secondary/80 sm:max-w-[180px]"
+                        title={t}
                       >
                         {t}
                       </button>
