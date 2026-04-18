@@ -3,12 +3,16 @@ import { useLanguage } from "@/i18n/LanguageContext";
 import {
   Newspaper, Search, Loader2, Clock, ExternalLink,
   Library, Check, ChevronRight, Sparkles, Send, MoreVertical, Trash2,
-  Headphones, Pause, Play, Volume2, RefreshCw,
+  Headphones, Pause, Play, Volume2, RefreshCw, Settings2, ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   useNewsletters,
   useNewsletterDetail,
@@ -16,6 +20,7 @@ import {
   useImportToLibrary,
   useDeleteNewsletter,
   useSearchTopics,
+  useNewsletterPreferences,
   type Newsletter,
   type NewsletterItem,
 } from "@/hooks/useNewsletters";
@@ -27,6 +32,91 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+
+function NewsletterPreferencesCard() {
+  const { t } = useLanguage();
+  const { data, isLoading, update } = useNewsletterPreferences();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [enabled, setEnabled] = useState(true);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    if (data) {
+      setText(data.preferences || "");
+      setEnabled(data.enabled);
+      setDirty(false);
+    }
+  }, [data]);
+
+  const handleSave = async () => {
+    await update.mutateAsync({ preferences: text, enabled });
+    setDirty(false);
+    const { toast } = await import("sonner");
+    toast.success(t("newsletter.preferencesSaved"));
+  };
+
+  const handleToggle = async (val: boolean) => {
+    setEnabled(val);
+    await update.mutateAsync({ enabled: val });
+  };
+
+  return (
+    <Card className="min-w-0 overflow-hidden">
+      <Collapsible open={open} onOpenChange={setOpen}>
+        <CollapsibleTrigger asChild>
+          <button className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left sm:px-6 sm:py-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <Settings2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <span className="text-xs font-medium sm:text-sm truncate">{t("newsletter.preferences")}</span>
+              {!isLoading && (
+                <Badge variant={enabled ? "default" : "secondary"} className="text-[10px] shrink-0">
+                  {enabled ? "ON" : "OFF"}
+                </Badge>
+              )}
+            </div>
+            <ChevronDown className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`} />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="space-y-3 px-3 pb-3 sm:px-6 sm:pb-4">
+            <p className="text-[11px] text-muted-foreground break-words">
+              {t("newsletter.preferencesDesc")}
+            </p>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="newsletter-prefs-toggle"
+                checked={enabled}
+                onCheckedChange={handleToggle}
+                disabled={isLoading}
+              />
+              <Label htmlFor="newsletter-prefs-toggle" className="text-xs cursor-pointer">
+                {t("newsletter.preferencesApply")}
+              </Label>
+            </div>
+            <Textarea
+              value={text}
+              onChange={(e) => { setText(e.target.value); setDirty(true); }}
+              placeholder={t("newsletter.preferencesPlaceholder")}
+              className="min-h-[200px] text-xs leading-relaxed font-mono resize-y"
+              disabled={isLoading || !enabled}
+            />
+            <div className="flex justify-end">
+              <Button
+                size="sm"
+                onClick={handleSave}
+                disabled={!dirty || update.isPending || isLoading}
+                className="text-xs h-8"
+              >
+                {update.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("newsletter.preferencesSave")}
+              </Button>
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+}
 
 function SourceBadge({ type, t }: { type: string; t: (k: string) => string }) {
   const config: Record<string, { labelKey: string; variant: "default" | "secondary" | "outline" }> = {
@@ -426,6 +516,10 @@ export default function NewsletterPage() {
         <p className="text-sm text-muted-foreground mt-0.5 break-words">
           {t("newsletter.subtitle")}
         </p>
+      </div>
+
+      <div className="mb-4 sm:mb-6 min-w-0">
+        <NewsletterPreferencesCard />
       </div>
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] min-w-0">

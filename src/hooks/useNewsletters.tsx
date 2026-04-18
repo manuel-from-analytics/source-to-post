@@ -164,6 +164,52 @@ export function useGenerateNewsletter() {
   return { generate, isGenerating };
 }
 
+export function useNewsletterPreferences() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { t } = useLanguage();
+
+  const query = useQuery({
+    queryKey: ["newsletter-preferences", user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("newsletter_preferences, newsletter_preferences_enabled")
+        .eq("id", user.id)
+        .single();
+      if (error) throw error;
+      return {
+        preferences: (data as any)?.newsletter_preferences ?? "",
+        enabled: (data as any)?.newsletter_preferences_enabled ?? true,
+      };
+    },
+    enabled: !!user,
+  });
+
+  const update = useMutation({
+    mutationFn: async (input: { preferences?: string; enabled?: boolean }) => {
+      if (!user) throw new Error(t("toast.notAuthenticated"));
+      const payload: Record<string, any> = {};
+      if (input.preferences !== undefined) payload.newsletter_preferences = input.preferences;
+      if (input.enabled !== undefined) payload.newsletter_preferences_enabled = input.enabled;
+      const { error } = await supabase
+        .from("profiles")
+        .update(payload)
+        .eq("id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["newsletter-preferences"] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  return { ...query, update };
+}
+
 export function useDeleteNewsletter() {
   const queryClient = useQueryClient();
   const { t } = useLanguage();
