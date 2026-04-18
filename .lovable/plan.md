@@ -1,53 +1,71 @@
 
 
-## Plan: Importar notas en Content Focus
+## Plan: Preferencias editables y system prompt neutro
 
-### Comportamiento confirmado
-- **Inserción**: solo el texto de la nota, sin encabezado ni etiqueta. Si el textarea ya tiene contenido, se añade un salto de línea antes.
-- **Reinserción**: tras añadir una nota, su botón se deshabilita y muestra "Añadida". Si el usuario cambia el texto del textarea manualmente, el estado "añadida" se mantiene (es un control para evitar doble click, no un seguimiento de contenido).
-- **Reset del estado "añadida"**: si el usuario desmarca la fuente y la vuelve a marcar, las notas reaparecen disponibles. Si limpia completamente el textarea, también se reinicia.
+### Objetivo
+1. Simplificar el system prompt para que sea neutro ("curador experto estilo Kloshletter").
+2. Mover TODAS las reglas hardcodeadas (tipos de fuente, frescura, FT/HBR/McKinsey, mínimo académico, dominios, etc.) a una **caja de preferencias editable** en la página de Newsletter.
+3. El usuario decide vía toggle si esas preferencias se inyectan o no al generar.
 
-### UI
-
-Encima del textarea de Content Focus, dentro del mismo bloque, aparece un panel colapsable **solo cuando hay fuentes seleccionadas con notas**:
+### UX en `NewsletterPage.tsx`
+Nueva tarjeta colapsable arriba del generador:
 
 ```text
-Content Focus
-┌─────────────────────────────────────────┐
-│ ▼ Importar desde mis notas (3)          │
-│   Article X                             │
-│     "Lorem ipsum dolor sit..."  [+ Añadir]│
-│     "Otra nota breve..."        [Añadida]│
-│   PDF Y                                 │
-│     "Texto de la nota..."       [+ Añadir]│
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│ Textarea editable libremente            │
-└─────────────────────────────────────────┘
+┌─ Preferencias de newsletter ────────── [▼] ┐
+│  [✓] Aplicar preferencias al generar       │
+│  ┌────────────────────────────────────┐    │
+│  │ Eres curador para un consultor de  │    │
+│  │ Analytics & GenAI. Prioriza FT,    │    │
+│  │ HBR, McKinsey. Mín 1 fuente        │    │
+│  │ académica. Frescura <6 meses...    │    │
+│  └────────────────────────────────────┘    │
+│  [Guardar preferencias]                    │
+└────────────────────────────────────────────┘
 ```
 
-- Panel abierto por defecto cuando hay notas
-- Notas agrupadas por título de fuente
-- Preview de la nota truncado (~80 chars) con `title` HTML para ver completa al hover
-- Si no hay fuentes seleccionadas o ninguna tiene notas → panel oculto
+- Colapsada por defecto.
+- Toggle "Aplicar preferencias" persiste si se envían o no.
+- Textarea libre, multilinea, sin estructura forzada — el usuario escribe lo que quiera.
+- Botón "Guardar" persiste en BD.
+- Valor por defecto al crear el campo: el texto actual hardcodeado (perfil Analytics/GenAI + reglas), para no romper la experiencia del usuario actual.
 
-### Cambios técnicos
+### Cambios en BD
+Migración: añadir 2 columnas a `profiles`:
+- `newsletter_preferences` (text, nullable) — el texto editable.
+- `newsletter_preferences_enabled` (boolean, default true) — el toggle.
 
-**Sin cambios en backend ni base de datos.** Las notas viajan dentro del propio `content_focus` como texto libre que ya envía el edge function `generate-post`.
+Inicializar `newsletter_preferences` con el bloque actual de reglas para usuarios existentes (vía DEFAULT en migración).
 
-Archivos a modificar:
-1. `src/pages/GeneratorPage.tsx`
-   - Query a `input_notes` filtrando por las fuentes en `selectedSources` (vía Supabase, agrupando resultados por `input_id`)
-   - Estado local `addedNoteIds: Set<string>` para marcar notas ya insertadas
-   - Handler `handleAddNote(noteContent, noteId)`: añade el texto al final de `contentFocus` con `\n` separador si ya hay contenido
-   - Componente colapsable usando `Collapsible` (ya disponible en el UI kit)
-2. `src/i18n/translations.ts` — claves nuevas en ES/EN/PT:
-   - `generator.importFromNotes` ("Importar desde mis notas")
-   - `generator.addNote` ("Añadir")
-   - `generator.noteAdded` ("Añadida")
-   - `generator.notesAvailable` ("{count} disponibles")
+### Cambios en edge function `generate-newsletter`
+1. **System prompt nuevo** (neutro):
+   > "Eres un curador experto de newsletters estilo Kloshletter: legibles, escaneables, accionables. Tu trabajo es entregar la mejor newsletter posible sobre el tema solicitado. Output MUST be valid JSON only."
 
-### Consideración de rendimiento
+2. **Leer preferencias del perfil** y, si `newsletter_preferences_enabled` es true y el texto no está vacío, inyectarlas en el user prompt como bloque **"USER PREFERENCES"**.
 
-La query a `input_notes` se ejecuta solo cuando `selectedSources.length > 0` y se invalida cada vez que cambia la lista de fuentes seleccionadas. Cacheo vía TanStack Query con clave `["input-notes-for-sources", selectedSources.sort().join(",")]`.
+3. **Limpiar queries de Firecrawl**: quitar sufijos `"latest trends insights"` y la query académica forzada. Hacer una sola búsqueda con `topic` tal cual + años recientes (esto último también pasa a ser opcional según preferencias, pero por simplicidad lo dejamos como query plana del topic).
+
+4. **Quitar validaciones hardcodeadas**: eliminar el filtro de fechas <6 meses y el conteo de académicas en código. Esas reglas ahora viven en las preferencias del usuario y el modelo las aplica si están activas.
+
+5. **Mantener**: estructura JSON de salida (subject/items/closing), tool calling, idioma del usuario, deduplicación de URLs ya usadas.
+
+### Cambios en frontend
+- `useNewsletters.tsx`: nuevo hook `useNewsletterPreferences()` (get/update sobre `profiles`).
+- `NewsletterPage.tsx`: nueva sección colapsable con textarea + toggle + botón guardar.
+- `translations.ts`: añadir claves ES/EN/PT (`newsletter.preferences`, `newsletter.preferencesApply`, `newsletter.preferencesPlaceholder`, `newsletter.preferencesSaved`, etc.).
+
+### Detalles técnicos clave
+- La migración usa `DEFAULT` con el texto largo de reglas actual (en español) para que ningún usuario existente note diferencia.
+- El textarea soporta texto largo, con `min-h-[200px]` y scroll.
+- El system prompt neutro se queda en código (no editable) para mantener formato JSON estable.
+- Mantener `formatNewsletter()` y los emojis 📰🏢📚🎓 tal cual.
+
+### Archivos a modificar
+1. Migración SQL nueva (añadir columnas a `profiles`).
+2. `supabase/functions/generate-newsletter/index.ts` — system prompt + leer preferencias + limpiar queries + quitar validaciones hardcoded.
+3. `src/hooks/useNewsletters.tsx` — añadir `useNewsletterPreferences`.
+4. `src/pages/NewsletterPage.tsx` — UI de la caja colapsable.
+5. `src/i18n/translations.ts` — claves nuevas.
+
+### Memoria
+Actualizar `mem://features/newsletter` reflejando que las reglas (frescura, fuentes, perfil) ya no están hardcodeadas sino que son preferencias editables por usuario.
 
