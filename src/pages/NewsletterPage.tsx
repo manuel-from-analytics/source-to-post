@@ -65,6 +65,7 @@ function NewsletterPreferencesCard({ selectedProfileId, onSelectProfile }: Newsl
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editText, setEditText] = useState("");
+  const [editFreshness, setEditFreshness] = useState<string>("");
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -86,17 +87,26 @@ function NewsletterPreferencesCard({ selectedProfileId, onSelectProfile }: Newsl
     setEditingId(p.id);
     setEditName(p.name);
     setEditText(p.preferences);
+    setEditFreshness(p.freshness_months != null ? String(p.freshness_months) : "");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditName("");
     setEditText("");
+    setEditFreshness("");
   };
 
   const saveEdit = async () => {
     if (!editingId) return;
-    await updateProfile.mutateAsync({ id: editingId, name: editName.trim() || "Sin nombre", preferences: editText });
+    const parsed = editFreshness.trim() === "" ? null : Math.max(0, Math.floor(Number(editFreshness)));
+    const freshness_months = parsed != null && Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    await updateProfile.mutateAsync({
+      id: editingId,
+      name: editName.trim() || "Sin nombre",
+      preferences: editText,
+      freshness_months,
+    });
     const { toast } = await import("sonner");
     toast.success(t("newsletter.preferencesSaved"));
     cancelEdit();
