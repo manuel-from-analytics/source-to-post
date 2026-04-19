@@ -177,6 +177,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "newsletter.profileEmpty": "Este perfil no tiene preferencias todavía. Pulsa Editar para añadirlas.",
     "newsletter.profileDeleteConfirm": "¿Eliminar este perfil?",
     "newsletter.profileDeleteConfirmDesc": "Se eliminará permanentemente el perfil:",
+    "newsletter.profileFreshness": "Frescura (meses)",
+    "newsletter.profileFreshnessHint": "Antigüedad máxima de los artículos. Vacío = sin filtro.",
+    "newsletter.profileFreshnessNone": "Sin filtro",
     "newsletter.cancel": "Cancelar",
 
     // Install
@@ -589,6 +592,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "newsletter.profileEmpty": "This profile has no preferences yet. Click Edit to add some.",
     "newsletter.profileDeleteConfirm": "Delete this profile?",
     "newsletter.profileDeleteConfirmDesc": "The following profile will be permanently deleted:",
+    "newsletter.profileFreshness": "Freshness (months)",
+    "newsletter.profileFreshnessHint": "Maximum article age. Empty = no filter.",
+    "newsletter.profileFreshnessNone": "No filter",
     "newsletter.cancel": "Cancel",
 
     // Install
@@ -1001,6 +1007,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "newsletter.profileEmpty": "Este perfil ainda não tem preferências. Clique em Editar para adicionar.",
     "newsletter.profileDeleteConfirm": "Excluir este perfil?",
     "newsletter.profileDeleteConfirmDesc": "O seguinte perfil será excluído permanentemente:",
+    "newsletter.profileFreshness": "Atualidade (meses)",
+    "newsletter.profileFreshnessHint": "Idade máxima dos artigos. Vazio = sem filtro.",
+    "newsletter.profileFreshnessNone": "Sem filtro",
     "newsletter.cancel": "Cancelar",
 
     // Install

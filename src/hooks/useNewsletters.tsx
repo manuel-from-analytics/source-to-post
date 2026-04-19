@@ -216,6 +216,7 @@ export interface NewsletterPreferenceProfile {
   name: string;
   preferences: string;
   is_default: boolean;
+  freshness_months: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -242,11 +243,16 @@ export function useCreateNewsletterProfile() {
   const queryClient = useQueryClient();
   const { t } = useLanguage();
   return useMutation({
-    mutationFn: async (input: { name: string; preferences: string }) => {
+    mutationFn: async (input: { name: string; preferences: string; freshness_months?: number | null }) => {
       if (!user) throw new Error(t("toast.notAuthenticated"));
       const { data, error } = await supabase
         .from("newsletter_preference_profiles")
-        .insert({ user_id: user.id, name: input.name, preferences: input.preferences })
+        .insert({
+          user_id: user.id,
+          name: input.name,
+          preferences: input.preferences,
+          freshness_months: input.freshness_months ?? null,
+        } as any)
         .select()
         .single();
       if (error) throw error;
@@ -262,10 +268,11 @@ export function useCreateNewsletterProfile() {
 export function useUpdateNewsletterProfile() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { id: string; name?: string; preferences?: string }) => {
+    mutationFn: async (input: { id: string; name?: string; preferences?: string; freshness_months?: number | null }) => {
       const payload: Record<string, any> = {};
       if (input.name !== undefined) payload.name = input.name;
       if (input.preferences !== undefined) payload.preferences = input.preferences;
+      if (input.freshness_months !== undefined) payload.freshness_months = input.freshness_months;
       const { error } = await supabase
         .from("newsletter_preference_profiles")
         .update(payload)

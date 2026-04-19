@@ -7,19 +7,38 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-async function firecrawlSearch(query: string, apiKey: string, limit = 10): Promise<any[]> {
+// Map months to Firecrawl tbs (Google-style time filter).
+// qdr:m = last month, qdr:m6 = last 6 months, qdr:y = last year, qdr:y2 = last 2 years.
+function monthsToTbs(months: number | null | undefined): string | undefined {
+  if (!months || months <= 0) return undefined;
+  if (months <= 1) return "qdr:m";
+  if (months <= 12) return `qdr:m${months}`;
+  const years = Math.ceil(months / 12);
+  return years <= 1 ? "qdr:y" : `qdr:y${years}`;
+}
+
+function cutoffDateFromMonths(months: number | null | undefined): string | null {
+  if (!months || months <= 0) return null;
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  return d.toISOString().split("T")[0];
+}
+
+async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: string): Promise<any[]> {
   try {
+    const body: Record<string, unknown> = {
+      query,
+      limit,
+      scrapeOptions: { formats: ["markdown"] },
+    };
+    if (tbs) body.tbs = tbs;
     const response = await fetch("https://api.firecrawl.dev/v1/search", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        query,
-        limit,
-        scrapeOptions: { formats: ["markdown"] },
-      }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       console.error("Firecrawl search error:", response.status);
@@ -82,23 +101,26 @@ serve(async (req) => {
     // - Else → use the user's default profile from newsletter_preference_profiles
     // - Else fallback → legacy profiles.newsletter_preferences text
     let userPreferences: string = "";
+    let freshnessMonths: number | null = null;
     if (preferencesEnabled) {
       if (profile_id) {
         const { data: prof } = await supabase
           .from("newsletter_preference_profiles")
-          .select("preferences")
+          .select("preferences, freshness_months")
           .eq("id", profile_id)
           .eq("user_id", userId)
           .maybeSingle();
         userPreferences = (prof as any)?.preferences || "";
+        freshnessMonths = (prof as any)?.freshness_months ?? null;
       } else {
         const { data: defaultProf } = await supabase
           .from("newsletter_preference_profiles")
-          .select("preferences")
+          .select("preferences, freshness_months")
           .eq("user_id", userId)
           .eq("is_default", true)
           .maybeSingle();
         userPreferences = (defaultProf as any)?.preferences || (profile as any)?.newsletter_preferences || "";
+        freshnessMonths = (defaultProf as any)?.freshness_months ?? null;
       }
     }
 
@@ -110,15 +132,21 @@ serve(async (req) => {
       .limit(500);
     const existingUrls: string[] = (allExistingItems || []).map((i: any) => i.url);
 
-    // Step 2: Search for content using Firecrawl (neutral query)
+    // Step 2: Search for content using Firecrawl with time filter from profile
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
     if (!FIRECRAWL_API_KEY) throw new Error("FIRECRAWL_API_KEY is not configured");
 
-    const searchResults = await firecrawlSearch(topic, FIRECRAWL_API_KEY, 12);
+    const tbs = monthsToTbs(freshnessMonths);
+    const cutoffDate = cutoffDateFromMonths(freshnessMonths);
+    console.log(`Freshness: ${freshnessMonths} months → tbs=${tbs ?? "none"} cutoff=${cutoffDate ?? "none"}`);
+
+    // Pull a wider candidate pool when filtering, so we still have enough after dropping stale items.
+    const searchLimit = freshnessMonths ? 20 : 12;
+    const searchResults = await firecrawlSearch(topic, FIRECRAWL_API_KEY, searchLimit, tbs);
     console.log(`Search results: ${searchResults.length} for topic "${topic}"`);
 
     if (searchResults.length === 0) {
-      return new Response(JSON.stringify({ error: "No search results found for this topic. Try a different query." }), {
+      return new Response(JSON.stringify({ error: "No search results found for this topic. Try a different query or relax the freshness filter." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -127,7 +155,7 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const sourceSummaries = searchResults.slice(0, 15).map((r: any, i: number) => {
+    const sourceSummaries = searchResults.slice(0, 20).map((r: any, i: number) => {
       const snippet = (r.markdown || r.description || "").slice(0, 800);
       return `[${i + 1}] Title: ${r.title || "Untitled"}\nURL: ${r.url}\nContent: ${snippet}`;
     }).join("\n\n---\n\n");
@@ -140,9 +168,13 @@ serve(async (req) => {
       ? `\n\nUSER PREFERENCES (apply estas reglas editoriales además de tu juicio experto):\n${userPreferences.trim()}\n`
       : "";
 
+    const freshnessBlock = cutoffDate
+      ? `\n\nSTRICT FRESHNESS RULE (non-negotiable):\n- Today is ${today}. The cutoff date is ${cutoffDate}.\n- Every item's pub_date MUST be >= ${cutoffDate}. REJECT any source older than that, even if it's a great article.\n- If a result has no clear publication date, treat it as too old and skip it.\n- Prefer items dated within the last few weeks when available.\n`
+      : "";
+
     const userPrompt = `Create a newsletter about: "${topic}"
 Today's date: ${today}
-${preferencesBlock}
+${preferencesBlock}${freshnessBlock}
 SEARCH RESULTS TO USE:
 ${sourceSummaries}
 
@@ -153,6 +185,7 @@ GENERAL RULES:
 2. Each item must have exactly one working link.
 3. No repeated links from the "already used URLs" list above.
 4. Write the newsletter in ${langName} regardless of the topic language.
+${cutoffDate ? `5. Every pub_date MUST be on or after ${cutoffDate}. This is the most important rule.` : ""}
 
 Return this exact JSON structure:
 {
@@ -242,6 +275,28 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
 
     const newsletter = JSON.parse(toolCall.function.arguments);
     console.log("Newsletter generated:", newsletter.subject, "items:", (newsletter.items || []).length);
+
+    // Step 3.5: Server-side freshness validation as a safety net
+    if (cutoffDate && Array.isArray(newsletter.items)) {
+      const before = newsletter.items.length;
+      newsletter.items = newsletter.items.filter((it: any) => {
+        if (!it?.pub_date) return false;
+        // Accept anything that parses to a date >= cutoff. Compare as YYYY-MM-DD strings (lexicographic == chronological).
+        const d = String(it.pub_date).slice(0, 10);
+        return d >= cutoffDate;
+      });
+      const dropped = before - newsletter.items.length;
+      if (dropped > 0) {
+        console.log(`Freshness filter dropped ${dropped} stale item(s) (cutoff ${cutoffDate}).`);
+      }
+      if (newsletter.items.length === 0) {
+        return new Response(JSON.stringify({
+          error: `All sources were older than ${freshnessMonths} months. Try a broader topic or increase the freshness window in your profile.`,
+        }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     // Format readable content
     const formattedContent = formatNewsletter(newsletter);

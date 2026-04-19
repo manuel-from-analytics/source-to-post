@@ -65,6 +65,7 @@ function NewsletterPreferencesCard({ selectedProfileId, onSelectProfile }: Newsl
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editText, setEditText] = useState("");
+  const [editFreshness, setEditFreshness] = useState<string>("");
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
 
@@ -86,17 +87,26 @@ function NewsletterPreferencesCard({ selectedProfileId, onSelectProfile }: Newsl
     setEditingId(p.id);
     setEditName(p.name);
     setEditText(p.preferences);
+    setEditFreshness(p.freshness_months != null ? String(p.freshness_months) : "");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditName("");
     setEditText("");
+    setEditFreshness("");
   };
 
   const saveEdit = async () => {
     if (!editingId) return;
-    await updateProfile.mutateAsync({ id: editingId, name: editName.trim() || "Sin nombre", preferences: editText });
+    const parsed = editFreshness.trim() === "" ? null : Math.max(0, Math.floor(Number(editFreshness)));
+    const freshness_months = parsed != null && Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    await updateProfile.mutateAsync({
+      id: editingId,
+      name: editName.trim() || "Sin nombre",
+      preferences: editText,
+      freshness_months,
+    });
     const { toast } = await import("sonner");
     toast.success(t("newsletter.preferencesSaved"));
     cancelEdit();
@@ -282,6 +292,24 @@ function NewsletterPreferencesCard({ selectedProfileId, onSelectProfile }: Newsl
                   placeholder={t("newsletter.preferencesPlaceholder")}
                   className="min-h-[200px] text-xs leading-relaxed font-mono resize-y"
                 />
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="profile-freshness" className="text-[11px] font-medium">
+                    {t("newsletter.profileFreshness")}
+                  </Label>
+                  <Input
+                    id="profile-freshness"
+                    type="number"
+                    min={0}
+                    step={1}
+                    value={editFreshness}
+                    onChange={(e) => setEditFreshness(e.target.value)}
+                    placeholder={t("newsletter.profileFreshnessNone")}
+                    className="h-9 text-xs w-32"
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    {t("newsletter.profileFreshnessHint")}
+                  </p>
+                </div>
                 <div className="flex justify-end gap-1">
                   <Button size="sm" variant="ghost" className="text-xs h-8" onClick={cancelEdit}>
                     {t("newsletter.cancel")}
@@ -300,7 +328,12 @@ function NewsletterPreferencesCard({ selectedProfileId, onSelectProfile }: Newsl
 
             {/* Read-only preview when not editing */}
             {!editing && selectedProfile && (
-              <div className="rounded-lg border bg-muted/20 p-2 sm:p-3">
+              <div className="rounded-lg border bg-muted/20 p-2 sm:p-3 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="outline" className="text-[10px]">
+                    {t("newsletter.profileFreshness")}: {selectedProfile.freshness_months ? `${selectedProfile.freshness_months}m` : t("newsletter.profileFreshnessNone")}
+                  </Badge>
+                </div>
                 <pre className="max-h-[160px] overflow-y-auto whitespace-pre-wrap break-words text-[11px] leading-relaxed font-mono text-muted-foreground">
                   {selectedProfile.preferences || t("newsletter.profileEmpty")}
                 </pre>
