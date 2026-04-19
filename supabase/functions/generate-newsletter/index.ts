@@ -187,6 +187,12 @@ GENERAL RULES:
 4. Write the newsletter in ${langName} regardless of the topic language.
 ${cutoffDate ? `5. Every pub_date MUST be on or after ${cutoffDate}. This is the most important rule.` : ""}
 
+RECENCY PRIORITY (very important):
+- Prefer the MOST RECENT publications available. Among sources of comparable quality and relevance, ALWAYS choose the newer one.
+- Order the final "items" array by pub_date in DESCENDING order (newest first).
+- Treat recency as a primary editorial criterion, not a tiebreaker. An item from this week beats a solid item from 3 months ago unless the older one is clearly superior in substance.
+- If two items cover the same news, keep only the most recent / most authoritative version.
+
 Return this exact JSON structure:
 {
   "subject": "${today} - [subject ≤80 chars total including date]",
