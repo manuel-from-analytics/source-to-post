@@ -9,6 +9,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
@@ -41,6 +44,7 @@ export default function HistoryPage() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [labelPickerOpen, setLabelPickerOpen] = useState(false);
   const { data: allLabels } = usePostLabels();
   const { data: assignmentsMap } = useAllPostLabelAssignments();
   const { data: publicationsMap } = useAllPostLabelPublications();
