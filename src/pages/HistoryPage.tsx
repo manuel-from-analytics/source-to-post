@@ -184,7 +184,7 @@ export default function HistoryPage() {
                          <Calendar className="h-3 w-3" />
                          {new Date(post.created_at).toLocaleDateString()}
                        </span>
-                       {(post as any).published_at && (
+                       {(post as any).published_at && (assignmentsMap?.[post.id]?.length ?? 0) === 0 && (
                          <span className="text-xs text-primary flex items-center gap-1">
                            <Check className="h-3 w-3" />
                            {t("history.publishedOn")} {new Date((post as any).published_at).toLocaleDateString()}
