@@ -387,6 +387,39 @@ export type Database = {
           },
         ]
       }
+      post_label_publications: {
+        Row: {
+          label_id: string
+          post_id: string
+          published_at: string
+        }
+        Insert: {
+          label_id: string
+          post_id: string
+          published_at?: string
+        }
+        Update: {
+          label_id?: string
+          post_id?: string
+          published_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_label_publications_label_id_fkey"
+            columns: ["label_id"]
+            isOneToOne: false
+            referencedRelation: "post_labels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_label_publications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "generated_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       post_labels: {
         Row: {
           color: string | null

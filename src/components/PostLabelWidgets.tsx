@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X, Tag } from "lucide-react";
+import { Plus, X, Tag, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,31 @@ const PRESET_COLORS = [
   "#3b82f6", "#ef4444", "#22c55e", "#f59e0b", "#8b5cf6",
   "#ec4899", "#14b8a6", "#f97316",
 ];
+
+/** Mini-badge that shows a label's name + a date with the label color. Read-only. */
+export function LabelPublishedDate({
+  label,
+  date,
+}: {
+  label: PostLabel;
+  date: string;
+}) {
+  const formatted = new Date(date).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  });
+  return (
+    <span
+      className="inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"
+      style={{ borderColor: label.color ?? undefined, color: label.color ?? undefined }}
+    >
+      <Check className="h-2.5 w-2.5" />
+      <span className="max-w-[6rem] truncate sm:max-w-[10rem]">{label.name}</span>
+      <span className="opacity-70">·</span>
+      <span>{formatted}</span>
+    </span>
+  );
+}
 
 export function PostLabelBadge({
   label,
