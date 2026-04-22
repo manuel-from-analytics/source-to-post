@@ -43,6 +43,11 @@ export default function HistoryPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const { data: allLabels } = usePostLabels();
   const { data: assignmentsMap } = useAllPostLabelAssignments();
+  const { data: publicationsMap } = useAllPostLabelPublications();
+  const { data: selectedAssignedIds } = usePostLabelAssignments(selectedPost?.id);
+  const { data: selectedPublications } = usePostLabelPublications(selectedPost?.id);
+  const publishToLabel = usePublishToLabel();
+  const unpublishFromLabel = useUnpublishFromLabel();
 
   const statusLabels: Record<PostStatus, string> = {
     draft: t("history.draft"),
