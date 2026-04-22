@@ -319,22 +319,73 @@ export default function HistoryPage() {
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">{t("history.status")}</span>
-                  <Select
-                    value={selectedPost.status ?? "draft"}
-                    onValueChange={(v) => {
-                      updateStatus.mutate({ id: selectedPost.id, status: v as PostStatus });
-                      setSelectedPost({ ...selectedPost, status: v as PostStatus });
-                    }}
-                  >
-                    <SelectTrigger className="h-8 w-[120px] text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">{t("history.draft")}</SelectItem>
-                      <SelectItem value="final">{t("history.final")}</SelectItem>
-                      <SelectItem value="published">{t("history.published")}</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Popover open={labelPickerOpen} onOpenChange={setLabelPickerOpen}>
+                    <PopoverTrigger asChild>
+                      <div>
+                        <Select
+                          value={selectedPost.status ?? "draft"}
+                          onValueChange={(v) => {
+                            const newStatus = v as PostStatus;
+                            const hasLabels = (selectedAssignedIds?.length ?? 0) > 0;
+                            const hasPublications = (selectedPublications?.length ?? 0) > 0;
+                            // If moving to "published" and the post has labels but
+                            // no per-label publication yet → ask which label to publish to
+                            // (publishing to a label promotes global status automatically).
+                            if (newStatus === "published" && hasLabels && !hasPublications) {
+                              setLabelPickerOpen(true);
+                              return;
+                            }
+                            updateStatus.mutate({ id: selectedPost.id, status: newStatus });
+                            setSelectedPost({ ...selectedPost, status: newStatus });
+                          }}
+                        >
+                          <SelectTrigger className="h-8 w-[120px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="draft">{t("history.draft")}</SelectItem>
+                            <SelectItem value="final">{t("history.final")}</SelectItem>
+                            <SelectItem value="published">{t("history.published")}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-64 p-2">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">
+                        {t("history.selectLabelToPublish")}
+                      </p>
+                      <div className="space-y-1">
+                        {(selectedAssignedIds ?? []).map((labelId) => {
+                          const lbl = (allLabels ?? []).find((l) => l.id === labelId);
+                          if (!lbl) return null;
+                          return (
+                            <button
+                              key={labelId}
+                              onClick={() => {
+                                publishToLabel.mutate(
+                                  { postId: selectedPost.id, labelId },
+                                  {
+                                    onSuccess: () => {
+                                      setSelectedPost({ ...selectedPost, status: "published" });
+                                      setLabelPickerOpen(false);
+                                    },
+                                  }
+                                );
+                              }}
+                              disabled={publishToLabel.isPending}
+                              className="w-full flex items-center gap-2 text-left text-sm px-2 py-1.5 rounded hover:bg-secondary transition-colors disabled:opacity-50"
+                            >
+                              <span
+                                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: lbl.color ?? "#3b82f6" }}
+                              />
+                              <span className="truncate">{lbl.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="flex gap-1">
                   <Button size="sm" variant="outline" onClick={() => { setSelectedPost(null); handleDuplicate(selectedPost); }} className="gap-1">
