@@ -19,8 +19,12 @@ import { usePosts, useUpdatePostStatus, useDeletePost } from "@/hooks/usePosts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLanguage } from "@/i18n/LanguageContext";
 import type { Database } from "@/integrations/supabase/types";
-import { PostLabelBadge, PostLabelPicker, PostLabelFilter } from "@/components/PostLabelWidgets";
-import { usePostLabels, useAllPostLabelAssignments } from "@/hooks/usePostLabels";
+import { PostLabelBadge, PostLabelPicker, PostLabelFilter, LabelPublishedDate } from "@/components/PostLabelWidgets";
+import {
+  usePostLabels, useAllPostLabelAssignments,
+  usePostLabelAssignments, usePostLabelPublications,
+  useAllPostLabelPublications, usePublishToLabel, useUnpublishFromLabel,
+} from "@/hooks/usePostLabels";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
 type Post = Database["public"]["Tables"]["generated_posts"]["Row"];
