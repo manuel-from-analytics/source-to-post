@@ -1,71 +1,64 @@
 
 
-## Plan: Preferencias editables y system prompt neutro
+## Plan: Fechas de publicación por label
 
 ### Objetivo
-1. Simplificar el system prompt para que sea neutro ("curador experto estilo Kloshletter").
-2. Mover TODAS las reglas hardcodeadas (tipos de fuente, frescura, FT/HBR/McKinsey, mínimo académico, dominios, etc.) a una **caja de preferencias editable** en la página de Newsletter.
-3. El usuario decide vía toggle si esas preferencias se inyectan o no al generar.
+Permitir registrar fechas de publicación independientes por cada label asignada a un post (ej: publicado en "Personal" el 12 abr y en "Empresa" el 18 abr), manteniendo el `status` global actual.
 
-### UX en `NewsletterPage.tsx`
-Nueva tarjeta colapsable arriba del generador:
+### Comportamiento
 
-```text
-┌─ Preferencias de newsletter ────────── [▼] ┐
-│  [✓] Aplicar preferencias al generar       │
-│  ┌────────────────────────────────────┐    │
-│  │ Eres curador para un consultor de  │    │
-│  │ Analytics & GenAI. Prioriza FT,    │    │
-│  │ HBR, McKinsey. Mín 1 fuente        │    │
-│  │ académica. Frescura <6 meses...    │    │
-│  └────────────────────────────────────┘    │
-│  [Guardar preferencias]                    │
-└────────────────────────────────────────────┘
-```
+1. **Status global** (draft/final/published) sigue funcionando como ahora. Un post se marca como `published` en cuanto se publica en al menos una label.
+2. **Dialog de detalle**: nueva sección **"Publicación por canal"** que lista cada label asignada al post con un botón:
+   - Si no publicado en esa label → botón **"Marcar publicado hoy"** (un click, fija fecha = hoy).
+   - Si ya publicado → muestra fecha (`12 abr 2026`) + botón pequeño para **despublicar** (borra la fecha).
+   - Solo aparece esta sección si el post tiene labels asignadas.
+3. **Tarjeta del listado**: debajo del badge global "Publicado", se listan las fechas por label como mini-badges con el color de cada label:
+   ```
+   [● Personal: 12 abr] [● Empresa: 18 abr]
+   ```
+   Solo lectura (no editables desde la tarjeta).
+4. **Sincronización con status global**:
+   - Al marcar la PRIMERA fecha de publicación por label → status global pasa a `published` (si no lo estaba ya).
+   - Al despublicar la ÚLTIMA fecha → status global vuelve a `final`.
+   - El campo `published_at` global se sincroniza con la fecha más antigua de las publicaciones por label.
 
-- Colapsada por defecto.
-- Toggle "Aplicar preferencias" persiste si se envían o no.
-- Textarea libre, multilinea, sin estructura forzada — el usuario escribe lo que quiera.
-- Botón "Guardar" persiste en BD.
-- Valor por defecto al crear el campo: el texto actual hardcodeado (perfil Analytics/GenAI + reglas), para no romper la experiencia del usuario actual.
+### Cambios técnicos
 
-### Cambios en BD
-Migración: añadir 2 columnas a `profiles`:
-- `newsletter_preferences` (text, nullable) — el texto editable.
-- `newsletter_preferences_enabled` (boolean, default true) — el toggle.
+**Base de datos** (migración):
+- Nueva tabla `post_label_publications`:
+  ```
+  post_id uuid NOT NULL
+  label_id uuid NOT NULL
+  published_at timestamptz NOT NULL DEFAULT now()
+  PRIMARY KEY (post_id, label_id)
+  ```
+- RLS: `EXISTS(generated_posts WHERE id = post_id AND user_id = auth.uid())` (mismo patrón que `post_label_assignments`).
 
-Inicializar `newsletter_preferences` con el bloque actual de reglas para usuarios existentes (vía DEFAULT en migración).
+**Hooks** (`src/hooks/usePostLabels.tsx`):
+- `usePostLabelPublications(postId)` — fechas por label de un post.
+- `useAllPostLabelPublications()` — bulk para el listado, devuelve `Record<post_id, Array<{label_id, published_at}>>`.
+- `usePublishToLabel()` — inserta `(post_id, label_id, now())`. Si era la primera publicación, también actualiza `generated_posts.status = 'published'` y `published_at`.
+- `useUnpublishFromLabel()` — borra el registro. Si era la última, vuelve `status = 'final'` y `published_at = null`.
 
-### Cambios en edge function `generate-newsletter`
-1. **System prompt nuevo** (neutro):
-   > "Eres un curador experto de newsletters estilo Kloshletter: legibles, escaneables, accionables. Tu trabajo es entregar la mejor newsletter posible sobre el tema solicitado. Output MUST be valid JSON only."
+**UI**:
+- `src/pages/HistoryPage.tsx`:
+  - Tarjeta: mostrar mini-badges de fechas por label (color heredado de la label) bajo el badge de status.
+  - Dialog: nueva sección "Publicación por canal" con lista de labels asignadas y botón publicar/despublicar.
+- `src/components/PostLabelWidgets.tsx`: nuevo componente `LabelPublishedDate` para los mini-badges con color.
+- `src/i18n/translations.ts`: nuevas claves (`history.publishByChannel`, `history.markPublishedToday`, `history.unpublish`, `history.publishedOnLabel`).
 
-2. **Leer preferencias del perfil** y, si `newsletter_preferences_enabled` es true y el texto no está vacío, inyectarlas en el user prompt como bloque **"USER PREFERENCES"**.
-
-3. **Limpiar queries de Firecrawl**: quitar sufijos `"latest trends insights"` y la query académica forzada. Hacer una sola búsqueda con `topic` tal cual + años recientes (esto último también pasa a ser opcional según preferencias, pero por simplicidad lo dejamos como query plana del topic).
-
-4. **Quitar validaciones hardcodeadas**: eliminar el filtro de fechas <6 meses y el conteo de académicas en código. Esas reglas ahora viven en las preferencias del usuario y el modelo las aplica si están activas.
-
-5. **Mantener**: estructura JSON de salida (subject/items/closing), tool calling, idioma del usuario, deduplicación de URLs ya usadas.
-
-### Cambios en frontend
-- `useNewsletters.tsx`: nuevo hook `useNewsletterPreferences()` (get/update sobre `profiles`).
-- `NewsletterPage.tsx`: nueva sección colapsable con textarea + toggle + botón guardar.
-- `translations.ts`: añadir claves ES/EN/PT (`newsletter.preferences`, `newsletter.preferencesApply`, `newsletter.preferencesPlaceholder`, `newsletter.preferencesSaved`, etc.).
-
-### Detalles técnicos clave
-- La migración usa `DEFAULT` con el texto largo de reglas actual (en español) para que ningún usuario existente note diferencia.
-- El textarea soporta texto largo, con `min-h-[200px]` y scroll.
-- El system prompt neutro se queda en código (no editable) para mantener formato JSON estable.
-- Mantener `formatNewsletter()` y los emojis 📰🏢📚🎓 tal cual.
-
-### Archivos a modificar
-1. Migración SQL nueva (añadir columnas a `profiles`).
-2. `supabase/functions/generate-newsletter/index.ts` — system prompt + leer preferencias + limpiar queries + quitar validaciones hardcoded.
-3. `src/hooks/useNewsletters.tsx` — añadir `useNewsletterPreferences`.
-4. `src/pages/NewsletterPage.tsx` — UI de la caja colapsable.
-5. `src/i18n/translations.ts` — claves nuevas.
+### Casos borde
+- Si despublicas en una label el post pierde esa fecha; si era la única, status vuelve a `final`.
+- Si quitas una label de un post (desasignar), también se borran sus publicaciones por cascade lógico (manejado en `useTogglePostLabel` o vía `ON DELETE` cuando borre la asignación).
+- Posts sin labels: la sección "Publicación por canal" no se muestra; el flujo actual de status global sigue intacto.
 
 ### Memoria
-Actualizar `mem://features/newsletter` reflejando que las reglas (frescura, fuentes, perfil) ya no están hardcodeadas sino que son preferencias editables por usuario.
+Actualizar `mem://features/post-history` reflejando que la publicación puede registrarse por label de forma independiente.
+
+### Archivos a tocar
+1. Nueva migración SQL (tabla `post_label_publications` + RLS).
+2. `src/hooks/usePostLabels.tsx` — nuevos hooks de publicación por label.
+3. `src/pages/HistoryPage.tsx` — sección dialog + mini-badges en tarjeta.
+4. `src/components/PostLabelWidgets.tsx` — componente `LabelPublishedDate`.
+5. `src/i18n/translations.ts` — claves nuevas (es/en/pt).
 
