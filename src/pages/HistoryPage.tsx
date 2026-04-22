@@ -191,6 +191,17 @@ export default function HistoryPage() {
                          </span>
                        )}
                      </div>
+                     {(publicationsMap?.[post.id]?.length ?? 0) > 0 && (
+                       <div className="flex flex-wrap gap-1.5 mt-2">
+                         {(publicationsMap?.[post.id] ?? []).map((pub) => {
+                           const lbl = (allLabels ?? []).find((l) => l.id === pub.label_id);
+                           if (!lbl) return null;
+                           return (
+                             <LabelPublishedDate key={pub.label_id} label={lbl} date={pub.published_at} />
+                           );
+                         })}
+                       </div>
+                     )}
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
                     <PostLabelPicker postId={post.id} />
@@ -236,6 +247,70 @@ export default function HistoryPage() {
                   {selectedPost.content}
                 </p>
               </div>
+
+              {(selectedAssignedIds?.length ?? 0) > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    {t("history.publishByChannel")}
+                  </p>
+                  <div className="space-y-1.5">
+                    {(selectedAssignedIds ?? []).map((labelId) => {
+                      const lbl = (allLabels ?? []).find((l) => l.id === labelId);
+                      if (!lbl) return null;
+                      const pub = (selectedPublications ?? []).find((p) => p.label_id === labelId);
+                      const isPublished = !!pub;
+                      return (
+                        <div
+                          key={labelId}
+                          className="flex items-center justify-between gap-2 rounded-md border p-2"
+                          style={{ borderColor: lbl.color ?? undefined }}
+                        >
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: lbl.color ?? "#3b82f6" }}
+                            />
+                            <span className="truncate text-sm font-medium" style={{ color: lbl.color ?? undefined }}>
+                              {lbl.name}
+                            </span>
+                            {isPublished && pub && (
+                              <span className="text-xs text-muted-foreground">
+                                · {new Date(pub.published_at).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          {isPublished ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 text-xs"
+                              onClick={() =>
+                                unpublishFromLabel.mutate({ postId: selectedPost.id, labelId })
+                              }
+                              disabled={unpublishFromLabel.isPending}
+                            >
+                              {t("history.unpublish")}
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              onClick={() =>
+                                publishToLabel.mutate({ postId: selectedPost.id, labelId })
+                              }
+                              disabled={publishToLabel.isPending}
+                            >
+                              <Check className="h-3 w-3 mr-1" />
+                              {t("history.markPublishedToday")}
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 <div className="flex items-center gap-2">
