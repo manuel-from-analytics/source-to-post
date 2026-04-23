@@ -342,50 +342,6 @@ export default function HistoryPage() {
                       <SelectItem value="published">{t("history.published")}</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Popover open={labelPickerOpen} onOpenChange={setLabelPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <span
-                        aria-hidden
-                        tabIndex={-1}
-                        className="pointer-events-none absolute left-[68px] bottom-0 h-0 w-0"
-                      />
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="w-64 p-2">
-                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">
-                        {t("history.selectLabelToPublish")}
-                      </p>
-                      <div className="space-y-1">
-                        {(selectedAssignedIds ?? []).map((labelId) => {
-                          const lbl = (allLabels ?? []).find((l) => l.id === labelId);
-                          if (!lbl) return null;
-                          return (
-                            <button
-                              key={labelId}
-                              onClick={() => {
-                                publishToLabel.mutate(
-                                  { postId: selectedPost.id, labelId },
-                                  {
-                                    onSuccess: () => {
-                                      setSelectedPost({ ...selectedPost, status: "published" });
-                                      setLabelPickerOpen(false);
-                                    },
-                                  }
-                                );
-                              }}
-                              disabled={publishToLabel.isPending}
-                              className="w-full flex items-center gap-2 text-left text-sm px-2 py-1.5 rounded hover:bg-secondary transition-colors disabled:opacity-50"
-                            >
-                              <span
-                                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: lbl.color ?? "#3b82f6" }}
-                              />
-                              <span className="truncate">{lbl.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
                 </div>
                 <div className="flex gap-1">
                   <Button size="sm" variant="outline" onClick={() => { setSelectedPost(null); handleDuplicate(selectedPost); }} className="gap-1">
