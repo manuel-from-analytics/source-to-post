@@ -34,6 +34,8 @@ export function LabelPublishedDate({
       style={{ borderColor: label.color ?? undefined, color: label.color ?? undefined }}
     >
       <Check className="h-2.5 w-2.5" />
+      <span>Publish</span>
+      <span className="opacity-70">·</span>
       <span className="max-w-[6rem] truncate sm:max-w-[10rem]">{label.name}</span>
       <span className="opacity-70">·</span>
       <span>{formatted}</span>
