@@ -175,12 +175,6 @@ export default function HistoryPage() {
                          if (!lbl) return null;
                          return <PostLabelBadge key={lid} label={lbl} />;
                        })}
-                       {post.goal && (
-                         <Badge variant="secondary" className="text-xs capitalize">{post.goal}</Badge>
-                       )}
-                       {post.tone && (
-                         <Badge variant="outline" className="text-xs capitalize">{post.tone}</Badge>
-                       )}
                        <span className="text-xs text-muted-foreground flex items-center gap-1">
                          <Calendar className="h-3 w-3" />
                          {new Date(post.created_at).toLocaleDateString()}
