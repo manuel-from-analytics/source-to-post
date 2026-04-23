@@ -30,15 +30,15 @@ export function LabelPublishedDate({
   });
   return (
     <span
-      className="inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"
+      className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium leading-tight"
       style={{ borderColor: label.color ?? undefined, color: label.color ?? undefined }}
     >
-      <Check className="h-2.5 w-2.5" />
-      <span>Publish</span>
-      <span className="opacity-70">·</span>
-      <span className="max-w-[6rem] truncate sm:max-w-[10rem]">{label.name}</span>
-      <span className="opacity-70">·</span>
-      <span>{formatted}</span>
+      <Check className="h-2.5 w-2.5 shrink-0" />
+      <span className="shrink-0">Publish</span>
+      <span className="shrink-0 opacity-70">·</span>
+      <span className="min-w-0 flex-1 truncate">{label.name}</span>
+      <span className="shrink-0 opacity-70">·</span>
+      <span className="shrink-0 whitespace-nowrap">{formatted}</span>
     </span>
   );
 }
