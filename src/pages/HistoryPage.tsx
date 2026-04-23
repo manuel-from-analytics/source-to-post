@@ -317,38 +317,41 @@ export default function HistoryPage() {
               )}
 
               <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-2">
+                <div className="relative flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">{t("history.status")}</span>
+                  <Select
+                    value={selectedPost.status ?? "draft"}
+                    onValueChange={(v) => {
+                      const newStatus = v as PostStatus;
+                      const hasLabels = (selectedAssignedIds?.length ?? 0) > 0;
+                      const hasPublications = (selectedPublications?.length ?? 0) > 0;
+                      // If moving to "published" and the post has labels but
+                      // no per-label publication yet → ask which label to publish to
+                      // (publishing to a label promotes global status automatically).
+                      if (newStatus === "published" && hasLabels && !hasPublications) {
+                        setLabelPickerOpen(true);
+                        return;
+                      }
+                      updateStatus.mutate({ id: selectedPost.id, status: newStatus });
+                      setSelectedPost({ ...selectedPost, status: newStatus });
+                    }}
+                  >
+                    <SelectTrigger className="h-8 w-[120px] text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="draft">{t("history.draft")}</SelectItem>
+                      <SelectItem value="final">{t("history.final")}</SelectItem>
+                      <SelectItem value="published">{t("history.published")}</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Popover open={labelPickerOpen} onOpenChange={setLabelPickerOpen}>
                     <PopoverTrigger asChild>
-                      <div>
-                        <Select
-                          value={selectedPost.status ?? "draft"}
-                          onValueChange={(v) => {
-                            const newStatus = v as PostStatus;
-                            const hasLabels = (selectedAssignedIds?.length ?? 0) > 0;
-                            const hasPublications = (selectedPublications?.length ?? 0) > 0;
-                            // If moving to "published" and the post has labels but
-                            // no per-label publication yet → ask which label to publish to
-                            // (publishing to a label promotes global status automatically).
-                            if (newStatus === "published" && hasLabels && !hasPublications) {
-                              setLabelPickerOpen(true);
-                              return;
-                            }
-                            updateStatus.mutate({ id: selectedPost.id, status: newStatus });
-                            setSelectedPost({ ...selectedPost, status: newStatus });
-                          }}
-                        >
-                          <SelectTrigger className="h-8 w-[120px] text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="draft">{t("history.draft")}</SelectItem>
-                            <SelectItem value="final">{t("history.final")}</SelectItem>
-                            <SelectItem value="published">{t("history.published")}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <span
+                        aria-hidden
+                        tabIndex={-1}
+                        className="pointer-events-none absolute left-[68px] bottom-0 h-0 w-0"
+                      />
                     </PopoverTrigger>
                     <PopoverContent align="start" className="w-64 p-2">
                       <p className="text-xs font-medium text-muted-foreground mb-2 px-1">
