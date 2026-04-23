@@ -9,9 +9,6 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle
 } from "@/components/ui/dialog";
 import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
-import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle
 } from "@/components/ui/alert-dialog";
@@ -345,50 +342,6 @@ export default function HistoryPage() {
                       <SelectItem value="published">{t("history.published")}</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Popover open={labelPickerOpen} onOpenChange={setLabelPickerOpen}>
-                    <PopoverTrigger asChild>
-                      <span
-                        aria-hidden
-                        tabIndex={-1}
-                        className="pointer-events-none absolute left-[68px] bottom-0 h-0 w-0"
-                      />
-                    </PopoverTrigger>
-                    <PopoverContent align="start" className="w-64 p-2">
-                      <p className="text-xs font-medium text-muted-foreground mb-2 px-1">
-                        {t("history.selectLabelToPublish")}
-                      </p>
-                      <div className="space-y-1">
-                        {(selectedAssignedIds ?? []).map((labelId) => {
-                          const lbl = (allLabels ?? []).find((l) => l.id === labelId);
-                          if (!lbl) return null;
-                          return (
-                            <button
-                              key={labelId}
-                              onClick={() => {
-                                publishToLabel.mutate(
-                                  { postId: selectedPost.id, labelId },
-                                  {
-                                    onSuccess: () => {
-                                      setSelectedPost({ ...selectedPost, status: "published" });
-                                      setLabelPickerOpen(false);
-                                    },
-                                  }
-                                );
-                              }}
-                              disabled={publishToLabel.isPending}
-                              className="w-full flex items-center gap-2 text-left text-sm px-2 py-1.5 rounded hover:bg-secondary transition-colors disabled:opacity-50"
-                            >
-                              <span
-                                className="h-2.5 w-2.5 shrink-0 rounded-full"
-                                style={{ backgroundColor: lbl.color ?? "#3b82f6" }}
-                              />
-                              <span className="truncate">{lbl.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
                 </div>
                 <div className="flex gap-1">
                   <Button size="sm" variant="outline" onClick={() => { setSelectedPost(null); handleDuplicate(selectedPost); }} className="gap-1">
@@ -408,6 +361,50 @@ export default function HistoryPage() {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Label selection dialog when promoting to "published" */}
+      <Dialog open={labelPickerOpen} onOpenChange={setLabelPickerOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              {t("history.selectLabelToPublish")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1.5 max-h-[60vh] overflow-y-auto">
+            {selectedPost && (selectedAssignedIds ?? []).map((labelId) => {
+              const lbl = (allLabels ?? []).find((l) => l.id === labelId);
+              if (!lbl) return null;
+              return (
+                <button
+                  key={labelId}
+                  onClick={() => {
+                    publishToLabel.mutate(
+                      { postId: selectedPost.id, labelId },
+                      {
+                        onSuccess: () => {
+                          setSelectedPost({ ...selectedPost, status: "published" });
+                          setLabelPickerOpen(false);
+                        },
+                      }
+                    );
+                  }}
+                  disabled={publishToLabel.isPending}
+                  className="w-full flex items-center gap-2 text-left text-sm px-3 py-2.5 rounded-md border hover:bg-secondary transition-colors disabled:opacity-50"
+                  style={{ borderColor: lbl.color ?? undefined }}
+                >
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full"
+                    style={{ backgroundColor: lbl.color ?? "#3b82f6" }}
+                  />
+                  <span className="truncate font-medium" style={{ color: lbl.color ?? undefined }}>
+                    {lbl.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </DialogContent>
       </Dialog>
 
