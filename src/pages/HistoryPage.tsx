@@ -252,7 +252,7 @@ export default function HistoryPage() {
                 </p>
               </div>
 
-              {(selectedAssignedIds?.length ?? 0) > 0 && (
+              {(selectedAssignedIds?.length ?? 0) > 0 && selectedPost.status === "published" && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">
                     {t("history.publishByChannel")}
