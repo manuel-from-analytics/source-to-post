@@ -77,6 +77,75 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_schedules: {
+        Row: {
+          content_focus: string | null
+          created_at: string
+          cta: string | null
+          enabled: boolean
+          extract_content: boolean
+          goal: string | null
+          id: string
+          language: string | null
+          last_run_at: string | null
+          length: string | null
+          notification_email: string | null
+          preference_profile_id: string | null
+          run_hour: number
+          target_audience: string | null
+          timezone: string
+          tone: string | null
+          topic: string | null
+          updated_at: string
+          user_id: string
+          voice_id: string | null
+        }
+        Insert: {
+          content_focus?: string | null
+          created_at?: string
+          cta?: string | null
+          enabled?: boolean
+          extract_content?: boolean
+          goal?: string | null
+          id?: string
+          language?: string | null
+          last_run_at?: string | null
+          length?: string | null
+          notification_email?: string | null
+          preference_profile_id?: string | null
+          run_hour?: number
+          target_audience?: string | null
+          timezone?: string
+          tone?: string | null
+          topic?: string | null
+          updated_at?: string
+          user_id: string
+          voice_id?: string | null
+        }
+        Update: {
+          content_focus?: string | null
+          created_at?: string
+          cta?: string | null
+          enabled?: boolean
+          extract_content?: boolean
+          goal?: string | null
+          id?: string
+          language?: string | null
+          last_run_at?: string | null
+          length?: string | null
+          notification_email?: string | null
+          preference_profile_id?: string | null
+          run_hour?: number
+          target_audience?: string | null
+          timezone?: string
+          tone?: string | null
+          topic?: string | null
+          updated_at?: string
+          user_id?: string
+          voice_id?: string | null
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string | null

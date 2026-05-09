@@ -20,19 +20,31 @@ serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const token = authHeader.replace("Bearer ", "");
+    const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const internalUserId = req.headers.get("x-internal-user-id");
+    const isInternalCall = token === SERVICE_ROLE && internalUserId;
 
-    const { data: { user }, error: userErr } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-    if (userErr || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let supabase;
+    let userEmail: string | undefined;
+    if (isInternalCall) {
+      supabase = createClient(Deno.env.get("SUPABASE_URL")!, SERVICE_ROLE);
+      const { data: u } = await supabase.auth.admin.getUserById(internalUserId!);
+      userEmail = u.user?.email ?? undefined;
+    } else {
+      supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user }, error: userErr } = await supabase.auth.getUser(token);
+      if (userErr || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      userEmail = user.email ?? undefined;
     }
-
     const { post_ids, subject, summary, to } = await req.json();
     if (!Array.isArray(post_ids) || post_ids.length === 0) {
       return new Response(JSON.stringify({ error: "post_ids required" }), {
@@ -45,7 +57,7 @@ serve(async (req) => {
       .select("id, title, content")
       .in("id", post_ids);
 
-    const recipient = to || user.email;
+    const recipient = to || userEmail;
     if (!recipient) {
       return new Response(JSON.stringify({ error: "No recipient email" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
