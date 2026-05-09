@@ -81,8 +81,10 @@ serve(async (req) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${SERVICE_ROLE}`,
-        "apikey": SERVICE_ROLE,
+        // Gateway accepts anon JWT for verify_jwt=true; the function itself
+        // uses service role internally to write DB rows.
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")!}`,
+        "apikey": Deno.env.get("SUPABASE_ANON_KEY")!,
       },
       body: JSON.stringify({
         templateName: "agent-posts-ready",
