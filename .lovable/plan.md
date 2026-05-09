@@ -1,64 +1,76 @@
 
+## Enfoque recomendado
 
-## Plan: Fechas de publicación por label
+Tu agente externo (Claude/Cursor/n8n/cron) debería poder hacer todo el flujo vía MCP, sin tocar la UI. Hoy el MCP solo **lee** newsletters ya creadas; hay que añadir **acciones** para generarla, materializar sus fuentes como `inputs`, y notificar al final. La generación de posts ya existe (`generate_post` + `save_post`), sólo falta encadenarla.
 
-### Objetivo
-Permitir registrar fechas de publicación independientes por cada label asignada a un post (ej: publicado en "Personal" el 12 abr y en "Empresa" el 18 abr), manteniendo el `status` global actual.
+Flujo objetivo del agente (1 ejecución/día):
 
-### Comportamiento
+```text
+1. list_voices / get_defaults     → elegir voz y presets
+2. generate_newsletter            → nueva (NUEVO tool)
+3. list_newsletter_items          → fuentes encontradas (NUEVO)
+4. import_newsletter_item → input → por cada item (NUEVO)
+5. generate_post + save_post(status=draft)  → 1 post por input
+6. notify_review                  → email/Slack/Telegram (NUEVO)
+```
 
-1. **Status global** (draft/final/published) sigue funcionando como ahora. Un post se marca como `published` en cuanto se publica en al menos una label.
-2. **Dialog de detalle**: nueva sección **"Publicación por canal"** que lista cada label asignada al post con un botón:
-   - Si no publicado en esa label → botón **"Marcar publicado hoy"** (un click, fija fecha = hoy).
-   - Si ya publicado → muestra fecha (`12 abr 2026`) + botón pequeño para **despublicar** (borra la fecha).
-   - Solo aparece esta sección si el post tiene labels asignadas.
-3. **Tarjeta del listado**: debajo del badge global "Publicado", se listan las fechas por label como mini-badges con el color de cada label:
-   ```
-   [● Personal: 12 abr] [● Empresa: 18 abr]
-   ```
-   Solo lectura (no editables desde la tarjeta).
-4. **Sincronización con status global**:
-   - Al marcar la PRIMERA fecha de publicación por label → status global pasa a `published` (si no lo estaba ya).
-   - Al despublicar la ÚLTIMA fecha → status global vuelve a `final`.
-   - El campo `published_at` global se sincroniza con la fecha más antigua de las publicaciones por label.
+## Cambios al MCP (`supabase/functions/mcp-server/index.ts`)
 
-### Cambios técnicos
+### Nuevas tools
 
-**Base de datos** (migración):
-- Nueva tabla `post_label_publications`:
-  ```
-  post_id uuid NOT NULL
-  label_id uuid NOT NULL
-  published_at timestamptz NOT NULL DEFAULT now()
-  PRIMARY KEY (post_id, label_id)
-  ```
-- RLS: `EXISTS(generated_posts WHERE id = post_id AND user_id = auth.uid())` (mismo patrón que `post_label_assignments`).
+1. **`generate_newsletter`** — invoca la edge function `generate-newsletter` con el JWT del usuario. Params: `topic?`, `language?`, `freshness_months?`, `preference_profile_id?`. Devuelve `{ newsletter_id, items: [...] }`. Evita que el agente tenga que reimplementar Firecrawl.
 
-**Hooks** (`src/hooks/usePostLabels.tsx`):
-- `usePostLabelPublications(postId)` — fechas por label de un post.
-- `useAllPostLabelPublications()` — bulk para el listado, devuelve `Record<post_id, Array<{label_id, published_at}>>`.
-- `usePublishToLabel()` — inserta `(post_id, label_id, now())`. Si era la primera publicación, también actualiza `generated_posts.status = 'published'` y `published_at`.
-- `useUnpublishFromLabel()` — borra el registro. Si era la última, vuelve `status = 'final'` y `published_at = null`.
+2. **`list_newsletter_items`** — `{ newsletter_id }` → lista de items con `id, title, url, description, source_type, imported_to_library, input_id`. Permite al agente saber qué falta importar.
 
-**UI**:
-- `src/pages/HistoryPage.tsx`:
-  - Tarjeta: mostrar mini-badges de fechas por label (color heredado de la label) bajo el badge de status.
-  - Dialog: nueva sección "Publicación por canal" con lista de labels asignadas y botón publicar/despublicar.
-- `src/components/PostLabelWidgets.tsx`: nuevo componente `LabelPublishedDate` para los mini-badges con color.
-- `src/i18n/translations.ts`: nuevas claves (`history.publishByChannel`, `history.markPublishedToday`, `history.unpublish`, `history.publishedOnLabel`).
+3. **`import_newsletter_item_as_input`** — `{ item_id, extract_content?: boolean }`. Crea un `input` (type=`url` o `youtube` según source), opcionalmente llama a `extract-url` para traer el contenido completo, marca `newsletter_items.imported_to_library=true` y guarda `input_id`. Devuelve el `input` creado.
 
-### Casos borde
-- Si despublicas en una label el post pierde esa fecha; si era la única, status vuelve a `final`.
-- Si quitas una label de un post (desasignar), también se borran sus publicaciones por cascade lógico (manejado en `useTogglePostLabel` o vía `ON DELETE` cuando borre la asignación).
-- Posts sin labels: la sección "Publicación por canal" no se muestra; el flujo actual de status global sigue intacto.
+4. **`generate_posts_from_newsletter`** (atajo opcional, recomendado) — `{ newsletter_id, voice_id?, goal?, tone?, language?, length?, cta?, target_audience?, content_focus? }`. En el server hace el bucle: importa cada item → genera post → guarda como `draft`. Devuelve `[{ item_id, input_id, post_id }]`. Esto reduce a **2 llamadas MCP** todo el día (`generate_newsletter` + este). Mucho más fiable que dejar al agente orquestar 5×N llamadas.
 
-### Memoria
-Actualizar `mem://features/post-history` reflejando que la publicación puede registrarse por label de forma independiente.
+5. **`get_user_defaults`** — devuelve `profiles` (default_voice_id, default_cta, default_length, preferred_language, app_language, default_writing_style) para que el agente no tenga que pedirlo cada vez.
 
-### Archivos a tocar
-1. Nueva migración SQL (tabla `post_label_publications` + RLS).
-2. `src/hooks/usePostLabels.tsx` — nuevos hooks de publicación por label.
-3. `src/pages/HistoryPage.tsx` — sección dialog + mini-badges en tarjeta.
-4. `src/components/PostLabelWidgets.tsx` — componente `LabelPublishedDate`.
-5. `src/i18n/translations.ts` — claves nuevas (es/en/pt).
+6. **`notify_review`** — `{ channel: "email"|"slack"|"telegram", subject?, summary, post_ids[] }`. Llama a una nueva edge function que manda el aviso con enlaces deep-link a `/history?post=<id>` para revisión manual. Empezaría por **email vía Resend** (o el connector que prefieras) por ser el menos fricción.
 
+### Mejoras a tools existentes
+
+- **`list_posts`**: añadir filtros `created_after`, `created_before` y `source_newsletter_id` (requiere columna nueva, ver abajo) para que el agente confirme idempotencia ("¿ya generé hoy?").
+- **`generate_post`**: añadir flag `save: boolean` y `status` para fusionar generate+save en una sola llamada (menos round-trips).
+- Devolver en todas las tools JSON estructurado además del texto, con un `meta` que incluya `count` y `next_cursor` para paginación futura.
+
+## Cambios de base de datos
+
+- `generated_posts.source_newsletter_id uuid NULL` — trazabilidad y para la deduplicación diaria.
+- `generated_posts.source_newsletter_item_id uuid NULL` — clave para idempotencia: índice único parcial `(user_id, source_newsletter_item_id)` evita posts duplicados si el agente reintenta.
+- (Opcional) `agent_runs` — log de ejecuciones del agente (`started_at`, `newsletter_id`, `posts_created`, `notified_at`, `status`, `error`) para que tengas un dashboard y el agente pueda saltarse días ya procesados.
+
+## Notificación: opciones
+
+| Canal | Pros | Setup |
+|-------|------|-------|
+| **Email (Resend)** ← recomendado | sencillo, ya tienes connector pattern, llega seguro | conectar Resend connector |
+| Telegram bot | push instantáneo en móvil, perfecto para revisar y copiar | conectar Telegram connector |
+| Slack DM | si ya lo usas a diario | conectar Slack connector |
+
+La tool `notify_review` debería ser polimorfa pero internamente delegar a la edge function correspondiente según `channel`.
+
+## Cómo orquestar el agente (lado externo)
+
+Dos opciones, en orden de simplicidad:
+
+1. **Cron + cliente MCP** (n8n, GitHub Actions, o un script Deno con cron): cada día a las 7am llama `generate_posts_from_newsletter` con tus defaults y luego `notify_review`. ~30 líneas.
+2. **Agente LLM con MCP** (Claude Desktop con un workflow guardado, o un agente custom): útil si quieres que el LLM elija el `topic` del día o filtre items por relevancia antes de generar. Más flexible pero más coste/latencia.
+
+Recomendación: empieza por la **opción 1** con `generate_posts_from_newsletter` (un solo tool call hace todo). Si luego quieres curado inteligente, mueves a opción 2 usando las tools atómicas (`list_newsletter_items` + `import_newsletter_item_as_input` + `generate_post` + `save_post`).
+
+## Consideraciones técnicas
+
+- El `x-user-token` actual del MCP es un JWT que expira en ~1h. Para un agente diario hay que decidir: (a) usar **service role + user_id fijo** en una tool dedicada `agent_run` autenticada por API key larga, o (b) hacer login con email/password en cada run para refrescar token. Recomiendo (a) con una tabla `agent_api_keys` (hash + user_id) y un header alternativo `x-agent-key` en el MCP — más seguro y sin caducidad.
+- `generate_posts_from_newsletter` puede tardar 30–60s si genera 5 posts. La edge function aguanta (max 150s), pero conviene paralelizar las llamadas al AI gateway con `Promise.all`.
+- Idempotencia: el índice único en `source_newsletter_item_id` + un `ON CONFLICT DO NOTHING` evita duplicados si el cron se dispara dos veces.
+
+## Entregables (orden de implementación)
+
+1. Migración: columnas + índice único + tabla `agent_runs` opcional.
+2. MCP: `get_user_defaults`, `generate_newsletter`, `list_newsletter_items`, `import_newsletter_item_as_input`, `generate_posts_from_newsletter`.
+3. Auth de agente: tabla `agent_api_keys` + header `x-agent-key` en MCP.
+4. Edge function `notify-review` (Resend) + tool `notify_review`.
+5. Documentación en `/mcp` page con ejemplo de script cron.
