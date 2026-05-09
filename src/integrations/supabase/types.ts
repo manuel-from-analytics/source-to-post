@@ -95,6 +95,7 @@ export type Database = {
           target_audience: string | null
           timezone: string
           tone: string | null
+          topic: string | null
           updated_at: string
           user_id: string
           voice_id: string | null
@@ -116,6 +117,7 @@ export type Database = {
           target_audience?: string | null
           timezone?: string
           tone?: string | null
+          topic?: string | null
           updated_at?: string
           user_id: string
           voice_id?: string | null
@@ -137,6 +139,7 @@ export type Database = {
           target_audience?: string | null
           timezone?: string
           tone?: string | null
+          topic?: string | null
           updated_at?: string
           user_id?: string
           voice_id?: string | null
