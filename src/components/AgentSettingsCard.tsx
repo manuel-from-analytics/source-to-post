@@ -5,10 +5,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Bot, Play, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useVoices } from "@/hooks/useVoices";
+import { useNewsletterProfiles } from "@/hooks/useNewsletters";
 import { toast } from "sonner";
 
 type Schedule = {
@@ -21,6 +23,10 @@ type Schedule = {
   length: string | null;
   cta: string | null;
   language: string | null;
+  goal: string | null;
+  target_audience: string | null;
+  content_focus: string | null;
+  preference_profile_id: string | null;
   notification_email: string | null;
   extract_content: boolean;
   last_run_at: string | null;
@@ -28,8 +34,9 @@ type Schedule = {
 
 const DEFAULT: Schedule = {
   enabled: false, run_hour: 7, topic: "", voice_id: null, tone: null,
-  length: null, cta: null, language: null, notification_email: null,
-  extract_content: false, last_run_at: null,
+  length: null, cta: null, language: null, goal: null,
+  target_audience: null, content_focus: null, preference_profile_id: null,
+  notification_email: null, extract_content: false, last_run_at: null,
 };
 
 type RunRow = { id: string; started_at: string; status: string; posts_created: number; error: string | null; notified_at: string | null };
