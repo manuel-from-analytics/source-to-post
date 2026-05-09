@@ -20,11 +20,48 @@ function generateAgentKey() {
   return `pfk_${b64}`;
 }
 
+type AgentKeyRow = { id: string; name: string; created_at: string; last_used_at: string | null };
+
 export default function McpPage() {
   const { t } = useLanguage();
   const { session } = useAuth();
   const [token, setToken] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
+  const [agentKeys, setAgentKeys] = useState<AgentKeyRow[]>([]);
+  const [newKeyName, setNewKeyName] = useState("");
+  const [freshAgentKey, setFreshAgentKey] = useState<string | null>(null);
+  const [creatingKey, setCreatingKey] = useState(false);
+
+  const loadAgentKeys = async () => {
+    const { data } = await supabase.from("agent_api_keys").select("id, name, created_at, last_used_at").order("created_at", { ascending: false });
+    setAgentKeys((data as AgentKeyRow[]) || []);
+  };
+  useEffect(() => { if (session) loadAgentKeys(); }, [session]);
+
+  const createAgentKey = async () => {
+    if (!newKeyName.trim() || !session?.user) return;
+    setCreatingKey(true);
+    try {
+      const key = generateAgentKey();
+      const hash = await sha256Hex(key);
+      const { error } = await supabase.from("agent_api_keys").insert({ user_id: session.user.id, name: newKeyName.trim(), key_hash: hash });
+      if (error) throw error;
+      setFreshAgentKey(key);
+      setNewKeyName("");
+      await loadAgentKeys();
+      toast.success("Agent key creada. Cópiala ahora; no se mostrará de nuevo.");
+    } catch (e: any) {
+      toast.error(e.message || "Error al crear");
+    } finally {
+      setCreatingKey(false);
+    }
+  };
+
+  const deleteAgentKey = async (id: string) => {
+    const { error } = await supabase.from("agent_api_keys").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    await loadAgentKeys();
+  };
 
   const mcpUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mcp-server`;
 
