@@ -1,11 +1,24 @@
 import { useState, useEffect } from "react";
-import { Copy, Check, Key, Plug, Terminal, RefreshCw } from "lucide-react";
+import { Copy, Check, Key, Plug, Terminal, RefreshCw, Bot, Trash2, Plus } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
+
+async function sha256Hex(s: string) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+function generateAgentKey() {
+  const bytes = new Uint8Array(32);
+  crypto.getRandomValues(bytes);
+  const b64 = btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return `pfk_${b64}`;
+}
 
 export default function McpPage() {
   const { t } = useLanguage();
