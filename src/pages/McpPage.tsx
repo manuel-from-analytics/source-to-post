@@ -126,6 +126,8 @@ export default function McpPage() {
         <p className="text-muted-foreground mt-1">{t("mcp.subtitle")}</p>
       </div>
 
+      <AgentSettingsCard />
+
       {/* Token Section */}
       <Card>
         <CardHeader>
