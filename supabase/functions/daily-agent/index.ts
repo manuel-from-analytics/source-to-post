@@ -117,7 +117,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
     });
     if (!nlResp.ok) throw new Error(`generate-newsletter failed ${nlResp.status}: ${await nlResp.text()}`);
     const nlData = await nlResp.json();
-    const newsletterId = nlData.id || nlData.newsletter_id;
+    const newsletterId = nlData.newsletter?.id || nlData.id || nlData.newsletter_id;
     if (!newsletterId) throw new Error("No newsletter_id returned");
 
     await admin.from("agent_runs").update({ newsletter_id: newsletterId }).eq("id", run.id);
