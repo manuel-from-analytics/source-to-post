@@ -36,6 +36,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { t } = useLanguage();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    setSidebarOpen(false);
+    navigate("/auth");
+  };
 
   return (
     <div className="flex h-screen overflow-hidden">
