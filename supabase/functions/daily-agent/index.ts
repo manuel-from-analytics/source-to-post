@@ -235,9 +235,15 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     const body = await req.json().catch(() => ({}));
 
-    // CRON path: invoked by pg_cron with shared secret. Iterates all schedules whose run_hour == current UTC hour.
-    if (cronSecret && cronSecret === CRON_SECRET) {
+    // CRON path: invoked by pg_cron with secret stored in agent_internal_config.
+    if (cronSecret) {
       const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+      const { data: cfg } = await admin.from("agent_internal_config").select("cron_secret").eq("id", 1).maybeSingle();
+      if (!cfg || cronSecret !== cfg.cron_secret) {
+        return new Response(JSON.stringify({ error: "Invalid cron secret" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const currentHour = new Date().getUTCHours();
       const { data: schedules } = await admin.from("agent_schedules")
         .select("user_id").eq("enabled", true).eq("run_hour", currentHour);
