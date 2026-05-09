@@ -35,14 +35,14 @@ describe("AppLayout logout button", () => {
     navigateMock.mockClear();
   });
 
-  it("calls signOut and redirects to /auth", async () => {
+  it("calls signOut and redirects to /login", async () => {
     renderLayout();
     const buttons = screen.getAllByText("nav.logout");
     expect(buttons.length).toBeGreaterThan(0);
     fireEvent.click(buttons[0]);
     await waitFor(() => {
       expect(signOutMock).toHaveBeenCalledTimes(1);
-      expect(navigateMock).toHaveBeenCalledWith("/auth");
+      expect(navigateMock).toHaveBeenCalledWith("/login");
     });
   });
 });
