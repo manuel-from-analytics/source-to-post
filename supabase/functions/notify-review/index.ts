@@ -73,30 +73,34 @@ serve(async (req) => {
       url: `${APP_BASE_URL}/history?post=${p.id}`,
     }));
 
-    // Send via Lovable Emails (transactional). Use service role so the
-    // send-transactional-email function (verify_jwt = true) accepts the call.
-    const adminClient = createClient(SUPABASE_URL, SERVICE_ROLE);
+    // Send via Lovable Emails. Call send-transactional-email directly with
+    // an explicit Authorization header (service role) so the gateway accepts it.
     const idempotencyKey = `agent-posts-${post_ids.slice().sort().join("-").slice(0, 80)}`;
 
-    const { data: sendResult, error: sendErr } = await adminClient.functions.invoke(
-      "send-transactional-email",
-      {
-        body: {
-          templateName: "agent-posts-ready",
-          recipientEmail: recipient,
-          idempotencyKey,
-          templateData: {
-            summary: summary || undefined,
-            count: items.length,
-            posts: items,
-          },
-        },
+    const ANON_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcG5zcXZjYWdvd3ZhYXZ6enhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzMzODYsImV4cCI6MjA5MDIwOTM4Nn0.M5cD9O37pUxIXU8oieOtCUmggzTL2zVJ8TvryG7TqN0";
+    const sendResp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${ANON_JWT}`,
+        "apikey": ANON_JWT,
       },
-    );
+      body: JSON.stringify({
+        templateName: "agent-posts-ready",
+        recipientEmail: recipient,
+        idempotencyKey,
+        templateData: {
+          summary: summary || undefined,
+          count: items.length,
+          posts: items,
+        },
+      }),
+    });
 
-    if (sendErr) {
-      console.error("send-transactional-email failed:", sendErr);
-      return new Response(JSON.stringify({ error: "Email send failed", details: String(sendErr) }), {
+    const sendResult = await sendResp.json().catch(() => ({}));
+    if (!sendResp.ok) {
+      console.error("send-transactional-email failed:", sendResp.status, sendResult);
+      return new Response(JSON.stringify({ error: "Email send failed", status: sendResp.status, details: sendResult }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
