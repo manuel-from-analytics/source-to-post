@@ -91,7 +91,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
 
   try {
     // 1) Generate newsletter (internal call)
-    const topic = "Daily curated update"; // generate-newsletter uses user prefs internally
+    const topic = (schedule.topic && schedule.topic.trim()) || "AI and analytics latest insights";
     const nlResp = await fetch(`${SUPABASE_URL}/functions/v1/generate-newsletter`, {
       method: "POST",
       headers: {
