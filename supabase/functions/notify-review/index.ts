@@ -77,14 +77,13 @@ serve(async (req) => {
     // an explicit Authorization header (service role) so the gateway accepts it.
     const idempotencyKey = `agent-posts-${post_ids.slice().sort().join("-").slice(0, 80)}`;
 
+    const ANON_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcG5zcXZjYWdvd3ZhYXZ6enhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzMzODYsImV4cCI6MjA5MDIwOTM4Nn0.M5cD9O37pUxIXU8oieOtCUmggzTL2zVJ8TvryG7TqN0";
     const sendResp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Gateway accepts anon JWT for verify_jwt=true; the function itself
-        // uses service role internally to write DB rows.
-        "Authorization": `Bearer ${Deno.env.get("SUPABASE_ANON_KEY")!}`,
-        "apikey": Deno.env.get("SUPABASE_ANON_KEY")!,
+        "Authorization": `Bearer ${ANON_JWT}`,
+        "apikey": ANON_JWT,
       },
       body: JSON.stringify({
         templateName: "agent-posts-ready",
