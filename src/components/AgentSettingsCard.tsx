@@ -152,6 +152,20 @@ export default function AgentSettingsCard() {
           <Input value={schedule.topic} onChange={(e) => setSchedule({ ...schedule, topic: e.target.value })} placeholder="Ej: GenAI for analytics consultants" />
         </div>
 
+        <div className="space-y-1">
+          <Label className="text-xs">Perfil de newsletter (criterios de curación)</Label>
+          <Select value={schedule.preference_profile_id || "none"} onValueChange={(v) => setSchedule({ ...schedule, preference_profile_id: v === "none" ? null : v })}>
+            <SelectTrigger><SelectValue placeholder="Por defecto" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">Por defecto del usuario</SelectItem>
+              {(profiles || []).map((p: any) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}{p.is_default ? " (default)" : ""}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">Gestiona los perfiles desde Newsletter → Preferencias.</p>
+        </div>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <Label className="text-xs">Voz</Label>
@@ -160,6 +174,20 @@ export default function AgentSettingsCard() {
               <SelectContent>
                 <SelectItem value="none">Por defecto del perfil</SelectItem>
                 {(voices || []).map((v: any) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Objetivo</Label>
+            <Select value={schedule.goal || "none"} onValueChange={(v) => setSchedule({ ...schedule, goal: v === "none" ? null : v })}>
+              <SelectTrigger><SelectValue placeholder="Por defecto" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">—</SelectItem>
+                <SelectItem value="educate">Educar</SelectItem>
+                <SelectItem value="inspire">Inspirar</SelectItem>
+                <SelectItem value="promote">Promocionar</SelectItem>
+                <SelectItem value="engage">Generar engagement</SelectItem>
+                <SelectItem value="storytelling">Contar una historia</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -174,6 +202,18 @@ export default function AgentSettingsCard() {
                 <SelectItem value="inspirational">Inspiracional</SelectItem>
                 <SelectItem value="direct">Directo</SelectItem>
                 <SelectItem value="humorous">Con humor</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs">Idioma</Label>
+            <Select value={schedule.language || "none"} onValueChange={(v) => setSchedule({ ...schedule, language: v === "none" ? null : v })}>
+              <SelectTrigger><SelectValue placeholder="Por defecto" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">—</SelectItem>
+                <SelectItem value="es">Español</SelectItem>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="pt">Português</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -202,6 +242,25 @@ export default function AgentSettingsCard() {
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs">Audiencia objetivo</Label>
+          <Input
+            value={schedule.target_audience || ""}
+            onChange={(e) => setSchedule({ ...schedule, target_audience: e.target.value || null })}
+            placeholder="Ej: CTOs y heads of data en empresas medianas"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs">Enfoque de contenido</Label>
+          <Textarea
+            rows={3}
+            value={schedule.content_focus || ""}
+            onChange={(e) => setSchedule({ ...schedule, content_focus: e.target.value || null })}
+            placeholder="Instrucciones específicas sobre ángulo, ejemplos, estructura..."
+          />
         </div>
 
         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border bg-muted/30">
