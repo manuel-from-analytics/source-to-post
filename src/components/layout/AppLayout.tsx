@@ -42,7 +42,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const handleSignOut = async () => {
     await signOut();
     setSidebarOpen(false);
-    navigate("/auth");
+    navigate("/login");
   };
 
   return (
