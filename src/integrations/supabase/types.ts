@@ -14,6 +14,69 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          key_hash: string
+          last_used_at: string | null
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_hash: string
+          last_used_at?: string | null
+          name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_hash?: string
+          last_used_at?: string | null
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agent_runs: {
+        Row: {
+          error: string | null
+          finished_at: string | null
+          id: string
+          newsletter_id: string | null
+          notified_at: string | null
+          posts_created: number
+          started_at: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          newsletter_id?: string | null
+          notified_at?: string | null
+          posts_created?: number
+          started_at?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          newsletter_id?: string | null
+          notified_at?: string | null
+          posts_created?: number
+          started_at?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string | null
@@ -52,6 +115,8 @@ export type Database = {
           language: string | null
           length: string | null
           published_at: string | null
+          source_newsletter_id: string | null
+          source_newsletter_item_id: string | null
           status: Database["public"]["Enums"]["post_status"] | null
           target_audience: string | null
           title: string | null
@@ -73,6 +138,8 @@ export type Database = {
           language?: string | null
           length?: string | null
           published_at?: string | null
+          source_newsletter_id?: string | null
+          source_newsletter_item_id?: string | null
           status?: Database["public"]["Enums"]["post_status"] | null
           target_audience?: string | null
           title?: string | null
@@ -94,6 +161,8 @@ export type Database = {
           language?: string | null
           length?: string | null
           published_at?: string | null
+          source_newsletter_id?: string | null
+          source_newsletter_item_id?: string | null
           status?: Database["public"]["Enums"]["post_status"] | null
           target_audience?: string | null
           title?: string | null
