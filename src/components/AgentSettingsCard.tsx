@@ -75,6 +75,10 @@ export default function AgentSettingsCard() {
       length: schedule.length,
       cta: schedule.cta,
       language: schedule.language,
+      goal: schedule.goal,
+      target_audience: schedule.target_audience,
+      content_focus: schedule.content_focus,
+      preference_profile_id: schedule.preference_profile_id,
       notification_email: schedule.notification_email,
       extract_content: schedule.extract_content,
     };
