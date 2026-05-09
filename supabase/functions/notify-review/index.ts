@@ -57,7 +57,7 @@ serve(async (req) => {
       .select("id, title, content")
       .in("id", post_ids);
 
-    const recipient = to || user.email;
+    const recipient = to || userEmail;
     if (!recipient) {
       return new Response(JSON.stringify({ error: "No recipient email" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
