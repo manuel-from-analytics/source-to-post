@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Copy, Check, Key, Plug, Terminal, RefreshCw, Bot, Trash2, Plus } from "lucide-react";
+import AgentSettingsCard from "@/components/AgentSettingsCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,6 +125,8 @@ export default function McpPage() {
         <h1 className="text-2xl font-bold text-foreground">{t("mcp.title")}</h1>
         <p className="text-muted-foreground mt-1">{t("mcp.subtitle")}</p>
       </div>
+
+      <AgentSettingsCard />
 
       {/* Token Section */}
       <Card>

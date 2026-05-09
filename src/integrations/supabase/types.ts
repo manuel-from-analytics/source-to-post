@@ -41,6 +41,24 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_internal_config: {
+        Row: {
+          created_at: string
+          cron_secret: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          cron_secret?: string
+          id?: number
+        }
+        Update: {
+          created_at?: string
+          cron_secret?: string
+          id?: number
+        }
+        Relationships: []
+      }
       agent_runs: {
         Row: {
           error: string | null
