@@ -183,6 +183,7 @@ export default function AgentSettingsCard() {
               <SelectTrigger><SelectValue placeholder="Por defecto" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">—</SelectItem>
+                <SelectItem value="auto">🤖 Que decida el agente</SelectItem>
                 <SelectItem value="educate">Educar</SelectItem>
                 <SelectItem value="inspire">Inspirar</SelectItem>
                 <SelectItem value="promote">Promocionar</SelectItem>
@@ -197,6 +198,7 @@ export default function AgentSettingsCard() {
               <SelectTrigger><SelectValue placeholder="Por defecto" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">—</SelectItem>
+                <SelectItem value="auto">🤖 Que decida el agente</SelectItem>
                 <SelectItem value="professional">Profesional</SelectItem>
                 <SelectItem value="casual">Casual</SelectItem>
                 <SelectItem value="inspirational">Inspiracional</SelectItem>
@@ -211,6 +213,7 @@ export default function AgentSettingsCard() {
               <SelectTrigger><SelectValue placeholder="Por defecto" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">—</SelectItem>
+                <SelectItem value="auto">🤖 Que decida el agente</SelectItem>
                 <SelectItem value="es">Español</SelectItem>
                 <SelectItem value="en">English</SelectItem>
                 <SelectItem value="pt">Português</SelectItem>
@@ -223,6 +226,7 @@ export default function AgentSettingsCard() {
               <SelectTrigger><SelectValue placeholder="Por defecto" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">—</SelectItem>
+                <SelectItem value="auto">🤖 Que decida el agente</SelectItem>
                 <SelectItem value="short">Corto</SelectItem>
                 <SelectItem value="medium">Medio</SelectItem>
                 <SelectItem value="long">Largo</SelectItem>
@@ -235,6 +239,7 @@ export default function AgentSettingsCard() {
               <SelectTrigger><SelectValue placeholder="Por defecto" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">—</SelectItem>
+                <SelectItem value="auto">🤖 Que decida el agente</SelectItem>
                 <SelectItem value="question">Pregunta</SelectItem>
                 <SelectItem value="share">Compartir</SelectItem>
                 <SelectItem value="follow">Seguir</SelectItem>
@@ -245,21 +250,41 @@ export default function AgentSettingsCard() {
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs">Audiencia objetivo</Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-xs">Audiencia objetivo</Label>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+              <Switch
+                checked={schedule.target_audience === "auto"}
+                onCheckedChange={(v) => setSchedule({ ...schedule, target_audience: v ? "auto" : null })}
+              />
+              🤖 Auto
+            </label>
+          </div>
           <Input
-            value={schedule.target_audience || ""}
+            disabled={schedule.target_audience === "auto"}
+            value={schedule.target_audience === "auto" ? "" : (schedule.target_audience || "")}
             onChange={(e) => setSchedule({ ...schedule, target_audience: e.target.value || null })}
-            placeholder="Ej: CTOs y heads of data en empresas medianas"
+            placeholder={schedule.target_audience === "auto" ? "El agente decidirá según el contenido" : "Ej: CTOs y heads of data en empresas medianas"}
           />
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs">Enfoque de contenido</Label>
+          <div className="flex items-center justify-between gap-2">
+            <Label className="text-xs">Enfoque de contenido</Label>
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
+              <Switch
+                checked={schedule.content_focus === "auto"}
+                onCheckedChange={(v) => setSchedule({ ...schedule, content_focus: v ? "auto" : null })}
+              />
+              🤖 Auto
+            </label>
+          </div>
           <Textarea
             rows={3}
-            value={schedule.content_focus || ""}
+            disabled={schedule.content_focus === "auto"}
+            value={schedule.content_focus === "auto" ? "" : (schedule.content_focus || "")}
             onChange={(e) => setSchedule({ ...schedule, content_focus: e.target.value || null })}
-            placeholder="Instrucciones específicas sobre ángulo, ejemplos, estructura..."
+            placeholder={schedule.content_focus === "auto" ? "El agente elegirá el ángulo según el tipo de contenido" : "Instrucciones específicas sobre ángulo, ejemplos, estructura..."}
           />
         </div>
 
