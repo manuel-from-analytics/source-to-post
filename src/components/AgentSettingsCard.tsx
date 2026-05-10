@@ -310,18 +310,28 @@ export default function AgentSettingsCard() {
           <div className="space-y-1">
             <Label className="text-xs">Últimas ejecuciones</Label>
             <div className="space-y-1.5">
-              {runs.map((r) => (
-                <div key={r.id} className="flex items-center justify-between gap-2 p-2 rounded-lg border bg-muted/30 text-xs min-w-0">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium truncate">{new Date(r.started_at).toLocaleString()}</p>
-                    {r.error && <p className="text-destructive break-all">{r.error}</p>}
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-medium">{r.posts_created} posts</p>
-                    <p className="text-muted-foreground">{r.status}{r.notified_at ? " · ✉" : ""}</p>
-                  </div>
-                </div>
-              ))}
+              {runs.map((r) => {
+                const clickable = !!r.newsletter_id;
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    disabled={!clickable}
+                    onClick={() => clickable && navigate(`/newsletter?id=${r.newsletter_id}`)}
+                    className={`flex w-full items-center justify-between gap-2 p-2 rounded-lg border bg-muted/30 text-xs min-w-0 text-left transition-colors ${clickable ? "hover:bg-muted/60 cursor-pointer" : "cursor-default opacity-80"}`}
+                    title={clickable ? "Ver newsletter generada" : "Sin newsletter asociada"}
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{new Date(r.started_at).toLocaleString()}</p>
+                      {r.error && <p className="text-destructive break-all">{r.error}</p>}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-medium">{r.posts_created} posts</p>
+                      <p className="text-muted-foreground">{r.status}{r.notified_at ? " · ✉" : ""}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
