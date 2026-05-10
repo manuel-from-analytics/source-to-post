@@ -577,9 +577,45 @@ export default function GeneratorPage() {
             </CardContent>
           </Card>
 
+          {selectedSources.length > 0 && (missingExtraction.length > 0 || thinExtraction.length > 0) && (
+            <div
+              className={`rounded-lg border p-3 text-xs ${
+                missingExtraction.length > 0
+                  ? "border-destructive/40 bg-destructive/5 text-destructive"
+                  : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"
+              }`}
+            >
+              {missingExtraction.length > 0 ? (
+                <>
+                  <p className="font-medium mb-1">
+                    {missingExtraction.length} fuente(s) sin contenido extraído
+                  </p>
+                  <p className="opacity-80 break-words">
+                    {missingExtraction.map((i) => i.title).join(" · ")}
+                  </p>
+                  <p className="mt-1 opacity-80">
+                    Abre la fuente y ejecuta la extracción antes de generar.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium mb-1">
+                    {thinExtraction.length} fuente(s) con extracción muy corta
+                  </p>
+                  <p className="opacity-80 break-words">
+                    {thinExtraction.map((i) => i.title).join(" · ")}
+                  </p>
+                  <p className="mt-1 opacity-80">
+                    El post podría salir genérico. Considera reextraer.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
           <Button
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={!canGenerate}
             className="w-full gap-2"
             size="lg"
           >
