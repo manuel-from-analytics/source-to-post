@@ -356,10 +356,10 @@ export default function GeneratorPage() {
                   const len = getSourceContent(source).trim().length;
                   const statusLabel =
                     status === "ready"
-                      ? `✓ ${len.toLocaleString()} chars`
+                      ? t("generator.extractionReady").replace("{count}", len.toLocaleString())
                       : status === "thin"
-                      ? `⚠ Extracción corta (${len})`
-                      : "⚠ Sin contenido extraído";
+                      ? t("generator.extractionThin").replace("{count}", String(len))
+                      : t("generator.extractionMissing");
                   const statusClass =
                     status === "ready"
                       ? "text-emerald-600 dark:text-emerald-400"
@@ -382,7 +382,7 @@ export default function GeneratorPage() {
                             to={`/library/${source.id}`}
                             onClick={(e) => e.stopPropagation()}
                             className="shrink-0 text-muted-foreground hover:text-primary"
-                            title="Ver en la biblioteca"
+                            title={t("generator.viewInLibrary")}
                           >
                             <ExternalLink className="h-3.5 w-3.5" />
                           </Link>
@@ -598,25 +598,25 @@ export default function GeneratorPage() {
               {missingExtraction.length > 0 ? (
                 <>
                   <p className="font-medium mb-1">
-                    {missingExtraction.length} fuente(s) sin contenido extraído
+                    {t("generator.missingExtractionWarning").replace("{count}", String(missingExtraction.length))}
                   </p>
                   <p className="opacity-80 break-words">
                     {missingExtraction.map((i) => i.title).join(" · ")}
                   </p>
                   <p className="mt-1 opacity-80">
-                    Abre la fuente y ejecuta la extracción antes de generar.
+                    {t("generator.missingExtractionHint")}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="font-medium mb-1">
-                    {thinExtraction.length} fuente(s) con extracción muy corta
+                    {t("generator.thinExtractionWarning").replace("{count}", String(thinExtraction.length))}
                   </p>
                   <p className="opacity-80 break-words">
                     {thinExtraction.map((i) => i.title).join(" · ")}
                   </p>
                   <p className="mt-1 opacity-80">
-                    El post podría salir genérico. Considera reextraer.
+                    {t("generator.thinExtractionHint")}
                   </p>
                 </>
               )}
