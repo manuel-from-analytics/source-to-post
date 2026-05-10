@@ -212,24 +212,61 @@ serve(async (req) => {
     const cutoffDate = cutoffDateFromMonths(freshnessMonths);
     console.log(`Freshness: ${freshnessMonths} months → tbs=${tbs ?? "none"} cutoff=${cutoffDate ?? "none"}`);
 
+    // Helper: extract domain from a URL for Google's `-site:` exclusion operator.
+    function domainOf(raw: string): string | null {
+      try { return new URL(raw).hostname.toLowerCase().replace(/^www\./, ""); } catch { return null; }
+    }
+
     // Pull a wider candidate pool — we filter out already-used URLs before passing to the AI,
     // so we need extra headroom to still have enough fresh candidates.
-    const searchLimit = 25;
-    const rawSearchResults = await firecrawlSearch(topic, FIRECRAWL_API_KEY, searchLimit, tbs);
-    console.log(`Search results: ${rawSearchResults.length} raw for topic "${topic}"`);
+    const TARGET_FRESH = 8; // we want at least this many fresh candidates before calling the AI
+    const MIN_FRESH = 3;    // hard minimum: below this we 400
+    const seenRawUrls = new Set<string>(); // dedup across retry batches
+    const freshCandidates: any[] = [];
 
-    // Pre-filter: drop any candidate whose normalized URL is already used in the last 14 days.
-    // This prevents the AI from picking obvious duplicates (it tends to grab top-ranked Google
-    // results, which are stable across runs) and forces it to choose from genuinely fresh items.
-    const searchResults = rawSearchResults.filter((r: any) => {
-      const norm = normalizeUrl(r?.url || "");
-      return norm && !recentUrlsNorm.has(norm);
-    });
-    const prefiltered = rawSearchResults.length - searchResults.length;
-    console.log(`Pre-filter: dropped ${prefiltered} already-used URLs → ${searchResults.length} fresh candidates`);
+    // Build queries: original, then variants that exclude domains we've already used a lot.
+    const usedDomainCounts = new Map<string, number>();
+    for (const u of recentUrlsNorm) {
+      const d = domainOf(u);
+      if (d) usedDomainCounts.set(d, (usedDomainCounts.get(d) || 0) + 1);
+    }
+    const topUsedDomains = [...usedDomainCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([d]) => d);
 
-    if (searchResults.length === 0) {
-      return new Response(JSON.stringify({ error: "No new content found for this topic (all top results were already covered in recent newsletters). Try a different query or widen the freshness filter." }), {
+    const queries: string[] = [topic];
+    if (topUsedDomains.length > 0) {
+      // Variant 1: exclude top 3 most-used domains
+      queries.push(`${topic} ${topUsedDomains.slice(0, 3).map((d) => `-site:${d}`).join(" ")}`);
+      // Variant 2: exclude all top used domains + recency hint
+      queries.push(`${topic} latest ${topUsedDomains.map((d) => `-site:${d}`).join(" ")}`);
+    } else {
+      queries.push(`${topic} latest`);
+    }
+
+    for (const q of queries) {
+      if (freshCandidates.length >= TARGET_FRESH) break;
+      const batch = await firecrawlSearch(q, FIRECRAWL_API_KEY, 25, tbs);
+      console.log(`Search "${q}" → ${batch.length} raw results`);
+      for (const r of batch) {
+        const norm = normalizeUrl(r?.url || "");
+        if (!norm || seenRawUrls.has(norm)) continue;
+        seenRawUrls.add(norm);
+        if (recentUrlsNorm.has(norm)) continue; // already used in last 14 days
+        freshCandidates.push(r);
+      }
+      console.log(`After "${q}": ${freshCandidates.length} fresh candidates accumulated`);
+      if (freshCandidates.length >= TARGET_FRESH) break;
+    }
+
+    const searchResults = freshCandidates;
+    console.log(`Total fresh candidates after fallback retries: ${searchResults.length}`);
+
+    if (searchResults.length < MIN_FRESH) {
+      return new Response(JSON.stringify({
+        error: `Only ${searchResults.length} new sources found after retries (need at least ${MIN_FRESH}). Try a different query or widen the freshness filter.`,
+      }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
