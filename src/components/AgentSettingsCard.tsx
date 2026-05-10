@@ -90,7 +90,7 @@ export default function AgentSettingsCard() {
     const { error } = await supabase.from("agent_schedules").upsert(payload, { onConflict: "user_id" });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Configuración guardada");
+    toast.success(t("agent.savedOk"));
   };
 
   const runNow = async () => {
@@ -99,10 +99,13 @@ export default function AgentSettingsCard() {
     try {
       const { data, error } = await supabase.functions.invoke("daily-agent", { body: {} });
       if (error) throw error;
-      toast.success(`Agente ejecutado: ${data?.posts_created ?? 0} posts creados${data?.notified ? " · email enviado" : ""}`);
+      toast.success(
+        t("agent.runOk").replace("{count}", String(data?.posts_created ?? 0)) +
+        (data?.notified ? t("agent.runOkEmail") : "")
+      );
       load();
     } catch (e: any) {
-      toast.error(e.message || "Error al ejecutar");
+      toast.error(e.message || t("agent.runError"));
     } finally {
       setRunning(false);
     }
