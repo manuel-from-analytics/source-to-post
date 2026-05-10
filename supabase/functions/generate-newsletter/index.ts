@@ -187,9 +187,11 @@ serve(async (req) => {
       }
     }
 
-    // Step 1: Collect previously used URLs+titles for this user (last 90 days) to avoid repetition.
-    const lookbackDays = 90;
-    const recentTitleDays = 30;
+    // Step 1: Collect previously used URLs+titles for this user to avoid repetition.
+    // URL dedup window kept short (14d) to avoid blocking legit reruns on stable topics
+    // where Google keeps returning the same top results. Title dedup window is wider.
+    const lookbackDays = 14;
+    const recentTitleDays = 14;
     const lookbackIso = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
     const recentTitleIso = new Date(Date.now() - recentTitleDays * 24 * 60 * 60 * 1000).toISOString();
     const { data: allExistingItems } = await supabase
