@@ -740,6 +740,7 @@ export default function NewsletterPage() {
   const handleSelectHistory = (nl: Newsletter) => {
     setSelectedId(nl.id);
     setGeneratedNewsletter(null);
+    setSearchParams({ id: nl.id }, { replace: true });
   };
 
   const handleReuseTopic = (t: string) => {
