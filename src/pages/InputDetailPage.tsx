@@ -49,6 +49,20 @@ export default function InputDetailPage() {
     enabled: !!user && !!id,
   });
 
+  const { data: relatedPosts } = useQuery({
+    queryKey: ["input-related-posts", id],
+    enabled: !!user && !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("generated_posts")
+        .select("id, title, content, status, created_at, input_id, input_ids")
+        .or(`input_id.eq.${id},input_ids.cs.{${id}}`)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const handleDelete = () => {
     if (!input) return;
     deleteInput.mutate(input, {
