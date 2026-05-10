@@ -212,13 +212,24 @@ serve(async (req) => {
     const cutoffDate = cutoffDateFromMonths(freshnessMonths);
     console.log(`Freshness: ${freshnessMonths} months → tbs=${tbs ?? "none"} cutoff=${cutoffDate ?? "none"}`);
 
-    // Pull a wider candidate pool when filtering, so we still have enough after dropping stale items.
-    const searchLimit = freshnessMonths ? 20 : 12;
-    const searchResults = await firecrawlSearch(topic, FIRECRAWL_API_KEY, searchLimit, tbs);
-    console.log(`Search results: ${searchResults.length} for topic "${topic}"`);
+    // Pull a wider candidate pool — we filter out already-used URLs before passing to the AI,
+    // so we need extra headroom to still have enough fresh candidates.
+    const searchLimit = 25;
+    const rawSearchResults = await firecrawlSearch(topic, FIRECRAWL_API_KEY, searchLimit, tbs);
+    console.log(`Search results: ${rawSearchResults.length} raw for topic "${topic}"`);
+
+    // Pre-filter: drop any candidate whose normalized URL is already used in the last 14 days.
+    // This prevents the AI from picking obvious duplicates (it tends to grab top-ranked Google
+    // results, which are stable across runs) and forces it to choose from genuinely fresh items.
+    const searchResults = rawSearchResults.filter((r: any) => {
+      const norm = normalizeUrl(r?.url || "");
+      return norm && !recentUrlsNorm.has(norm);
+    });
+    const prefiltered = rawSearchResults.length - searchResults.length;
+    console.log(`Pre-filter: dropped ${prefiltered} already-used URLs → ${searchResults.length} fresh candidates`);
 
     if (searchResults.length === 0) {
-      return new Response(JSON.stringify({ error: "No search results found for this topic. Try a different query or relax the freshness filter." }), {
+      return new Response(JSON.stringify({ error: "No new content found for this topic (all top results were already covered in recent newsletters). Try a different query or widen the freshness filter." }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
