@@ -301,6 +301,40 @@ export default function InputDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Related generated posts */}
+      {relatedPosts && relatedPosts.length > 0 && (
+        <Card className="min-w-0 overflow-hidden">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <PenTool className="h-4 w-4" />
+              Posts generados ({relatedPosts.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6 space-y-2">
+            {relatedPosts.map((p: any) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => navigate("/history", { state: { openPostId: p.id } })}
+                className="w-full flex items-start gap-2 rounded-lg border p-2.5 text-left hover:bg-secondary/50 transition-colors min-w-0"
+              >
+                <div className="min-w-0 flex-1">
+                  {p.title && (
+                    <p className="text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere] mb-0.5">{p.title}</p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground line-clamp-2 break-words [overflow-wrap:anywhere]">{p.content}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="secondary" className="text-[10px] capitalize">{p.status ?? "draft"}</Badge>
+                    <span className="text-[10px] text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Content */}
       {displayContent && (
         <Card className="min-w-0 overflow-hidden">
