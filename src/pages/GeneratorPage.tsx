@@ -206,6 +206,25 @@ export default function GeneratorPage() {
     );
   };
 
+  // Extraction status helpers
+  const getSourceContent = (s: any): string =>
+    (s?.extracted_content || s?.raw_content || "") as string;
+  const getExtractionStatus = (s: any): "ready" | "thin" | "missing" => {
+    const len = getSourceContent(s).trim().length;
+    if (len === 0) return "missing";
+    if (s.type !== "text" && len < 300) return "thin";
+    return "ready";
+  };
+
+  const selectedInputObjs = useMemo(
+    () => (inputs ?? []).filter((i) => selectedSources.includes(i.id)),
+    [inputs, selectedSources]
+  );
+  const missingExtraction = selectedInputObjs.filter((i) => getExtractionStatus(i) === "missing");
+  const thinExtraction = selectedInputObjs.filter((i) => getExtractionStatus(i) === "thin");
+  const canGenerate =
+    selectedSources.length > 0 && missingExtraction.length === 0 && !isGenerating;
+
   const handleGenerate = () => {
     generate({
       input_ids: selectedSources,
