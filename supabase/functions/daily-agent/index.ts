@@ -80,6 +80,30 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
   else if (params.content_focus) userPrompt += `\n\nENFOQUE:\n${params.content_focus}`;
   userPrompt += "\n\nDevuelve solo el post, sin explicaciones ni metadatos.";
 
+  // Ask the model to also report which choices it made for the auto fields,
+  // so we can persist that visibility in the post metadata.
+  const autoKeys: string[] = [];
+  if (isAuto(params.goal)) autoKeys.push("goal");
+  if (isAuto(params.tone)) autoKeys.push("tone");
+  if (isAuto(params.language)) autoKeys.push("language");
+  if (isAuto(params.length)) autoKeys.push("length");
+  if (isAuto(params.cta)) autoKeys.push("cta");
+  if (isAuto(params.target_audience)) autoKeys.push("target_audience");
+  if (isAuto(params.content_focus)) autoKeys.push("content_focus");
+
+  userPrompt += `\n\nDevuelve EXCLUSIVAMENTE un JSON válido con esta forma exacta (sin texto adicional, sin markdown, sin code fences):\n{"decisions": { ${autoKeys.map(k => `"${k}": "..."`).join(", ") || ""} }, "post": "TEXTO DEL POST"}\n`;
+  if (autoKeys.length) {
+    userPrompt += `\nValores permitidos para decisions:\n`;
+    if (autoKeys.includes("goal")) userPrompt += `- goal: educate | inspire | promote | engage | storytelling\n`;
+    if (autoKeys.includes("tone")) userPrompt += `- tone: professional | casual | inspirational | direct | humorous\n`;
+    if (autoKeys.includes("language")) userPrompt += `- language: es | en | pt\n`;
+    if (autoKeys.includes("length")) userPrompt += `- length: short | medium | long\n`;
+    if (autoKeys.includes("cta")) userPrompt += `- cta: question | share | follow | link | none\n`;
+    if (autoKeys.includes("target_audience")) userPrompt += `- target_audience: descripción breve (string)\n`;
+    if (autoKeys.includes("content_focus")) userPrompt += `- content_focus: ángulo elegido en 1 frase (string)\n`;
+  }
+  userPrompt += `\nEl campo "decisions" SOLO debe contener las claves listadas. El campo "post" es el texto plano del post de LinkedIn.`;
+
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
   const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -87,11 +111,33 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+      response_format: { type: "json_object" },
     }),
   });
   if (!aiResponse.ok) throw new Error(`AI error ${aiResponse.status}: ${await aiResponse.text()}`);
   const aiResult = await aiResponse.json();
-  return (aiResult.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+  const raw = (aiResult.choices?.[0]?.message?.content || "").trim();
+
+  // Robust JSON parse: strip code fences if present
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");
+  let parsed: any = null;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    // fallback: try to locate first { ... } block
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
+  }
+
+  const post = (parsed?.post ?? cleaned).toString().replace(/^\s*\[.*?\]\s*/g, "");
+  const decisions = (parsed?.decisions && typeof parsed.decisions === "object") ? parsed.decisions : {};
+  // Only keep keys we actually asked about
+  const filtered: GenerationResult["decisions"] = {};
+  for (const k of autoKeys) {
+    const v = decisions[k];
+    if (typeof v === "string" && v.trim()) (filtered as any)[k] = v.trim();
+  }
+  return { content: post, decisions: filtered };
 }
 
 async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual" }): Promise<any> {
