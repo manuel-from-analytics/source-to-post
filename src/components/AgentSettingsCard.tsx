@@ -45,6 +45,7 @@ type RunRow = { id: string; started_at: string; status: string; posts_created: n
 
 export default function AgentSettingsCard() {
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const { session } = useAuth();
   const { data: voices } = useVoices();
   const { data: profiles } = useNewsletterProfiles();
