@@ -24,6 +24,58 @@ function cutoffDateFromMonths(months: number | null | undefined): string | null 
   return d.toISOString().split("T")[0];
 }
 
+// ---------- Dedup helpers ----------
+const TRACKING_PARAMS_PREFIX = ["utm_", "mc_"];
+const TRACKING_PARAMS_EXACT = new Set([
+  "gclid", "fbclid", "ref", "ref_src", "igshid", "yclid", "msclkid", "_hsenc", "_hsmi",
+]);
+
+function normalizeUrl(raw: string): string {
+  if (!raw || typeof raw !== "string") return "";
+  try {
+    const u = new URL(raw.trim());
+    u.hash = "";
+    u.hostname = u.hostname.toLowerCase().replace(/^www\./, "");
+    const keep: [string, string][] = [];
+    u.searchParams.forEach((v, k) => {
+      const lk = k.toLowerCase();
+      if (TRACKING_PARAMS_EXACT.has(lk)) return;
+      if (TRACKING_PARAMS_PREFIX.some((p) => lk.startsWith(p))) return;
+      keep.push([k, v]);
+    });
+    u.search = "";
+    keep.sort(([a], [b]) => a.localeCompare(b)).forEach(([k, v]) => u.searchParams.append(k, v));
+    let s = u.toString();
+    // strip trailing slash unless it's the root
+    if (u.pathname !== "/" && s.endsWith("/")) s = s.slice(0, -1);
+    return s.toLowerCase();
+  } catch {
+    return raw.trim().toLowerCase();
+  }
+}
+
+const STOPWORDS = new Set([
+  "el","la","los","las","de","del","y","o","u","un","una","unos","unas","en","para","por","con","sin","al","lo","es","son","que","como","más","mas","sobre","ante","tras","entre","muy","ya","si","no",
+  "the","a","an","of","and","or","to","in","for","on","with","at","by","from","is","are","was","were","be","been","being","this","that","these","those","as","it","its","but","if","into","than","then","so","up","out",
+]);
+
+function tokenizeTitle(title: string): Set<string> {
+  if (!title) return new Set();
+  const cleaned = title.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ");
+  const tokens = cleaned.split(/\s+/).filter((t) => t.length >= 3 && !STOPWORDS.has(t));
+  return new Set(tokens);
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter++;
+  const union = a.size + b.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
 async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: string): Promise<any[]> {
   try {
     const body: Record<string, unknown> = {
@@ -135,13 +187,28 @@ serve(async (req) => {
       }
     }
 
-    // Step 1: Collect ALL previously used URLs to avoid repetition
+    // Step 1: Collect previously used URLs+titles for this user (last 90 days) to avoid repetition.
+    const lookbackDays = 90;
+    const recentTitleDays = 30;
+    const lookbackIso = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
+    const recentTitleIso = new Date(Date.now() - recentTitleDays * 24 * 60 * 60 * 1000).toISOString();
     const { data: allExistingItems } = await supabase
       .from("newsletter_items")
-      .select("url, newsletter_id")
-      .order("created_at", { ascending: false })
-      .limit(500);
-    const existingUrls: string[] = (allExistingItems || []).map((i: any) => i.url);
+      .select("url, title, created_at, newsletters!inner(user_id)")
+      .eq("newsletters.user_id", userId)
+      .gte("created_at", lookbackIso)
+      .order("created_at", { ascending: false });
+    const recentUrlsNorm = new Set<string>();
+    const recentTitleTokens: Set<string>[] = [];
+    const recentTitlesForPrompt: string[] = [];
+    for (const it of (allExistingItems || []) as any[]) {
+      if (it.url) recentUrlsNorm.add(normalizeUrl(it.url));
+      if (it.created_at >= recentTitleIso && it.title) {
+        recentTitleTokens.push(tokenizeTitle(it.title));
+        recentTitlesForPrompt.push(it.title);
+      }
+    }
+    const existingUrls: string[] = Array.from(recentUrlsNorm);
 
     // Step 2: Search for content using Firecrawl with time filter from profile
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
@@ -189,7 +256,9 @@ ${preferencesBlock}${freshnessBlock}
 SEARCH RESULTS TO USE:
 ${sourceSummaries}
 
-${existingUrls.length > 0 ? `ALREADY USED URLs (DO NOT repeat these):\n${existingUrls.join("\n")}` : ""}
+${existingUrls.length > 0 ? `ALREADY USED URLs (DO NOT repeat these, neither exact nor with different tracking params):\n${existingUrls.slice(0, 200).join("\n")}` : ""}
+
+${recentTitlesForPrompt.length > 0 ? `RECENTLY COVERED TOPICS (last ${recentTitleDays} days — DO NOT repeat the same news/topic, even from a different source):\n${recentTitlesForPrompt.slice(0, 80).map((t) => `- ${t}`).join("\n")}` : ""}
 
 GENERAL RULES:
 1. Select exactly 5 items.
@@ -312,6 +381,50 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
         }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
+      }
+    }
+
+    // Step 3.6: Hard dedup post-AI (URL + title-based topic similarity).
+    if (Array.isArray(newsletter.items)) {
+      const beforeDedup = newsletter.items.length;
+      const seenUrlsThisBatch = new Set<string>();
+      const acceptedTitleTokens: Set<string>[] = [];
+      let droppedByUrl = 0;
+      let droppedByTitle = 0;
+      const TITLE_SIMILARITY_THRESHOLD = 0.7;
+
+      newsletter.items = newsletter.items.filter((it: any) => {
+        const norm = normalizeUrl(it?.url || "");
+        if (!norm) { droppedByUrl++; return false; }
+        if (recentUrlsNorm.has(norm) || seenUrlsThisBatch.has(norm)) {
+          droppedByUrl++;
+          return false;
+        }
+        const tokens = tokenizeTitle(it?.title || "");
+        if (tokens.size > 0) {
+          const dupHistorical = recentTitleTokens.some((t) => jaccard(tokens, t) >= TITLE_SIMILARITY_THRESHOLD);
+          const dupBatch = acceptedTitleTokens.some((t) => jaccard(tokens, t) >= TITLE_SIMILARITY_THRESHOLD);
+          if (dupHistorical || dupBatch) {
+            droppedByTitle++;
+            return false;
+          }
+        }
+        seenUrlsThisBatch.add(norm);
+        acceptedTitleTokens.push(tokens);
+        return true;
+      });
+
+      console.log(`Dedup: ${beforeDedup} → ${newsletter.items.length} (dropped ${droppedByUrl} by URL, ${droppedByTitle} by title)`);
+
+      if (newsletter.items.length < 3) {
+        return new Response(JSON.stringify({
+          error: "No se encontró suficiente contenido nuevo (la mayoría ya estaba cubierto en newsletters recientes). Prueba a ampliar el topic o la ventana de frescura.",
+        }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (newsletter.items.length < 5) {
+        console.warn(`Newsletter saved with only ${newsletter.items.length} items after dedup.`);
       }
     }
 
