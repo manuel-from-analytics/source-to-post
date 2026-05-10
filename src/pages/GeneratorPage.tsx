@@ -376,7 +376,17 @@ export default function GeneratorPage() {
                         onCheckedChange={() => toggleSource(source.id)}
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{source.title}</p>
+                        <div className="flex items-start gap-1.5 min-w-0">
+                          <p className="text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere] flex-1 min-w-0">{source.title}</p>
+                          <Link
+                            to={`/library/${source.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="shrink-0 text-muted-foreground hover:text-primary"
+                            title="Ver en la biblioteca"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Link>
+                        </div>
                         <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                           <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
                           <span className="text-[10px] text-muted-foreground capitalize">{source.type}</span>
