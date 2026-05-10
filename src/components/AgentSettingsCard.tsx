@@ -59,7 +59,7 @@ export default function AgentSettingsCard() {
     const { data } = await supabase.from("agent_schedules").select("*").eq("user_id", session.user.id).maybeSingle();
     if (data) setSchedule({ ...DEFAULT, ...data, topic: data.topic || "" });
     else setSchedule({ ...DEFAULT, notification_email: session.user.email ?? null });
-    const { data: r } = await supabase.from("agent_runs").select("id, started_at, status, posts_created, error, notified_at").order("started_at", { ascending: false }).limit(10);
+    const { data: r } = await supabase.from("agent_runs").select("id, started_at, status, posts_created, error, notified_at, newsletter_id").order("started_at", { ascending: false }).limit(10);
     setRuns((r as RunRow[]) || []);
     setLoading(false);
   };
