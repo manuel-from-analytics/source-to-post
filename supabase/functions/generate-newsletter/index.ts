@@ -256,7 +256,9 @@ ${preferencesBlock}${freshnessBlock}
 SEARCH RESULTS TO USE:
 ${sourceSummaries}
 
-${existingUrls.length > 0 ? `ALREADY USED URLs (DO NOT repeat these):\n${existingUrls.join("\n")}` : ""}
+${existingUrls.length > 0 ? `ALREADY USED URLs (DO NOT repeat these, neither exact nor with different tracking params):\n${existingUrls.slice(0, 200).join("\n")}` : ""}
+
+${recentTitlesForPrompt.length > 0 ? `RECENTLY COVERED TOPICS (last ${recentTitleDays} days — DO NOT repeat the same news/topic, even from a different source):\n${recentTitlesForPrompt.slice(0, 80).map((t) => `- ${t}`).join("\n")}` : ""}
 
 GENERAL RULES:
 1. Select exactly 5 items.
