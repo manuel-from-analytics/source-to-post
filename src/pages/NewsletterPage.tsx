@@ -645,11 +645,29 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang, t }: { newsl
 
 function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const importMutation = useImportToLibrary();
+  const [openingItemId, setOpeningItemId] = useState<string | null>(null);
 
   const handleImportAll = () => {
     const unimported = (newsletter.items || []).filter(i => !i.imported_to_library);
     unimported.forEach(item => importMutation.mutate(item));
+  };
+
+  const handleOpenItem = async (item: NewsletterItem) => {
+    if (item.imported_to_library && item.input_id) {
+      navigate(`/library/${item.input_id}`);
+      return;
+    }
+    setOpeningItemId(item.id);
+    try {
+      const input = await importMutation.mutateAsync(item);
+      navigate(`/library/${input.id}`);
+    } catch {
+      // toast already shown by mutation onError
+    } finally {
+      setOpeningItemId(null);
+    }
   };
 
   return (
@@ -686,7 +704,8 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
             key={item.id || i}
             item={item}
             onImport={() => importMutation.mutate(item)}
-            importing={importMutation.isPending}
+            onOpen={() => handleOpenItem(item)}
+            importing={openingItemId === item.id || (importMutation.isPending && importMutation.variables?.id === item.id)}
             t={t}
           />
         ))}
