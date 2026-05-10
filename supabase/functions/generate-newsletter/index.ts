@@ -24,6 +24,58 @@ function cutoffDateFromMonths(months: number | null | undefined): string | null 
   return d.toISOString().split("T")[0];
 }
 
+// ---------- Dedup helpers ----------
+const TRACKING_PARAMS_PREFIX = ["utm_", "mc_"];
+const TRACKING_PARAMS_EXACT = new Set([
+  "gclid", "fbclid", "ref", "ref_src", "igshid", "yclid", "msclkid", "_hsenc", "_hsmi",
+]);
+
+function normalizeUrl(raw: string): string {
+  if (!raw || typeof raw !== "string") return "";
+  try {
+    const u = new URL(raw.trim());
+    u.hash = "";
+    u.hostname = u.hostname.toLowerCase().replace(/^www\./, "");
+    const keep: [string, string][] = [];
+    u.searchParams.forEach((v, k) => {
+      const lk = k.toLowerCase();
+      if (TRACKING_PARAMS_EXACT.has(lk)) return;
+      if (TRACKING_PARAMS_PREFIX.some((p) => lk.startsWith(p))) return;
+      keep.push([k, v]);
+    });
+    u.search = "";
+    keep.sort(([a], [b]) => a.localeCompare(b)).forEach(([k, v]) => u.searchParams.append(k, v));
+    let s = u.toString();
+    // strip trailing slash unless it's the root
+    if (u.pathname !== "/" && s.endsWith("/")) s = s.slice(0, -1);
+    return s.toLowerCase();
+  } catch {
+    return raw.trim().toLowerCase();
+  }
+}
+
+const STOPWORDS = new Set([
+  "el","la","los","las","de","del","y","o","u","un","una","unos","unas","en","para","por","con","sin","al","lo","es","son","que","como","más","mas","sobre","ante","tras","entre","muy","ya","si","no",
+  "the","a","an","of","and","or","to","in","for","on","with","at","by","from","is","are","was","were","be","been","being","this","that","these","those","as","it","its","but","if","into","than","then","so","up","out",
+]);
+
+function tokenizeTitle(title: string): Set<string> {
+  if (!title) return new Set();
+  const cleaned = title.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ");
+  const tokens = cleaned.split(/\s+/).filter((t) => t.length >= 3 && !STOPWORDS.has(t));
+  return new Set(tokens);
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  for (const t of a) if (b.has(t)) inter++;
+  const union = a.size + b.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
 async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: string): Promise<any[]> {
   try {
     const body: Record<string, unknown> = {
