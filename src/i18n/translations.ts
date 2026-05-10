@@ -426,6 +426,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
   en: {
     // Navigation
     "nav.dashboard": "Dashboard",
+    "nav.agent": "Agent",
     "nav.newsletter": "Newsletter",
     "nav.library": "Library",
     "nav.voice": "My Voice",
