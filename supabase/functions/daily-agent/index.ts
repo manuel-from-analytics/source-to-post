@@ -222,7 +222,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
       }
 
       try {
-        const content = await generateContent(admin, {
+        const { content, decisions } = await generateContent(admin, {
           input_ids: [inputId],
           voice_id: schedule.voice_id || profile?.default_voice_id || undefined,
           tone: schedule.tone || undefined,
@@ -234,16 +234,20 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
           content_focus: schedule.content_focus || undefined,
         });
         const norm = (v: any) => (v === "auto" || v === "__auto__" ? null : v);
+        // For each field: if user set an explicit value, use it; otherwise use what
+        // the agent decided (visible in metadata); fall back to profile defaults.
+        const pick = (scheduleVal: any, agentVal: any, fallback: any = null) =>
+          norm(scheduleVal) ?? agentVal ?? fallback;
         const { data: post, error: pe } = await admin.from("generated_posts").insert({
           user_id: userId, content, title: item.title,
           input_id: inputId, input_ids: [inputId],
-          tone: norm(schedule.tone),
-          length: norm(schedule.length) || profile?.default_length || null,
-          cta: norm(schedule.cta) || profile?.default_cta || null,
-          goal: norm(schedule.goal),
-          language: norm(schedule.language) || profile?.preferred_language || null,
-          target_audience: norm(schedule.target_audience),
-          content_focus: norm(schedule.content_focus),
+          tone: pick(schedule.tone, decisions.tone),
+          length: pick(schedule.length, decisions.length, profile?.default_length || null),
+          cta: pick(schedule.cta, decisions.cta, profile?.default_cta || null),
+          goal: pick(schedule.goal, decisions.goal),
+          language: pick(schedule.language, decisions.language, profile?.preferred_language || null),
+          target_audience: pick(schedule.target_audience, decisions.target_audience),
+          content_focus: pick(schedule.content_focus, decisions.content_focus),
           voice_id: schedule.voice_id || profile?.default_voice_id || null,
           status: "draft",
           source_newsletter_id: newsletterId,
