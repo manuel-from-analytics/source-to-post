@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useVoices } from "@/hooks/useVoices";
 import { useNewsletterProfiles } from "@/hooks/useNewsletters";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
 
 type Schedule = {
