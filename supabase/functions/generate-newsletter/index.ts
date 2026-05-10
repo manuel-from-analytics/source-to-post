@@ -187,13 +187,28 @@ serve(async (req) => {
       }
     }
 
-    // Step 1: Collect ALL previously used URLs to avoid repetition
+    // Step 1: Collect previously used URLs+titles for this user (last 90 days) to avoid repetition.
+    const lookbackDays = 90;
+    const recentTitleDays = 30;
+    const lookbackIso = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
+    const recentTitleIso = new Date(Date.now() - recentTitleDays * 24 * 60 * 60 * 1000).toISOString();
     const { data: allExistingItems } = await supabase
       .from("newsletter_items")
-      .select("url, newsletter_id")
-      .order("created_at", { ascending: false })
-      .limit(500);
-    const existingUrls: string[] = (allExistingItems || []).map((i: any) => i.url);
+      .select("url, title, created_at, newsletters!inner(user_id)")
+      .eq("newsletters.user_id", userId)
+      .gte("created_at", lookbackIso)
+      .order("created_at", { ascending: false });
+    const recentUrlsNorm = new Set<string>();
+    const recentTitleTokens: Set<string>[] = [];
+    const recentTitlesForPrompt: string[] = [];
+    for (const it of (allExistingItems || []) as any[]) {
+      if (it.url) recentUrlsNorm.add(normalizeUrl(it.url));
+      if (it.created_at >= recentTitleIso && it.title) {
+        recentTitleTokens.push(tokenizeTitle(it.title));
+        recentTitlesForPrompt.push(it.title);
+      }
+    }
+    const existingUrls: string[] = Array.from(recentUrlsNorm);
 
     // Step 2: Search for content using Firecrawl with time filter from profile
     const FIRECRAWL_API_KEY = Deno.env.get("FIRECRAWL_API_KEY");
