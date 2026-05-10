@@ -255,6 +255,31 @@ export default function HistoryPage() {
                 </p>
               </div>
 
+              {(() => {
+                const ids = Array.from(new Set([
+                  ...(selectedPost.input_id ? [selectedPost.input_id] : []),
+                  ...(((selectedPost as any).input_ids as string[] | null) ?? []),
+                ]));
+                if (ids.length === 0) return null;
+                return (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Fuentes</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ids.map((iid) => (
+                        <Link
+                          key={iid}
+                          to={`/library/${iid}`}
+                          className="inline-flex items-center gap-1 rounded-full border bg-secondary/50 px-2.5 py-1 text-xs hover:bg-secondary transition-colors"
+                        >
+                          <Library className="h-3 w-3" />
+                          Ver fuente
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {(selectedAssignedIds?.length ?? 0) > 0 && selectedPost.status === "published" && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">
