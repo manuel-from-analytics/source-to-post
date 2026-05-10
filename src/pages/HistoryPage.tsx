@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Files } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, Link } from "react-router-dom";
+import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Files, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,6 +32,7 @@ type Post = Database["public"]["Tables"]["generated_posts"]["Row"];
 export default function HistoryPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: posts, isLoading } = usePosts();
   const updateStatus = useUpdatePostStatus();
   const deletePost = useDeletePost();
@@ -49,6 +50,17 @@ export default function HistoryPage() {
   const { data: selectedPublications } = usePostLabelPublications(selectedPost?.id);
   const publishToLabel = usePublishToLabel();
   const unpublishFromLabel = useUnpublishFromLabel();
+
+  // Auto-open a post if navigated here with { openPostId }
+  useEffect(() => {
+    const id = (location.state as any)?.openPostId as string | undefined;
+    if (!id || !posts) return;
+    const found = posts.find((p) => p.id === id);
+    if (found) {
+      setSelectedPost(found);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, posts, navigate, location.pathname]);
 
   const statusLabels: Record<PostStatus, string> = {
     draft: t("history.draft"),
@@ -242,6 +254,31 @@ export default function HistoryPage() {
                   {selectedPost.content}
                 </p>
               </div>
+
+              {(() => {
+                const ids = Array.from(new Set([
+                  ...(selectedPost.input_id ? [selectedPost.input_id] : []),
+                  ...(((selectedPost as any).input_ids as string[] | null) ?? []),
+                ]));
+                if (ids.length === 0) return null;
+                return (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">Fuentes</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ids.map((iid) => (
+                        <Link
+                          key={iid}
+                          to={`/library/${iid}`}
+                          className="inline-flex items-center gap-1 rounded-full border bg-secondary/50 px-2.5 py-1 text-xs hover:bg-secondary transition-colors"
+                        >
+                          <Library className="h-3 w-3" />
+                          Ver fuente
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
 
               {(selectedAssignedIds?.length ?? 0) > 0 && selectedPost.status === "published" && (
                 <div className="space-y-2">

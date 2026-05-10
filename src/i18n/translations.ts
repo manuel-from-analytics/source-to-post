@@ -4,6 +4,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
   es: {
     // Navigation
     "nav.dashboard": "Dashboard",
+    "nav.agent": "Agente",
     "nav.newsletter": "Newsletter",
     "nav.library": "Biblioteca",
     "nav.voice": "Mi Voz",
@@ -425,6 +426,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
   en: {
     // Navigation
     "nav.dashboard": "Dashboard",
+    "nav.agent": "Agent",
     "nav.newsletter": "Newsletter",
     "nav.library": "Library",
     "nav.voice": "My Voice",
@@ -846,6 +848,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
   pt: {
     // Navigation
     "nav.dashboard": "Painel",
+    "nav.agent": "Agente",
     "nav.newsletter": "Newsletter",
     "nav.library": "Biblioteca",
     "nav.voice": "Minha Voz",

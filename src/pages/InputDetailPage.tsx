@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Star, Trash2, ExternalLink, Loader2,
-  FileText, Sparkles, RefreshCw, Youtube
+  FileText, Sparkles, RefreshCw, Youtube, PenTool, ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +47,20 @@ export default function InputDetailPage() {
       return data as InputRow;
     },
     enabled: !!user && !!id,
+  });
+
+  const { data: relatedPosts } = useQuery({
+    queryKey: ["input-related-posts", id],
+    enabled: !!user && !!id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("generated_posts")
+        .select("id, title, content, status, created_at, input_id, input_ids")
+        .or(`input_id.eq.${id},input_ids.cs.{${id}}`)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
   });
 
   const handleDelete = () => {
@@ -286,6 +300,40 @@ export default function InputDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Related generated posts */}
+      {relatedPosts && relatedPosts.length > 0 && (
+        <Card className="min-w-0 overflow-hidden">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <PenTool className="h-4 w-4" />
+              Posts generados ({relatedPosts.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6 space-y-2">
+            {relatedPosts.map((p: any) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => navigate("/history", { state: { openPostId: p.id } })}
+                className="w-full flex items-start gap-2 rounded-lg border p-2.5 text-left hover:bg-secondary/50 transition-colors min-w-0"
+              >
+                <div className="min-w-0 flex-1">
+                  {p.title && (
+                    <p className="text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere] mb-0.5">{p.title}</p>
+                  )}
+                  <p className="text-[11px] text-muted-foreground line-clamp-2 break-words [overflow-wrap:anywhere]">{p.content}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="secondary" className="text-[10px] capitalize">{p.status ?? "draft"}</Badge>
+                    <span className="text-[10px] text-muted-foreground">{new Date(p.created_at).toLocaleDateString()}</span>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0 mt-1" />
+              </button>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Content */}
       {displayContent && (

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/i18n/LanguageContext";
 import {
   Newspaper, Search, Loader2, Clock, ExternalLink,
@@ -384,29 +385,39 @@ function FreshnessBadge({ pubDate, t }: { pubDate: string; t: (k: string) => str
   );
 }
 
-function NewsletterItemCard({ item, onImport, importing, t }: {
+function NewsletterItemCard({ item, onImport, onOpen, importing, t }: {
   item: NewsletterItem;
   onImport: () => void;
+  onOpen: () => void;
   importing: boolean;
   t: (k: string) => string;
 }) {
   return (
-    <div className="min-w-0 space-y-1.5 rounded-lg border p-3 sm:p-4 overflow-hidden">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between min-w-0">
-        <h4 className="min-w-0 flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere]">{item.title}</h4>
-        <div className="flex flex-wrap items-center gap-2 self-start shrink-0 max-w-full">
-          {item.pub_date && <FreshnessBadge pubDate={item.pub_date} t={t} />}
-          <SourceBadge type={item.source_type} t={t} />
+    <div className="min-w-0 space-y-1.5 rounded-lg border p-3 sm:p-4 overflow-hidden hover:bg-secondary/30 transition-colors">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="w-full text-left min-w-0"
+        disabled={importing}
+        title={item.imported_to_library ? "Abrir en la biblioteca" : "Importar a la biblioteca y abrir"}
+      >
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between min-w-0">
+          <h4 className="min-w-0 flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere] hover:text-primary">{item.title}</h4>
+          <div className="flex flex-wrap items-center gap-2 self-start shrink-0 max-w-full">
+            {item.pub_date && <FreshnessBadge pubDate={item.pub_date} t={t} />}
+            <SourceBadge type={item.source_type} t={t} />
+          </div>
         </div>
-      </div>
-      {item.description && (
-        <p className="text-[11px] leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere] line-clamp-2">{item.description}</p>
-      )}
+        {item.description && (
+          <p className="text-[11px] leading-relaxed text-muted-foreground break-words [overflow-wrap:anywhere] line-clamp-2 mt-1">{item.description}</p>
+        )}
+      </button>
       <div className="flex flex-wrap items-center gap-2">
         <a
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
           className="text-xs text-primary hover:underline flex items-center gap-1"
         >
           <ExternalLink className="h-3 w-3" />
@@ -421,7 +432,7 @@ function NewsletterItemCard({ item, onImport, importing, t }: {
             variant="ghost"
             size="sm"
             className="text-xs h-6 gap-1"
-            onClick={onImport}
+            onClick={(e) => { e.stopPropagation(); onImport(); }}
             disabled={importing}
           >
             <Library className="h-3 w-3" />
@@ -634,11 +645,29 @@ function PodcastPlayer({ newsletterId, savedScript, newsletterLang, t }: { newsl
 
 function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
   const { t } = useLanguage();
+  const navigate = useNavigate();
   const importMutation = useImportToLibrary();
+  const [openingItemId, setOpeningItemId] = useState<string | null>(null);
 
   const handleImportAll = () => {
     const unimported = (newsletter.items || []).filter(i => !i.imported_to_library);
     unimported.forEach(item => importMutation.mutate(item));
+  };
+
+  const handleOpenItem = async (item: NewsletterItem) => {
+    if (item.imported_to_library && item.input_id) {
+      navigate(`/library/${item.input_id}`);
+      return;
+    }
+    setOpeningItemId(item.id);
+    try {
+      const input = await importMutation.mutateAsync(item);
+      navigate(`/library/${input.id}`);
+    } catch {
+      // toast already shown by mutation onError
+    } finally {
+      setOpeningItemId(null);
+    }
   };
 
   return (
@@ -675,7 +704,8 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
             key={item.id || i}
             item={item}
             onImport={() => importMutation.mutate(item)}
-            importing={importMutation.isPending}
+            onOpen={() => handleOpenItem(item)}
+            importing={openingItemId === item.id || (importMutation.isPending && importMutation.variables?.id === item.id)}
             t={t}
           />
         ))}
@@ -699,10 +729,20 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
 
 export default function NewsletterPage() {
   const { t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [topic, setTopic] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("id"));
   const [generatedNewsletter, setGeneratedNewsletter] = useState<Newsletter | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+
+  // React to ?id=... changes (e.g. when navigating from agent runs)
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id && id !== selectedId) {
+      setSelectedId(id);
+      setGeneratedNewsletter(null);
+    }
+  }, [searchParams]);
 
   const { data: newsletters, isLoading: loadingHistory } = useNewsletters();
   const { data: pastTopics } = useSearchTopics();
@@ -729,6 +769,7 @@ export default function NewsletterPage() {
   const handleSelectHistory = (nl: Newsletter) => {
     setSelectedId(nl.id);
     setGeneratedNewsletter(null);
+    setSearchParams({ id: nl.id }, { replace: true });
   };
 
   const handleReuseTopic = (t: string) => {
