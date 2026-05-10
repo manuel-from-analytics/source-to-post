@@ -206,6 +206,25 @@ export default function GeneratorPage() {
     );
   };
 
+  // Extraction status helpers
+  const getSourceContent = (s: any): string =>
+    (s?.extracted_content || s?.raw_content || "") as string;
+  const getExtractionStatus = (s: any): "ready" | "thin" | "missing" => {
+    const len = getSourceContent(s).trim().length;
+    if (len === 0) return "missing";
+    if (s.type !== "text" && len < 300) return "thin";
+    return "ready";
+  };
+
+  const selectedInputObjs = useMemo(
+    () => (inputs ?? []).filter((i) => selectedSources.includes(i.id)),
+    [inputs, selectedSources]
+  );
+  const missingExtraction = selectedInputObjs.filter((i) => getExtractionStatus(i) === "missing");
+  const thinExtraction = selectedInputObjs.filter((i) => getExtractionStatus(i) === "thin");
+  const canGenerate =
+    selectedSources.length > 0 && missingExtraction.length === 0 && !isGenerating;
+
   const handleGenerate = () => {
     generate({
       input_ids: selectedSources,
@@ -333,6 +352,20 @@ export default function GeneratorPage() {
                   .filter((s) => !onlyFavorites || s.is_favorite)
                   .map((source) => {
                   const Icon = typeIcons[source.type] || FileText;
+                  const status = getExtractionStatus(source);
+                  const len = getSourceContent(source).trim().length;
+                  const statusLabel =
+                    status === "ready"
+                      ? `✓ ${len.toLocaleString()} chars`
+                      : status === "thin"
+                      ? `⚠ Extracción corta (${len})`
+                      : "⚠ Sin contenido extraído";
+                  const statusClass =
+                    status === "ready"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : status === "thin"
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-destructive";
                   return (
                     <label
                       key={source.id}
@@ -347,6 +380,7 @@ export default function GeneratorPage() {
                         <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                           <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
                           <span className="text-[10px] text-muted-foreground capitalize">{source.type}</span>
+                          <span className={`text-[10px] font-medium ${statusClass}`}>{statusLabel}</span>
                         </div>
                       </div>
                     </label>
@@ -543,9 +577,45 @@ export default function GeneratorPage() {
             </CardContent>
           </Card>
 
+          {selectedSources.length > 0 && (missingExtraction.length > 0 || thinExtraction.length > 0) && (
+            <div
+              className={`rounded-lg border p-3 text-xs ${
+                missingExtraction.length > 0
+                  ? "border-destructive/40 bg-destructive/5 text-destructive"
+                  : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400"
+              }`}
+            >
+              {missingExtraction.length > 0 ? (
+                <>
+                  <p className="font-medium mb-1">
+                    {missingExtraction.length} fuente(s) sin contenido extraído
+                  </p>
+                  <p className="opacity-80 break-words">
+                    {missingExtraction.map((i) => i.title).join(" · ")}
+                  </p>
+                  <p className="mt-1 opacity-80">
+                    Abre la fuente y ejecuta la extracción antes de generar.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium mb-1">
+                    {thinExtraction.length} fuente(s) con extracción muy corta
+                  </p>
+                  <p className="opacity-80 break-words">
+                    {thinExtraction.map((i) => i.title).join(" · ")}
+                  </p>
+                  <p className="mt-1 opacity-80">
+                    El post podría salir genérico. Considera reextraer.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
           <Button
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={!canGenerate}
             className="w-full gap-2"
             size="lg"
           >
