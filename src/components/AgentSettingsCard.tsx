@@ -40,9 +40,10 @@ const DEFAULT: Schedule = {
   notification_email: null, extract_content: false, last_run_at: null,
 };
 
-type RunRow = { id: string; started_at: string; status: string; posts_created: number; error: string | null; notified_at: string | null };
+type RunRow = { id: string; started_at: string; status: string; posts_created: number; error: string | null; notified_at: string | null; newsletter_id: string | null };
 
 export default function AgentSettingsCard() {
+  const navigate = useNavigate();
   const { session } = useAuth();
   const { data: voices } = useVoices();
   const { data: profiles } = useNewsletterProfiles();
