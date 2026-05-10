@@ -4,6 +4,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
   es: {
     // Navigation
     "nav.dashboard": "Dashboard",
+    "nav.agent": "Agente",
     "nav.newsletter": "Newsletter",
     "nav.library": "Biblioteca",
     "nav.voice": "Mi Voz",
