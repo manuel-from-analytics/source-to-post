@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 
 const navItems = [
   { icon: LayoutDashboard, labelKey: "nav.dashboard", path: "/dashboard" },
+  { icon: Bot, labelKey: "nav.agent", path: "/agent" },
   { icon: Newspaper, labelKey: "nav.newsletter", path: "/newsletter" },
   { icon: Library, labelKey: "nav.library", path: "/library" },
   { icon: Mic, labelKey: "nav.voice", path: "/voice" },
