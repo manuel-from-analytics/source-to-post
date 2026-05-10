@@ -598,25 +598,25 @@ export default function GeneratorPage() {
               {missingExtraction.length > 0 ? (
                 <>
                   <p className="font-medium mb-1">
-                    {missingExtraction.length} fuente(s) sin contenido extraído
+                    {t("generator.missingExtractionWarning").replace("{count}", String(missingExtraction.length))}
                   </p>
                   <p className="opacity-80 break-words">
                     {missingExtraction.map((i) => i.title).join(" · ")}
                   </p>
                   <p className="mt-1 opacity-80">
-                    Abre la fuente y ejecuta la extracción antes de generar.
+                    {t("generator.missingExtractionHint")}
                   </p>
                 </>
               ) : (
                 <>
                   <p className="font-medium mb-1">
-                    {thinExtraction.length} fuente(s) con extracción muy corta
+                    {t("generator.thinExtractionWarning").replace("{count}", String(thinExtraction.length))}
                   </p>
                   <p className="opacity-80 break-words">
                     {thinExtraction.map((i) => i.title).join(" · ")}
                   </p>
                   <p className="mt-1 opacity-80">
-                    El post podría salir genérico. Considera reextraer.
+                    {t("generator.thinExtractionHint")}
                   </p>
                 </>
               )}
