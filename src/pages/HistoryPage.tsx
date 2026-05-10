@@ -32,6 +32,7 @@ type Post = Database["public"]["Tables"]["generated_posts"]["Row"];
 export default function HistoryPage() {
   const { t } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: posts, isLoading } = usePosts();
   const updateStatus = useUpdatePostStatus();
   const deletePost = useDeletePost();
