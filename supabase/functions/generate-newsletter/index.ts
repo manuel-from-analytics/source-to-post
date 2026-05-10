@@ -416,9 +416,9 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
 
       console.log(`Dedup: ${beforeDedup} → ${newsletter.items.length} (dropped ${droppedByUrl} by URL, ${droppedByTitle} by title)`);
 
-      if (newsletter.items.length < 3) {
+      if (newsletter.items.length < 1) {
         return new Response(JSON.stringify({
-          error: "No se encontró suficiente contenido nuevo (la mayoría ya estaba cubierto en newsletters recientes). Prueba a ampliar el topic o la ventana de frescura.",
+          error: "No se encontró contenido nuevo (todo ya estaba cubierto en newsletters recientes). Prueba a ampliar el topic o la ventana de frescura.",
         }), {
           status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
