@@ -21,7 +21,20 @@ const lengthMap: Record<string, string> = { short: "corto (~100 palabras)", medi
 const ctaMap: Record<string, string> = { question: "una pregunta abierta al lector", share: "invitar a compartir", follow: "invitar a seguir", link: "invitar a visitar un enlace", none: "sin call to action" };
 const langMap: Record<string, string> = { es: "español", en: "inglés", pt: "portugués" };
 
-async function generateContent(supabase: SupabaseClient, params: any): Promise<string> {
+interface GenerationResult {
+  content: string;
+  decisions: {
+    goal?: string | null;
+    tone?: string | null;
+    language?: string | null;
+    length?: string | null;
+    cta?: string | null;
+    target_audience?: string | null;
+    content_focus?: string | null;
+  };
+}
+
+async function generateContent(supabase: SupabaseClient, params: any): Promise<GenerationResult> {
   let sourceTexts: string[] = [];
   if (params.input_ids?.length) {
     const { data: inputs } = await supabase.from("inputs")
@@ -67,6 +80,30 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<s
   else if (params.content_focus) userPrompt += `\n\nENFOQUE:\n${params.content_focus}`;
   userPrompt += "\n\nDevuelve solo el post, sin explicaciones ni metadatos.";
 
+  // Ask the model to also report which choices it made for the auto fields,
+  // so we can persist that visibility in the post metadata.
+  const autoKeys: string[] = [];
+  if (isAuto(params.goal)) autoKeys.push("goal");
+  if (isAuto(params.tone)) autoKeys.push("tone");
+  if (isAuto(params.language)) autoKeys.push("language");
+  if (isAuto(params.length)) autoKeys.push("length");
+  if (isAuto(params.cta)) autoKeys.push("cta");
+  if (isAuto(params.target_audience)) autoKeys.push("target_audience");
+  if (isAuto(params.content_focus)) autoKeys.push("content_focus");
+
+  userPrompt += `\n\nDevuelve EXCLUSIVAMENTE un JSON válido con esta forma exacta (sin texto adicional, sin markdown, sin code fences):\n{"decisions": { ${autoKeys.map(k => `"${k}": "..."`).join(", ") || ""} }, "post": "TEXTO DEL POST"}\n`;
+  if (autoKeys.length) {
+    userPrompt += `\nValores permitidos para decisions:\n`;
+    if (autoKeys.includes("goal")) userPrompt += `- goal: educate | inspire | promote | engage | storytelling\n`;
+    if (autoKeys.includes("tone")) userPrompt += `- tone: professional | casual | inspirational | direct | humorous\n`;
+    if (autoKeys.includes("language")) userPrompt += `- language: es | en | pt\n`;
+    if (autoKeys.includes("length")) userPrompt += `- length: short | medium | long\n`;
+    if (autoKeys.includes("cta")) userPrompt += `- cta: question | share | follow | link | none\n`;
+    if (autoKeys.includes("target_audience")) userPrompt += `- target_audience: descripción breve (string)\n`;
+    if (autoKeys.includes("content_focus")) userPrompt += `- content_focus: ángulo elegido en 1 frase (string)\n`;
+  }
+  userPrompt += `\nEl campo "decisions" SOLO debe contener las claves listadas. El campo "post" es el texto plano del post de LinkedIn.`;
+
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
   const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -74,11 +111,33 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<s
     body: JSON.stringify({
       model: "google/gemini-3-flash-preview",
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
+      response_format: { type: "json_object" },
     }),
   });
   if (!aiResponse.ok) throw new Error(`AI error ${aiResponse.status}: ${await aiResponse.text()}`);
   const aiResult = await aiResponse.json();
-  return (aiResult.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+  const raw = (aiResult.choices?.[0]?.message?.content || "").trim();
+
+  // Robust JSON parse: strip code fences if present
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/i, "");
+  let parsed: any = null;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    // fallback: try to locate first { ... } block
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) { try { parsed = JSON.parse(m[0]); } catch { /* ignore */ } }
+  }
+
+  const post = (parsed?.post ?? cleaned).toString().replace(/^\s*\[.*?\]\s*/g, "");
+  const decisions = (parsed?.decisions && typeof parsed.decisions === "object") ? parsed.decisions : {};
+  // Only keep keys we actually asked about
+  const filtered: GenerationResult["decisions"] = {};
+  for (const k of autoKeys) {
+    const v = decisions[k];
+    if (typeof v === "string" && v.trim()) (filtered as any)[k] = v.trim();
+  }
+  return { content: post, decisions: filtered };
 }
 
 async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual" }): Promise<any> {
@@ -163,7 +222,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
       }
 
       try {
-        const content = await generateContent(admin, {
+        const { content, decisions } = await generateContent(admin, {
           input_ids: [inputId],
           voice_id: schedule.voice_id || profile?.default_voice_id || undefined,
           tone: schedule.tone || undefined,
@@ -175,16 +234,20 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
           content_focus: schedule.content_focus || undefined,
         });
         const norm = (v: any) => (v === "auto" || v === "__auto__" ? null : v);
+        // For each field: if user set an explicit value, use it; otherwise use what
+        // the agent decided (visible in metadata); fall back to profile defaults.
+        const pick = (scheduleVal: any, agentVal: any, fallback: any = null) =>
+          norm(scheduleVal) ?? agentVal ?? fallback;
         const { data: post, error: pe } = await admin.from("generated_posts").insert({
           user_id: userId, content, title: item.title,
           input_id: inputId, input_ids: [inputId],
-          tone: norm(schedule.tone),
-          length: norm(schedule.length) || profile?.default_length || null,
-          cta: norm(schedule.cta) || profile?.default_cta || null,
-          goal: norm(schedule.goal),
-          language: norm(schedule.language) || profile?.preferred_language || null,
-          target_audience: norm(schedule.target_audience),
-          content_focus: norm(schedule.content_focus),
+          tone: pick(schedule.tone, decisions.tone),
+          length: pick(schedule.length, decisions.length, profile?.default_length || null),
+          cta: pick(schedule.cta, decisions.cta, profile?.default_cta || null),
+          goal: pick(schedule.goal, decisions.goal),
+          language: pick(schedule.language, decisions.language, profile?.preferred_language || null),
+          target_audience: pick(schedule.target_audience, decisions.target_audience),
+          content_focus: pick(schedule.content_focus, decisions.content_focus),
           voice_id: schedule.voice_id || profile?.default_voice_id || null,
           status: "draft",
           source_newsletter_id: newsletterId,
