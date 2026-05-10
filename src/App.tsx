@@ -19,6 +19,7 @@ import VoicePage from "@/pages/VoicePage";
 import NewsletterPage from "@/pages/NewsletterPage";
 import InstallPage from "@/pages/InstallPage";
 import McpPage from "@/pages/McpPage";
+import AgentPage from "@/pages/AgentPage";
 import UnsubscribePage from "@/pages/UnsubscribePage";
 import NotFound from "@/pages/NotFound";
 
