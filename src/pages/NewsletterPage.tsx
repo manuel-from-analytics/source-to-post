@@ -700,10 +700,20 @@ function NewsletterView({ newsletter }: { newsletter: Newsletter }) {
 
 export default function NewsletterPage() {
   const { t } = useLanguage();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [topic, setTopic] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(searchParams.get("id"));
   const [generatedNewsletter, setGeneratedNewsletter] = useState<Newsletter | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
+
+  // React to ?id=... changes (e.g. when navigating from agent runs)
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id && id !== selectedId) {
+      setSelectedId(id);
+      setGeneratedNewsletter(null);
+    }
+  }, [searchParams]);
 
   const { data: newsletters, isLoading: loadingHistory } = useNewsletters();
   const { data: pastTopics } = useSearchTopics();
