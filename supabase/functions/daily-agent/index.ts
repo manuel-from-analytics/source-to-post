@@ -21,7 +21,20 @@ const lengthMap: Record<string, string> = { short: "corto (~100 palabras)", medi
 const ctaMap: Record<string, string> = { question: "una pregunta abierta al lector", share: "invitar a compartir", follow: "invitar a seguir", link: "invitar a visitar un enlace", none: "sin call to action" };
 const langMap: Record<string, string> = { es: "español", en: "inglés", pt: "portugués" };
 
-async function generateContent(supabase: SupabaseClient, params: any): Promise<string> {
+interface GenerationResult {
+  content: string;
+  decisions: {
+    goal?: string | null;
+    tone?: string | null;
+    language?: string | null;
+    length?: string | null;
+    cta?: string | null;
+    target_audience?: string | null;
+    content_focus?: string | null;
+  };
+}
+
+async function generateContent(supabase: SupabaseClient, params: any): Promise<GenerationResult> {
   let sourceTexts: string[] = [];
   if (params.input_ids?.length) {
     const { data: inputs } = await supabase.from("inputs")
