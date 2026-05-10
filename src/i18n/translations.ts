@@ -848,6 +848,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
   pt: {
     // Navigation
     "nav.dashboard": "Painel",
+    "nav.agent": "Agente",
     "nav.newsletter": "Newsletter",
     "nav.library": "Biblioteca",
     "nav.voice": "Minha Voz",
