@@ -149,6 +149,12 @@ Deno.serve(async (req) => {
       if (userError || !userData?.user) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else if (!internalUserId) {
+      return new Response(JSON.stringify({ error: "x-internal-user-id required for service-role calls" }), {
+        status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
