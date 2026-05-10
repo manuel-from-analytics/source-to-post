@@ -307,7 +307,7 @@ export default function InputDetailPage() {
           <CardHeader className="pb-2 px-3 sm:px-6">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <PenTool className="h-4 w-4" />
-              Posts generados ({relatedPosts.length})
+              {t("inputDetail.relatedPosts").replace("{count}", String(relatedPosts.length))}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 sm:px-6 space-y-2">
