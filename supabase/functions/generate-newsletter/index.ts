@@ -187,28 +187,20 @@ serve(async (req) => {
       }
     }
 
-    // Step 1: Collect previously used URLs+titles for this user to avoid repetition.
-    // URL dedup window kept short (14d) to avoid blocking legit reruns on stable topics
-    // where Google keeps returning the same top results. Title dedup window is wider.
+    // Step 1: Collect previously used URLs (last 14 days) to avoid repeating the exact same source.
+    // We only dedup by normalized URL — title-based dedup was removed because it blocked
+    // legitimate distinct news that happened to share words with previous items.
     const lookbackDays = 14;
-    const recentTitleDays = 14;
     const lookbackIso = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
-    const recentTitleIso = new Date(Date.now() - recentTitleDays * 24 * 60 * 60 * 1000).toISOString();
     const { data: allExistingItems } = await supabase
       .from("newsletter_items")
-      .select("url, title, created_at, newsletters!inner(user_id)")
+      .select("url, created_at, newsletters!inner(user_id)")
       .eq("newsletters.user_id", userId)
       .gte("created_at", lookbackIso)
       .order("created_at", { ascending: false });
     const recentUrlsNorm = new Set<string>();
-    const recentTitleTokens: Set<string>[] = [];
-    const recentTitlesForPrompt: string[] = [];
     for (const it of (allExistingItems || []) as any[]) {
       if (it.url) recentUrlsNorm.add(normalizeUrl(it.url));
-      if (it.created_at >= recentTitleIso && it.title) {
-        recentTitleTokens.push(tokenizeTitle(it.title));
-        recentTitlesForPrompt.push(it.title);
-      }
     }
     const existingUrls: string[] = Array.from(recentUrlsNorm);
 
@@ -260,7 +252,6 @@ ${sourceSummaries}
 
 ${existingUrls.length > 0 ? `ALREADY USED URLs (DO NOT repeat these, neither exact nor with different tracking params):\n${existingUrls.slice(0, 200).join("\n")}` : ""}
 
-${recentTitlesForPrompt.length > 0 ? `RECENTLY COVERED TOPICS (last ${recentTitleDays} days — DO NOT repeat the same news/topic, even from a different source):\n${recentTitlesForPrompt.slice(0, 80).map((t) => `- ${t}`).join("\n")}` : ""}
 
 GENERAL RULES:
 1. Select exactly 5 items.
@@ -386,14 +377,11 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
       }
     }
 
-    // Step 3.6: Hard dedup post-AI (URL + title-based topic similarity).
+    // Step 3.6: Hard dedup post-AI by normalized URL only.
     if (Array.isArray(newsletter.items)) {
       const beforeDedup = newsletter.items.length;
       const seenUrlsThisBatch = new Set<string>();
-      const acceptedTitleTokens: Set<string>[] = [];
       let droppedByUrl = 0;
-      let droppedByTitle = 0;
-      const TITLE_SIMILARITY_THRESHOLD = 0.7;
 
       newsletter.items = newsletter.items.filter((it: any) => {
         const norm = normalizeUrl(it?.url || "");
@@ -402,21 +390,11 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
           droppedByUrl++;
           return false;
         }
-        const tokens = tokenizeTitle(it?.title || "");
-        if (tokens.size > 0) {
-          const dupHistorical = recentTitleTokens.some((t) => jaccard(tokens, t) >= TITLE_SIMILARITY_THRESHOLD);
-          const dupBatch = acceptedTitleTokens.some((t) => jaccard(tokens, t) >= TITLE_SIMILARITY_THRESHOLD);
-          if (dupHistorical || dupBatch) {
-            droppedByTitle++;
-            return false;
-          }
-        }
         seenUrlsThisBatch.add(norm);
-        acceptedTitleTokens.push(tokens);
         return true;
       });
 
-      console.log(`Dedup: ${beforeDedup} → ${newsletter.items.length} (dropped ${droppedByUrl} by URL, ${droppedByTitle} by title)`);
+      console.log(`Dedup: ${beforeDedup} → ${newsletter.items.length} (dropped ${droppedByUrl} by URL)`);
 
       if (newsletter.items.length < 1) {
         return new Response(JSON.stringify({
