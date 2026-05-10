@@ -51,6 +51,17 @@ export default function HistoryPage() {
   const publishToLabel = usePublishToLabel();
   const unpublishFromLabel = useUnpublishFromLabel();
 
+  // Auto-open a post if navigated here with { openPostId }
+  useEffect(() => {
+    const id = (location.state as any)?.openPostId as string | undefined;
+    if (!id || !posts) return;
+    const found = posts.find((p) => p.id === id);
+    if (found) {
+      setSelectedPost(found);
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location.state, posts, navigate, location.pathname]);
+
   const statusLabels: Record<PostStatus, string> = {
     draft: t("history.draft"),
     final: t("history.final"),
