@@ -352,6 +352,20 @@ export default function GeneratorPage() {
                   .filter((s) => !onlyFavorites || s.is_favorite)
                   .map((source) => {
                   const Icon = typeIcons[source.type] || FileText;
+                  const status = getExtractionStatus(source);
+                  const len = getSourceContent(source).trim().length;
+                  const statusLabel =
+                    status === "ready"
+                      ? `✓ ${len.toLocaleString()} chars`
+                      : status === "thin"
+                      ? `⚠ Extracción corta (${len})`
+                      : "⚠ Sin contenido extraído";
+                  const statusClass =
+                    status === "ready"
+                      ? "text-emerald-600 dark:text-emerald-400"
+                      : status === "thin"
+                      ? "text-amber-600 dark:text-amber-400"
+                      : "text-destructive";
                   return (
                     <label
                       key={source.id}
@@ -366,6 +380,7 @@ export default function GeneratorPage() {
                         <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
                           <Icon className="h-3 w-3 text-muted-foreground shrink-0" />
                           <span className="text-[10px] text-muted-foreground capitalize">{source.type}</span>
+                          <span className={`text-[10px] font-medium ${statusClass}`}>{statusLabel}</span>
                         </div>
                       </div>
                     </label>
