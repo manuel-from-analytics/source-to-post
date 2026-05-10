@@ -196,7 +196,16 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
       let inputId = item.input_id;
       if (!inputId) {
         const isYoutube = (item.url || "").includes("youtube.com") || (item.url || "").includes("youtu.be");
-        let extracted: string | null = null;
+        // 1) Insert the input first (without content) so extract-url can populate it.
+        const { data: newInput, error: ie } = await admin.from("inputs").insert({
+          user_id: userId, title: item.title, type: isYoutube ? "youtube" : "url",
+          original_url: item.url, summary: item.description || null,
+        }).select().single();
+        if (ie) { console.error("input insert failed", ie); continue; }
+        inputId = newInput.id;
+        await admin.from("newsletter_items").update({ imported_to_library: true, input_id: inputId }).eq("id", item.id);
+
+        // 2) Synchronously call extract-url with input_id; it writes extracted_content into the row.
         if (schedule.extract_content) {
           try {
             const ex = await fetch(`${SUPABASE_URL}/functions/v1/extract-url`, {
@@ -207,18 +216,17 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
                 apikey: SUPABASE_ANON_KEY,
                 "x-internal-user-id": userId,
               },
-              body: JSON.stringify({ url: item.url }),
+              body: JSON.stringify({ input_id: inputId }),
             });
-            if (ex.ok) { const d = await ex.json(); extracted = d.content || d.extracted_content || null; }
-          } catch (_) { /* best-effort */ }
+            if (!ex.ok) {
+              const errText = await ex.text().catch(() => "");
+              console.error("extract-url failed", ex.status, errText);
+            } else {
+              const d = await ex.json().catch(() => ({}));
+              console.log(`Extracted content for ${item.url}: length=${d.length ?? "unknown"}`);
+            }
+          } catch (e) { console.error("extract-url threw", e); }
         }
-        const { data: newInput, error: ie } = await admin.from("inputs").insert({
-          user_id: userId, title: item.title, type: isYoutube ? "youtube" : "url",
-          original_url: item.url, raw_content: extracted, summary: item.description || null,
-        }).select().single();
-        if (ie) { console.error("input insert failed", ie); continue; }
-        inputId = newInput.id;
-        await admin.from("newsletter_items").update({ imported_to_library: true, input_id: inputId }).eq("id", item.id);
       }
 
       try {
