@@ -187,28 +187,20 @@ serve(async (req) => {
       }
     }
 
-    // Step 1: Collect previously used URLs+titles for this user to avoid repetition.
-    // URL dedup window kept short (14d) to avoid blocking legit reruns on stable topics
-    // where Google keeps returning the same top results. Title dedup window is wider.
+    // Step 1: Collect previously used URLs (last 14 days) to avoid repeating the exact same source.
+    // We only dedup by normalized URL — title-based dedup was removed because it blocked
+    // legitimate distinct news that happened to share words with previous items.
     const lookbackDays = 14;
-    const recentTitleDays = 14;
     const lookbackIso = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000).toISOString();
-    const recentTitleIso = new Date(Date.now() - recentTitleDays * 24 * 60 * 60 * 1000).toISOString();
     const { data: allExistingItems } = await supabase
       .from("newsletter_items")
-      .select("url, title, created_at, newsletters!inner(user_id)")
+      .select("url, created_at, newsletters!inner(user_id)")
       .eq("newsletters.user_id", userId)
       .gte("created_at", lookbackIso)
       .order("created_at", { ascending: false });
     const recentUrlsNorm = new Set<string>();
-    const recentTitleTokens: Set<string>[] = [];
-    const recentTitlesForPrompt: string[] = [];
     for (const it of (allExistingItems || []) as any[]) {
       if (it.url) recentUrlsNorm.add(normalizeUrl(it.url));
-      if (it.created_at >= recentTitleIso && it.title) {
-        recentTitleTokens.push(tokenizeTitle(it.title));
-        recentTitlesForPrompt.push(it.title);
-      }
     }
     const existingUrls: string[] = Array.from(recentUrlsNorm);
 
