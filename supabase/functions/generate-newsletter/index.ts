@@ -377,14 +377,11 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
       }
     }
 
-    // Step 3.6: Hard dedup post-AI (URL + title-based topic similarity).
+    // Step 3.6: Hard dedup post-AI by normalized URL only.
     if (Array.isArray(newsletter.items)) {
       const beforeDedup = newsletter.items.length;
       const seenUrlsThisBatch = new Set<string>();
-      const acceptedTitleTokens: Set<string>[] = [];
       let droppedByUrl = 0;
-      let droppedByTitle = 0;
-      const TITLE_SIMILARITY_THRESHOLD = 0.7;
 
       newsletter.items = newsletter.items.filter((it: any) => {
         const norm = normalizeUrl(it?.url || "");
@@ -393,21 +390,11 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
           droppedByUrl++;
           return false;
         }
-        const tokens = tokenizeTitle(it?.title || "");
-        if (tokens.size > 0) {
-          const dupHistorical = recentTitleTokens.some((t) => jaccard(tokens, t) >= TITLE_SIMILARITY_THRESHOLD);
-          const dupBatch = acceptedTitleTokens.some((t) => jaccard(tokens, t) >= TITLE_SIMILARITY_THRESHOLD);
-          if (dupHistorical || dupBatch) {
-            droppedByTitle++;
-            return false;
-          }
-        }
         seenUrlsThisBatch.add(norm);
-        acceptedTitleTokens.push(tokens);
         return true;
       });
 
-      console.log(`Dedup: ${beforeDedup} → ${newsletter.items.length} (dropped ${droppedByUrl} by URL, ${droppedByTitle} by title)`);
+      console.log(`Dedup: ${beforeDedup} → ${newsletter.items.length} (dropped ${droppedByUrl} by URL)`);
 
       if (newsletter.items.length < 1) {
         return new Response(JSON.stringify({
