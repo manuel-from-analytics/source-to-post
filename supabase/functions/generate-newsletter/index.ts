@@ -384,6 +384,50 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
       }
     }
 
+    // Step 3.6: Hard dedup post-AI (URL + title-based topic similarity).
+    if (Array.isArray(newsletter.items)) {
+      const beforeDedup = newsletter.items.length;
+      const seenUrlsThisBatch = new Set<string>();
+      const acceptedTitleTokens: Set<string>[] = [];
+      let droppedByUrl = 0;
+      let droppedByTitle = 0;
+      const TITLE_SIMILARITY_THRESHOLD = 0.7;
+
+      newsletter.items = newsletter.items.filter((it: any) => {
+        const norm = normalizeUrl(it?.url || "");
+        if (!norm) { droppedByUrl++; return false; }
+        if (recentUrlsNorm.has(norm) || seenUrlsThisBatch.has(norm)) {
+          droppedByUrl++;
+          return false;
+        }
+        const tokens = tokenizeTitle(it?.title || "");
+        if (tokens.size > 0) {
+          const dupHistorical = recentTitleTokens.some((t) => jaccard(tokens, t) >= TITLE_SIMILARITY_THRESHOLD);
+          const dupBatch = acceptedTitleTokens.some((t) => jaccard(tokens, t) >= TITLE_SIMILARITY_THRESHOLD);
+          if (dupHistorical || dupBatch) {
+            droppedByTitle++;
+            return false;
+          }
+        }
+        seenUrlsThisBatch.add(norm);
+        acceptedTitleTokens.push(tokens);
+        return true;
+      });
+
+      console.log(`Dedup: ${beforeDedup} → ${newsletter.items.length} (dropped ${droppedByUrl} by URL, ${droppedByTitle} by title)`);
+
+      if (newsletter.items.length < 3) {
+        return new Response(JSON.stringify({
+          error: "No se encontró suficiente contenido nuevo (la mayoría ya estaba cubierto en newsletters recientes). Prueba a ampliar el topic o la ventana de frescura.",
+        }), {
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (newsletter.items.length < 5) {
+        console.warn(`Newsletter saved with only ${newsletter.items.length} items after dedup.`);
+      }
+    }
+
     // Format readable content
     const formattedContent = formatNewsletter(newsletter);
 
