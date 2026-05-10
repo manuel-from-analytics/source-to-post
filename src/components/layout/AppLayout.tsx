@@ -14,6 +14,7 @@ import {
   Newspaper,
   Smartphone,
   Plug,
+  Bot,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageContext";
