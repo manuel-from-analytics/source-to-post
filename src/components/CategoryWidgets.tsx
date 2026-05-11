@@ -84,7 +84,7 @@ export function CategoryPicker({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-2" align="end" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Categorías</p>
+        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">{t("categories.title")}</p>
         <div className="space-y-1 max-h-40 overflow-y-auto">
           {(categories ?? []).map((cat) => (
             <button
