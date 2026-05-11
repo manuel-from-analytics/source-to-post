@@ -103,7 +103,7 @@ export function PostLabelPicker({ postId }: { postId: string }) {
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-2" align="end" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Labels</p>
+        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">{t("labels.title")}</p>
         <div className="space-y-1 max-h-40 overflow-y-auto">
           {(labels ?? []).map((lbl) => {
             const isAssigned = (assignedIds ?? []).includes(lbl.id);
