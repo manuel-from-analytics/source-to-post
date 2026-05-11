@@ -283,7 +283,7 @@ export default function McpPage() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{k.name}</p>
                     <p className="text-xs text-muted-foreground break-all">
-                      Creada {new Date(k.created_at).toLocaleDateString()} · {k.last_used_at ? `Último uso ${new Date(k.last_used_at).toLocaleString()}` : "Sin usar"}
+                      {t("mcp.created")} {new Date(k.created_at).toLocaleDateString()} · {k.last_used_at ? `${t("mcp.lastUsed")} ${new Date(k.last_used_at).toLocaleString()}` : t("mcp.unused")}
                     </p>
                   </div>
                   <Button size="icon" variant="ghost" onClick={() => deleteAgentKey(k.id)}>
