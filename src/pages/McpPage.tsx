@@ -343,26 +343,26 @@ curl -s -X POST "$MCP_URL" -H "x-agent-key: $AGENT_KEY" \\
         <CardContent>
           <div className="grid gap-2">
             {[
-              { name: "get_user_defaults", desc: "Devuelve los presets de tu perfil (voz, CTA, idioma, longitud)." },
+              { name: "get_user_defaults", desc: t("mcp.tool.getUserDefaults") },
               { name: "list_inputs", desc: t("mcp.tool.listInputs") },
               { name: "get_input", desc: t("mcp.tool.getInput") },
               { name: "create_input", desc: t("mcp.tool.createInput") },
               { name: "delete_input", desc: t("mcp.tool.deleteInput") },
-              { name: "list_posts", desc: "Lista posts. Filtros: status, fechas, source_newsletter_id." },
+              { name: "list_posts", desc: t("mcp.tool.listPostsExt") },
               { name: "get_post", desc: t("mcp.tool.getPost") },
-              { name: "generate_post", desc: "Genera un post. Con save:true lo guarda en una sola llamada." },
+              { name: "generate_post", desc: t("mcp.tool.generatePostExt") },
               { name: "save_post", desc: t("mcp.tool.savePost") },
               { name: "update_post", desc: t("mcp.tool.updatePost") },
               { name: "delete_post", desc: t("mcp.tool.deletePost") },
               { name: "list_voices", desc: t("mcp.tool.listVoices") },
               { name: "list_newsletters", desc: t("mcp.tool.listNewsletters") },
               { name: "get_newsletter", desc: t("mcp.tool.getNewsletter") },
-              { name: "list_newsletter_items", desc: "Lista las fuentes encontradas en una newsletter." },
-              { name: "generate_newsletter", desc: "Genera una nueva newsletter con tus preferencias." },
-              { name: "import_newsletter_item_as_input", desc: "Importa un item de newsletter como source en la biblioteca." },
-              { name: "generate_posts_from_newsletter", desc: "Atómico: importa items y crea 1 post draft por fuente. Idempotente." },
-              { name: "notify_review", desc: "Envía email con los posts listos para revisar." },
-              { name: "log_agent_run", desc: "Registra el resultado de una ejecución del agente." },
+              { name: "list_newsletter_items", desc: t("mcp.tool.listNewsletterItems") },
+              { name: "generate_newsletter", desc: t("mcp.tool.generateNewsletter") },
+              { name: "import_newsletter_item_as_input", desc: t("mcp.tool.importNewsletterItem") },
+              { name: "generate_posts_from_newsletter", desc: t("mcp.tool.generatePostsFromNewsletter") },
+              { name: "notify_review", desc: t("mcp.tool.notifyReview") },
+              { name: "log_agent_run", desc: t("mcp.tool.logAgentRun") },
             ].map((tool) => (
               <div key={tool.name} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50">
                 <code className="text-xs font-mono bg-primary/10 text-primary px-2 py-1 rounded shrink-0">
