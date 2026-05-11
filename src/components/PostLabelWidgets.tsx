@@ -143,7 +143,7 @@ export function PostLabelPicker({ postId }: { postId: string }) {
           </div>
           {newName.trim() && (
             <Button size="sm" className="w-full h-7 text-xs" onClick={handleCreate} disabled={createLabel.isPending}>
-              Crear "{newName.trim()}"
+              {t("labels.create")} "{newName.trim()}"
             </Button>
           )}
         </div>
