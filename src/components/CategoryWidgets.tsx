@@ -151,7 +151,7 @@ export function CategoryFilter({
           !selectedCategoryId ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"
         }`}
       >
-        Todas
+        {t("categories.all")}
       </button>
       {categories.map((cat) => (
         <button
