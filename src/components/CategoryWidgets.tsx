@@ -138,6 +138,7 @@ export function CategoryFilter({
   selectedCategoryId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const { t } = useLanguage();
   const { data: categories } = useCategories();
 
   if (!categories?.length) return null;
