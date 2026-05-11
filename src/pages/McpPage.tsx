@@ -265,13 +265,13 @@ export default function McpPage() {
 
           {freshAgentKey && (
             <div className="rounded-lg border border-primary/40 bg-primary/5 p-3 space-y-2">
-              <p className="text-xs text-primary font-medium">Cópiala ahora — no se mostrará de nuevo:</p>
+              <p className="text-xs text-primary font-medium">{t("mcp.copyNow")}</p>
               <pre className="bg-background rounded p-2 text-xs font-mono break-all whitespace-pre-wrap">{freshAgentKey}</pre>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => copyToClipboard(freshAgentKey, "fresh")}>
-                  {copied === "fresh" ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />} Copiar
+                  {copied === "fresh" ? <Check className="h-4 w-4 mr-1" /> : <Copy className="h-4 w-4 mr-1" />} {t("mcp.copy")}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => setFreshAgentKey(null)}>Ocultar</Button>
+                <Button size="sm" variant="ghost" onClick={() => setFreshAgentKey(null)}>{t("mcp.hide")}</Button>
               </div>
             </div>
           )}
