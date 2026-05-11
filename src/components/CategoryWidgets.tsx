@@ -101,7 +101,7 @@ export function CategoryPicker({
         </div>
         <div className="border-t mt-2 pt-2 space-y-2">
           <Input
-            placeholder="Nueva categoría…"
+            placeholder={t("categories.newPlaceholder")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
