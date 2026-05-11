@@ -10,8 +10,10 @@ import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 export function LoginPage() {
+  const { t } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -39,7 +41,7 @@ export function LoginPage() {
     const { error } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
-    if (error) toast.error("Error al iniciar sesión con Google");
+    if (error) toast.error(t("auth.googleError"));
   };
 
   return (
@@ -50,15 +52,13 @@ export function LoginPage() {
             <Sparkles className="h-7 w-7 text-primary" />
             <span className="text-2xl font-bold">PostFlow</span>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Transforma tu conocimiento en posts de LinkedIn
-          </p>
+          <p className="text-sm text-muted-foreground">{t("auth.tagline")}</p>
         </div>
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Iniciar sesión</CardTitle>
-            <CardDescription>Ingresa tus credenciales para continuar</CardDescription>
+            <CardTitle className="text-lg">{t("auth.signIn")}</CardTitle>
+            <CardDescription>{t("auth.signInDesc")}</CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
@@ -69,18 +69,18 @@ export function LoginPage() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                Continuar con Google
+                {t("auth.continueGoogle")}
               </Button>
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center"><Separator /></div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">o</span>
+                  <span className="bg-card px-2 text-muted-foreground">{t("auth.or")}</span>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("auth.email")}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input id="email" type="email" placeholder="tu@email.com" className="pl-9" value={email} onChange={e => setEmail(e.target.value)} required />
@@ -88,7 +88,7 @@ export function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Contraseña</Label>
+                <Label htmlFor="password">{t("auth.password")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" className="pl-9 pr-9" value={password} onChange={e => setPassword(e.target.value)} required />
@@ -100,11 +100,11 @@ export function LoginPage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button className="w-full" type="submit" disabled={loading}>
-                {loading ? "Iniciando..." : "Iniciar sesión"}
+                {loading ? t("auth.signingIn") : t("auth.signIn")}
               </Button>
               <p className="text-center text-sm text-muted-foreground">
-                ¿No tienes cuenta?{" "}
-                <Link to="/signup" className="font-medium text-primary hover:underline">Regístrate</Link>
+                {t("auth.noAccount")}{" "}
+                <Link to="/signup" className="font-medium text-primary hover:underline">{t("auth.signUpLink")}</Link>
               </p>
             </CardFooter>
           </form>
@@ -115,6 +115,7 @@ export function LoginPage() {
 }
 
 export function SignupPage() {
+  const { t } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -130,7 +131,7 @@ export function SignupPage() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (password.length < 6) {
-      toast.error("La contraseña debe tener al menos 6 caracteres");
+      toast.error(t("auth.passwordTooShort"));
       return;
     }
     setLoading(true);
@@ -146,7 +147,7 @@ export function SignupPage() {
     if (error) {
       toast.error(error.message);
     } else {
-      toast.success("¡Cuenta creada! Revisa tu email para confirmar tu cuenta.");
+      toast.success(t("auth.accountCreated"));
     }
   };
 
@@ -154,7 +155,7 @@ export function SignupPage() {
     const { error } = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
-    if (error) toast.error("Error al registrarse con Google");
+    if (error) toast.error(t("auth.googleSignupError"));
   };
 
   return (
@@ -165,13 +166,13 @@ export function SignupPage() {
             <Sparkles className="h-7 w-7 text-primary" />
             <span className="text-2xl font-bold">PostFlow</span>
           </div>
-          <p className="text-sm text-muted-foreground">Crea tu cuenta y empieza a generar contenido</p>
+          <p className="text-sm text-muted-foreground">{t("auth.signupTagline")}</p>
         </div>
 
         <Card>
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Crear cuenta</CardTitle>
-            <CardDescription>Completa tus datos para registrarte</CardDescription>
+            <CardTitle className="text-lg">{t("auth.createAccount")}</CardTitle>
+            <CardDescription>{t("auth.createAccountDesc")}</CardDescription>
           </CardHeader>
           <form onSubmit={handleSignup}>
             <CardContent className="space-y-4">
@@ -182,26 +183,26 @@ export function SignupPage() {
                   <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
                   <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                 </svg>
-                Continuar con Google
+                {t("auth.continueGoogle")}
               </Button>
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center"><Separator /></div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">o</span>
+                  <span className="bg-card px-2 text-muted-foreground">{t("auth.or")}</span>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="name">Nombre completo</Label>
+                <Label htmlFor="name">{t("auth.fullName")}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="name" placeholder="Tu nombre" className="pl-9" value={fullName} onChange={e => setFullName(e.target.value)} required />
+                  <Input id="name" placeholder={t("auth.fullNamePlaceholder")} className="pl-9" value={fullName} onChange={e => setFullName(e.target.value)} required />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
+                <Label htmlFor="signup-email">{t("auth.email")}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input id="signup-email" type="email" placeholder="tu@email.com" className="pl-9" value={email} onChange={e => setEmail(e.target.value)} required />
@@ -209,10 +210,10 @@ export function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="signup-password">Contraseña</Label>
+                <Label htmlFor="signup-password">{t("auth.password")}</Label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input id="signup-password" type={showPassword ? "text" : "password"} placeholder="Mínimo 6 caracteres" className="pl-9 pr-9" value={password} onChange={e => setPassword(e.target.value)} required />
+                  <Input id="signup-password" type={showPassword ? "text" : "password"} placeholder={t("auth.minPassword")} className="pl-9 pr-9" value={password} onChange={e => setPassword(e.target.value)} required />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -221,11 +222,11 @@ export function SignupPage() {
             </CardContent>
             <CardFooter className="flex flex-col gap-3">
               <Button className="w-full" type="submit" disabled={loading}>
-                {loading ? "Creando cuenta..." : "Crear cuenta"}
+                {loading ? t("auth.creating") : t("auth.createAccount")}
               </Button>
               <p className="text-center text-sm text-muted-foreground">
-                ¿Ya tienes cuenta?{" "}
-                <Link to="/login" className="font-medium text-primary hover:underline">Inicia sesión</Link>
+                {t("auth.haveAccount")}{" "}
+                <Link to="/login" className="font-medium text-primary hover:underline">{t("auth.signInLink")}</Link>
               </p>
             </CardFooter>
           </form>

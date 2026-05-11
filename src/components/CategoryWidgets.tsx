@@ -10,6 +10,7 @@ import {
   useCategories, useCreateCategory, useDeleteCategory, useAssignCategory,
   type CategoryRow,
 } from "@/hooks/useCategories";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const PRESET_COLORS = [
   "#3b82f6", "#ef4444", "#22c55e", "#f59e0b", "#8b5cf6",
@@ -54,6 +55,7 @@ export function CategoryPicker({
   inputId: string;
   currentCategoryId: string | null;
 }) {
+  const { t } = useLanguage();
   const { data: categories } = useCategories();
   const createCategory = useCreateCategory();
   const assignCategory = useAssignCategory();
@@ -82,7 +84,7 @@ export function CategoryPicker({
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-2" align="end" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Categorías</p>
+        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">{t("categories.title")}</p>
         <div className="space-y-1 max-h-40 overflow-y-auto">
           {(categories ?? []).map((cat) => (
             <button
@@ -99,7 +101,7 @@ export function CategoryPicker({
         </div>
         <div className="border-t mt-2 pt-2 space-y-2">
           <Input
-            placeholder="Nueva categoría…"
+            placeholder={t("categories.newPlaceholder")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
@@ -119,7 +121,7 @@ export function CategoryPicker({
           </div>
           {newName.trim() && (
             <Button size="sm" className="w-full h-7 text-xs" onClick={handleCreate} disabled={createCategory.isPending}>
-              Crear "{newName.trim()}"
+              {t("categories.create")} "{newName.trim()}"
             </Button>
           )}
         </div>
@@ -136,6 +138,7 @@ export function CategoryFilter({
   selectedCategoryId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const { t } = useLanguage();
   const { data: categories } = useCategories();
 
   if (!categories?.length) return null;
@@ -148,7 +151,7 @@ export function CategoryFilter({
           !selectedCategoryId ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"
         }`}
       >
-        Todas
+        {t("categories.all")}
       </button>
       {categories.map((cat) => (
         <button

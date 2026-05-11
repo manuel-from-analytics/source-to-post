@@ -10,6 +10,7 @@ import {
   usePostLabels, useCreatePostLabel, useTogglePostLabel,
   usePostLabelAssignments, type PostLabel,
 } from "@/hooks/usePostLabels";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const PRESET_COLORS = [
   "#3b82f6", "#ef4444", "#22c55e", "#f59e0b", "#8b5cf6",
@@ -73,6 +74,7 @@ export function PostLabelBadge({
 }
 
 export function PostLabelPicker({ postId }: { postId: string }) {
+  const { t } = useLanguage();
   const { data: labels } = usePostLabels();
   const { data: assignedIds } = usePostLabelAssignments(postId);
   const createLabel = useCreatePostLabel();
@@ -101,7 +103,7 @@ export function PostLabelPicker({ postId }: { postId: string }) {
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-56 p-2" align="end" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Labels</p>
+        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">{t("labels.title")}</p>
         <div className="space-y-1 max-h-40 overflow-y-auto">
           {(labels ?? []).map((lbl) => {
             const isAssigned = (assignedIds ?? []).includes(lbl.id);
@@ -121,7 +123,7 @@ export function PostLabelPicker({ postId }: { postId: string }) {
         </div>
         <div className="border-t mt-2 pt-2 space-y-2">
           <Input
-            placeholder="Nueva label…"
+            placeholder={t("labels.newPlaceholder")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
@@ -141,7 +143,7 @@ export function PostLabelPicker({ postId }: { postId: string }) {
           </div>
           {newName.trim() && (
             <Button size="sm" className="w-full h-7 text-xs" onClick={handleCreate} disabled={createLabel.isPending}>
-              Crear "{newName.trim()}"
+              {t("labels.create")} "{newName.trim()}"
             </Button>
           )}
         </div>
