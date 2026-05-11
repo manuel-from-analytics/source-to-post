@@ -10,6 +10,7 @@ import {
   usePostLabels, useCreatePostLabel, useTogglePostLabel,
   usePostLabelAssignments, type PostLabel,
 } from "@/hooks/usePostLabels";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 const PRESET_COLORS = [
   "#3b82f6", "#ef4444", "#22c55e", "#f59e0b", "#8b5cf6",
