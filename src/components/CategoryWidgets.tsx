@@ -55,6 +55,7 @@ export function CategoryPicker({
   inputId: string;
   currentCategoryId: string | null;
 }) {
+  const { t } = useLanguage();
   const { data: categories } = useCategories();
   const createCategory = useCreateCategory();
   const assignCategory = useAssignCategory();
