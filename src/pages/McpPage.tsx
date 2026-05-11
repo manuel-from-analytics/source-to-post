@@ -329,9 +329,7 @@ curl -s -X POST "$MCP_URL" -H "x-agent-key: $AGENT_KEY" \\
         "name":"notify_review","arguments":{"post_ids":["<id1>","<id2>"]}}}'`}
           </pre>
           <p className="text-xs text-muted-foreground">
-            Nota: <code>generate_newsletter</code> y <code>notify_review</code> requieren <code>x-user-token</code> (JWT de usuario)
-            porque encadenan otras edge functions. Para automatización completa: genera la newsletter manualmente o desde un cron con JWT refresco,
-            y deja al agente crear los posts y notificarte vía email a través de un proxy con JWT.
+            {t("mcp.recipeNote")}
           </p>
         </CardContent>
       </Card>
