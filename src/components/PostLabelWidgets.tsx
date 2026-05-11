@@ -123,7 +123,7 @@ export function PostLabelPicker({ postId }: { postId: string }) {
         </div>
         <div className="border-t mt-2 pt-2 space-y-2">
           <Input
-            placeholder="Nueva label…"
+            placeholder={t("labels.newPlaceholder")}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleCreate()}
