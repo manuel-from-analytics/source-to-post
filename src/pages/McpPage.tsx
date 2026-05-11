@@ -49,9 +49,9 @@ export default function McpPage() {
       setFreshAgentKey(key);
       setNewKeyName("");
       await loadAgentKeys();
-      toast.success("Agent key creada. Cópiala ahora; no se mostrará de nuevo.");
+      toast.success(t("mcp.agentKeyCreated"));
     } catch (e: any) {
-      toast.error(e.message || "Error al crear");
+      toast.error(e.message || t("mcp.createError"));
     } finally {
       setCreatingKey(false);
     }
