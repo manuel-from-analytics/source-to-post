@@ -74,6 +74,7 @@ export function PostLabelBadge({
 }
 
 export function PostLabelPicker({ postId }: { postId: string }) {
+  const { t } = useLanguage();
   const { data: labels } = usePostLabels();
   const { data: assignedIds } = usePostLabelAssignments(postId);
   const createLabel = useCreatePostLabel();
