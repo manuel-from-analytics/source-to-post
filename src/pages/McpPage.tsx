@@ -249,18 +249,17 @@ export default function McpPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Bot className="h-5 w-5 text-primary" />
-            Agent API Keys
+            {t("mcp.agentKeysTitle")}
           </CardTitle>
           <CardDescription>
-            Claves de larga duración para que un agente externo (cron, n8n, script) llame al MCP sin token caducable.
-            Se envían en el header <code>x-agent-key</code>.
+            {t("mcp.agentKeysDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2">
-            <Input placeholder="Nombre (ej. cron-diario)" value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} />
+            <Input placeholder={t("mcp.agentKeyNamePlaceholder")} value={newKeyName} onChange={(e) => setNewKeyName(e.target.value)} />
             <Button onClick={createAgentKey} disabled={creatingKey || !newKeyName.trim()}>
-              <Plus className="h-4 w-4 mr-1" /> Crear
+              <Plus className="h-4 w-4 mr-1" /> {t("mcp.create")}
             </Button>
           </div>
 
