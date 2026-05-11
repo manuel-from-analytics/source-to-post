@@ -301,10 +301,10 @@ export default function McpPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <Terminal className="h-5 w-5 text-primary" />
-            Receta: agente diario
+            {t("mcp.recipeTitle")}
           </CardTitle>
           <CardDescription>
-            Llama el MCP cada día con tu agent key para generar borradores y recibir un email de revisión.
+            {t("mcp.recipeDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
