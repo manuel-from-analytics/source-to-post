@@ -121,7 +121,7 @@ export function CategoryPicker({
           </div>
           {newName.trim() && (
             <Button size="sm" className="w-full h-7 text-xs" onClick={handleCreate} disabled={createCategory.isPending}>
-              Crear "{newName.trim()}"
+              {t("categories.create")} "{newName.trim()}"
             </Button>
           )}
         </div>
