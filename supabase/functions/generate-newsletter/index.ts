@@ -252,7 +252,7 @@ serve(async (req) => {
 
     for (const q of queries) {
       if (freshCandidates.length >= TARGET_FRESH) break;
-      const batch = await firecrawlSearch(q, FIRECRAWL_API_KEY, 25, tbs);
+      const batch = await firecrawlSearch(q, FIRECRAWL_API_KEY, 12, tbs);
       console.log(`Search "${q}" → ${batch.length} raw results`);
       for (const r of batch) {
         const norm = normalizeUrl(r?.url || "");
