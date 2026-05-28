@@ -76,7 +76,9 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : inter / union;
 }
 
-async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: string): Promise<any[]> {
+async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: string, timeoutMs = 45000): Promise<any[]> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const body: Record<string, unknown> = {
       query,
@@ -91,6 +93,7 @@ async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: 
         "Content-Type": "application/json",
       },
       body: JSON.stringify(body),
+      signal: ctrl.signal,
     });
     if (!response.ok) {
       console.error("Firecrawl search error:", response.status);
@@ -99,8 +102,10 @@ async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: 
     const data = await response.json();
     return data.data || [];
   } catch (e) {
-    console.error("Firecrawl search failed:", e);
+    console.error("Firecrawl search failed:", (e as Error)?.message || e);
     return [];
+  } finally {
+    clearTimeout(timer);
   }
 }
 
@@ -247,7 +252,7 @@ serve(async (req) => {
 
     for (const q of queries) {
       if (freshCandidates.length >= TARGET_FRESH) break;
-      const batch = await firecrawlSearch(q, FIRECRAWL_API_KEY, 25, tbs);
+      const batch = await firecrawlSearch(q, FIRECRAWL_API_KEY, 12, tbs);
       console.log(`Search "${q}" → ${batch.length} raw results`);
       for (const r of batch) {
         const norm = normalizeUrl(r?.url || "");
