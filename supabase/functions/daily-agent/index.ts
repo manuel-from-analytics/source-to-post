@@ -329,19 +329,30 @@ serve(async (req) => {
       const currentHour = new Date().getUTCHours();
       const { data: schedules } = await admin.from("agent_schedules")
         .select("user_id").eq("enabled", true).eq("run_hour", currentHour);
-      const results: any[] = [];
-      for (const s of schedules || []) {
-        try {
-          const r = await runForUser(s.user_id, { triggered_by: "cron" });
-          results.push({ user_id: s.user_id, ...r });
-        } catch (e: any) {
-          results.push({ user_id: s.user_id, error: e.message });
+
+      // Run each user in the background so the cron HTTP call returns immediately
+      // and isn't killed by the 150s idle timeout. Each runForUser updates its own
+      // agent_runs row with success/error on completion.
+      const userIds = (schedules || []).map((s: any) => s.user_id);
+      const backgroundWork = (async () => {
+        for (const uid of userIds) {
+          try {
+            await runForUser(uid, { triggered_by: "cron" });
+          } catch (e: any) {
+            console.error("cron runForUser failed for", uid, e?.message || e);
+          }
         }
+      })();
+      // @ts-ignore - EdgeRuntime is provided by Supabase edge runtime
+      if (typeof EdgeRuntime !== "undefined" && EdgeRuntime?.waitUntil) {
+        // @ts-ignore
+        EdgeRuntime.waitUntil(backgroundWork);
       }
-      return new Response(JSON.stringify({ ran: results.length, results }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      return new Response(JSON.stringify({ scheduled: userIds.length }), {
+        status: 202, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     // MANUAL path: invoked by user via "Run now" with their JWT
     if (!authHeader?.startsWith("Bearer ")) {
