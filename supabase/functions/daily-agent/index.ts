@@ -203,7 +203,11 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
       // Idempotency
       const { data: existing } = await admin.from("generated_posts")
         .select("id").eq("user_id", userId).eq("source_newsletter_item_id", item.id).maybeSingle();
-      if (existing) { postIds.push(existing.id); continue; }
+      if (existing) {
+        postIds.push(existing.id);
+        await admin.from("agent_runs").update({ posts_created: postIds.length }).eq("id", run.id);
+        continue;
+      }
 
       // Ensure input
       let inputId = item.input_id;
@@ -221,7 +225,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
         // 2) Synchronously call extract-url with input_id; it writes extracted_content into the row.
         if (schedule.extract_content) {
           try {
-            const ex = await fetch(`${SUPABASE_URL}/functions/v1/extract-url`, {
+            const ex = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/extract-url`, {
               method: "POST",
               headers: {
                 Authorization: `Bearer ${SERVICE_ROLE}`,
@@ -230,7 +234,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
                 "x-internal-user-id": userId,
               },
               body: JSON.stringify({ input_id: inputId }),
-            });
+            }, 30000, "extract-url");
             if (!ex.ok) {
               const errText = await ex.text().catch(() => "");
               console.error("extract-url failed", ex.status, errText);
@@ -276,6 +280,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
         }).select("id").single();
         if (pe) { console.error("post insert failed", pe); continue; }
         postIds.push(post.id);
+        await admin.from("agent_runs").update({ posts_created: postIds.length }).eq("id", run.id);
       } catch (e: any) {
         console.error("generate failed for item", item.id, e.message);
       }
