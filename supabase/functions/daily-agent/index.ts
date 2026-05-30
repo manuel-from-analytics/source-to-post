@@ -21,6 +21,19 @@ const lengthMap: Record<string, string> = { short: "corto (~100 palabras)", medi
 const ctaMap: Record<string, string> = { question: "una pregunta abierta al lector", share: "invitar a compartir", follow: "invitar a seguir", link: "invitar a visitar un enlace", none: "sin call to action" };
 const langMap: Record<string, string> = { es: "español", en: "inglés", pt: "portugués" };
 
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number, label: string): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } catch (e: any) {
+    if (e?.name === "AbortError") throw new Error(`${label} timed out after ${timeoutMs}ms`);
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 interface GenerationResult {
   content: string;
   decisions: {
@@ -105,7 +118,7 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
   userPrompt += `\nEl campo "decisions" SOLO debe contener las claves listadas. El campo "post" es el texto plano del post de LinkedIn.`;
 
   if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
-  const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const aiResponse = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -113,7 +126,7 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
       messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }],
       response_format: { type: "json_object" },
     }),
-  });
+  }, 45000, "post generation");
   if (!aiResponse.ok) throw new Error(`AI error ${aiResponse.status}: ${await aiResponse.text()}`);
   const aiResult = await aiResponse.json();
   const raw = (aiResult.choices?.[0]?.message?.content || "").trim();
