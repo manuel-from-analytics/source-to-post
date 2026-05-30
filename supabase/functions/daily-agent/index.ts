@@ -153,6 +153,53 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
   return { content: post, decisions: filtered };
 }
 
+const ANON_JWT_FOR_EMAIL = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcG5zcXZjYWdvd3ZhYXZ6enhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzMzODYsImV4cCI6MjA5MDIwOTM4Nn0.M5cD9O37pUxIXU8oieOtCUmggzTL2zVJ8TvryG7TqN0";
+
+async function sendAgentAlert(opts: {
+  recipient: string;
+  alertType: "stuck" | "timeout" | "no_sources" | "error";
+  runId: string;
+  startedAt?: string;
+  durationMinutes?: number;
+  errorMessage?: string;
+  topic?: string;
+}): Promise<void> {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${ANON_JWT_FOR_EMAIL}`,
+        apikey: ANON_JWT_FOR_EMAIL,
+      },
+      body: JSON.stringify({
+        templateName: "agent-run-alert",
+        recipientEmail: opts.recipient,
+        idempotencyKey: `agent-alert-${opts.alertType}-${opts.runId}`,
+        templateData: {
+          alertType: opts.alertType,
+          runId: opts.runId,
+          startedAt: opts.startedAt,
+          durationMinutes: opts.durationMinutes,
+          errorMessage: opts.errorMessage,
+          topic: opts.topic,
+        },
+      }),
+    });
+    if (!resp.ok) console.error("agent alert email failed:", resp.status, await resp.text().catch(() => ""));
+  } catch (e: any) {
+    console.error("agent alert email exception:", e?.message || e);
+  }
+}
+
+async function resolveAlertRecipient(admin: SupabaseClient, userId: string, scheduleEmail?: string | null): Promise<string | undefined> {
+  if (scheduleEmail) return scheduleEmail;
+  try {
+    const { data } = await admin.auth.admin.getUserById(userId);
+    return data?.user?.email ?? undefined;
+  } catch { return undefined; }
+}
+
 async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual" }): Promise<any> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
@@ -306,11 +353,43 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
 
     await admin.from("agent_schedules").update({ last_run_at: new Date().toISOString() }).eq("user_id", userId);
 
+    // Alert: 0 posts created (no fresh sources or all failed)
+    if (postIds.length === 0) {
+      const recipient = await resolveAlertRecipient(admin, userId, schedule.notification_email);
+      if (recipient) {
+        await sendAgentAlert({
+          recipient,
+          alertType: "no_sources",
+          runId: run.id,
+          startedAt: run.started_at,
+          topic,
+          errorMessage: `Newsletter generada (${newsletterId}) pero sin items procesables.`,
+        });
+      }
+    }
+
     return { ok: true, run_id: run.id, newsletter_id: newsletterId, posts_created: postIds.length, post_ids: postIds, notified };
   } catch (e: any) {
     await admin.from("agent_runs").update({
       status: "error", error: e.message, finished_at: new Date().toISOString(),
     }).eq("id", run.id);
+
+    // Alert: error / timeout
+    const isTimeout = /timed out|timeout|IDLE_TIMEOUT/i.test(e?.message || "");
+    const recipient = await resolveAlertRecipient(admin, userId, schedule.notification_email);
+    if (recipient) {
+      const startedMs = new Date(run.started_at).getTime();
+      const durationMinutes = Math.round((Date.now() - startedMs) / 60000);
+      await sendAgentAlert({
+        recipient,
+        alertType: isTimeout ? "timeout" : "error",
+        runId: run.id,
+        startedAt: run.started_at,
+        durationMinutes,
+        errorMessage: e?.message || String(e),
+        topic: (schedule.topic && schedule.topic.trim()) || undefined,
+      });
+    }
     throw e;
   }
 }
