@@ -153,6 +153,53 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
   return { content: post, decisions: filtered };
 }
 
+const ANON_JWT_FOR_EMAIL = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcG5zcXZjYWdvd3ZhYXZ6enhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzMzODYsImV4cCI6MjA5MDIwOTM4Nn0.M5cD9O37pUxIXU8oieOtCUmggzTL2zVJ8TvryG7TqN0";
+
+async function sendAgentAlert(opts: {
+  recipient: string;
+  alertType: "stuck" | "timeout" | "no_sources" | "error";
+  runId: string;
+  startedAt?: string;
+  durationMinutes?: number;
+  errorMessage?: string;
+  topic?: string;
+}): Promise<void> {
+  try {
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${ANON_JWT_FOR_EMAIL}`,
+        apikey: ANON_JWT_FOR_EMAIL,
+      },
+      body: JSON.stringify({
+        templateName: "agent-run-alert",
+        recipientEmail: opts.recipient,
+        idempotencyKey: `agent-alert-${opts.alertType}-${opts.runId}`,
+        templateData: {
+          alertType: opts.alertType,
+          runId: opts.runId,
+          startedAt: opts.startedAt,
+          durationMinutes: opts.durationMinutes,
+          errorMessage: opts.errorMessage,
+          topic: opts.topic,
+        },
+      }),
+    });
+    if (!resp.ok) console.error("agent alert email failed:", resp.status, await resp.text().catch(() => ""));
+  } catch (e: any) {
+    console.error("agent alert email exception:", e?.message || e);
+  }
+}
+
+async function resolveAlertRecipient(admin: SupabaseClient, userId: string, scheduleEmail?: string | null): Promise<string | undefined> {
+  if (scheduleEmail) return scheduleEmail;
+  try {
+    const { data } = await admin.auth.admin.getUserById(userId);
+    return data?.user?.email ?? undefined;
+  } catch { return undefined; }
+}
+
 async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual" }): Promise<any> {
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
 
