@@ -198,55 +198,42 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
     const { data: items } = await admin.from("newsletter_items")
       .select("*").eq("newsletter_id", newsletterId);
 
-    const postIds: string[] = [];
-    for (const item of items || []) {
-      // Idempotency
-      const { data: existing } = await admin.from("generated_posts")
-        .select("id").eq("user_id", userId).eq("source_newsletter_item_id", item.id).maybeSingle();
-      if (existing) {
-        postIds.push(existing.id);
-        await admin.from("agent_runs").update({ posts_created: postIds.length }).eq("id", run.id);
-        continue;
-      }
-
-      // Ensure input
-      let inputId = item.input_id;
-      if (!inputId) {
-        const isYoutube = (item.url || "").includes("youtube.com") || (item.url || "").includes("youtu.be");
-        // 1) Insert the input first (without content) so extract-url can populate it.
-        const { data: newInput, error: ie } = await admin.from("inputs").insert({
-          user_id: userId, title: item.title, type: isYoutube ? "youtube" : "url",
-          original_url: item.url, summary: item.description || null,
-        }).select().single();
-        if (ie) { console.error("input insert failed", ie); continue; }
-        inputId = newInput.id;
-        await admin.from("newsletter_items").update({ imported_to_library: true, input_id: inputId }).eq("id", item.id);
-
-        // 2) Synchronously call extract-url with input_id; it writes extracted_content into the row.
-        if (schedule.extract_content) {
-          try {
-            const ex = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/extract-url`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${SERVICE_ROLE}`,
-                "Content-Type": "application/json",
-                apikey: SUPABASE_ANON_KEY,
-                "x-internal-user-id": userId,
-              },
-              body: JSON.stringify({ input_id: inputId }),
-            }, 30000, "extract-url");
-            if (!ex.ok) {
-              const errText = await ex.text().catch(() => "");
-              console.error("extract-url failed", ex.status, errText);
-            } else {
-              const d = await ex.json().catch(() => ({}));
-              console.log(`Extracted content for ${item.url}: length=${d.length ?? "unknown"}`);
-            }
-          } catch (e) { console.error("extract-url threw", e); }
-        }
-      }
-
+    const processItem = async (item: any): Promise<string | null> => {
       try {
+        // Idempotency
+        const { data: existing } = await admin.from("generated_posts")
+          .select("id").eq("user_id", userId).eq("source_newsletter_item_id", item.id).maybeSingle();
+        if (existing) return existing.id;
+
+        // Ensure input
+        let inputId = item.input_id;
+        if (!inputId) {
+          const isYoutube = (item.url || "").includes("youtube.com") || (item.url || "").includes("youtu.be");
+          const { data: newInput, error: ie } = await admin.from("inputs").insert({
+            user_id: userId, title: item.title, type: isYoutube ? "youtube" : "url",
+            original_url: item.url, summary: item.description || null,
+          }).select().single();
+          if (ie) { console.error("input insert failed", ie); return null; }
+          inputId = newInput.id;
+          await admin.from("newsletter_items").update({ imported_to_library: true, input_id: inputId }).eq("id", item.id);
+
+          if (schedule.extract_content) {
+            try {
+              const ex = await fetchWithTimeout(`${SUPABASE_URL}/functions/v1/extract-url`, {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${SERVICE_ROLE}`,
+                  "Content-Type": "application/json",
+                  apikey: SUPABASE_ANON_KEY,
+                  "x-internal-user-id": userId,
+                },
+                body: JSON.stringify({ input_id: inputId }),
+              }, 25000, "extract-url");
+              if (!ex.ok) console.error("extract-url failed", ex.status, await ex.text().catch(() => ""));
+            } catch (e: any) { console.error("extract-url skipped", e?.message || e); }
+          }
+        }
+
         const { content, decisions } = await generateContent(admin, {
           input_ids: [inputId],
           voice_id: schedule.voice_id || profile?.default_voice_id || undefined,
@@ -259,8 +246,6 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
           content_focus: schedule.content_focus || undefined,
         });
         const norm = (v: any) => (v === "auto" || v === "__auto__" ? null : v);
-        // For each field: if user set an explicit value, use it; otherwise use what
-        // the agent decided (visible in metadata); fall back to profile defaults.
         const pick = (scheduleVal: any, agentVal: any, fallback: any = null) =>
           norm(scheduleVal) ?? agentVal ?? fallback;
         const { data: post, error: pe } = await admin.from("generated_posts").insert({
@@ -278,13 +263,16 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
           source_newsletter_id: newsletterId,
           source_newsletter_item_id: item.id,
         }).select("id").single();
-        if (pe) { console.error("post insert failed", pe); continue; }
-        postIds.push(post.id);
-        await admin.from("agent_runs").update({ posts_created: postIds.length }).eq("id", run.id);
+        if (pe) { console.error("post insert failed", pe); return null; }
+        return post.id;
       } catch (e: any) {
-        console.error("generate failed for item", item.id, e.message);
+        console.error("generate failed for item", item.id, e?.message || e);
+        return null;
       }
-    }
+    };
+
+    const postIds = (await Promise.all((items || []).map(processItem))).filter(Boolean) as string[];
+    await admin.from("agent_runs").update({ posts_created: postIds.length }).eq("id", run.id);
 
     // 3) Notify
     let notified = false;
