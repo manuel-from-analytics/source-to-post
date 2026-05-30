@@ -240,14 +240,20 @@ serve(async (req) => {
       .slice(0, 6)
       .map(([d]) => d);
 
-    const queries: string[] = [topic];
+    const baseTopic = topic.trim();
+    const fallbackTopic = baseTopic.toLowerCase().includes("analytics")
+      ? `${baseTopic} BI data platforms semantic layer AI agents`
+      : `${baseTopic} analysis trends research`;
+    const queries: string[] = [baseTopic];
     if (topUsedDomains.length > 0) {
       // Variant 1: exclude top 3 most-used domains
-      queries.push(`${topic} ${topUsedDomains.slice(0, 3).map((d) => `-site:${d}`).join(" ")}`);
+      queries.push(`${baseTopic} ${topUsedDomains.slice(0, 3).map((d) => `-site:${d}`).join(" ")}`);
       // Variant 2: exclude all top used domains + recency hint
-      queries.push(`${topic} latest ${topUsedDomains.map((d) => `-site:${d}`).join(" ")}`);
+      queries.push(`${fallbackTopic} latest ${topUsedDomains.map((d) => `-site:${d}`).join(" ")}`);
+      // Variant 3: broader query with no domain exclusions; useful when the exact topic is exhausted.
+      queries.push(`${fallbackTopic} recent research`);
     } else {
-      queries.push(`${topic} latest`);
+      queries.push(`${baseTopic} latest`, `${fallbackTopic} recent research`);
     }
 
     for (const q of queries) {
