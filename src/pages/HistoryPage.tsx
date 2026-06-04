@@ -24,6 +24,7 @@ import {
   usePostLabels, useAllPostLabelAssignments,
   usePostLabelAssignments, usePostLabelPublications,
   useAllPostLabelPublications, usePublishToLabel, useUnpublishFromLabel,
+  useTogglePostLabel,
 } from "@/hooks/usePostLabels";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
@@ -50,6 +51,7 @@ export default function HistoryPage() {
   const { data: selectedPublications } = usePostLabelPublications(selectedPost?.id);
   const publishToLabel = usePublishToLabel();
   const unpublishFromLabel = useUnpublishFromLabel();
+  const toggleLabel = useTogglePostLabel();
 
   // Auto-open a post if navigated here with { openPostId }
   useEffect(() => {
@@ -279,6 +281,26 @@ export default function HistoryPage() {
                   </div>
                 );
               })()}
+
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">{t("labels.title")}</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(selectedAssignedIds ?? []).map((labelId) => {
+                    const lbl = (allLabels ?? []).find((l) => l.id === labelId);
+                    if (!lbl) return null;
+                    return (
+                      <PostLabelBadge
+                        key={labelId}
+                        label={lbl}
+                        onRemove={() =>
+                          toggleLabel.mutate({ postId: selectedPost.id, labelId, assigned: true })
+                        }
+                      />
+                    );
+                  })}
+                  <PostLabelPicker postId={selectedPost.id} />
+                </div>
+              </div>
 
               {(selectedAssignedIds?.length ?? 0) > 0 && selectedPost.status === "published" && (
                 <div className="space-y-2">
