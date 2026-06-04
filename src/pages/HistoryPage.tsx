@@ -24,6 +24,7 @@ import {
   usePostLabels, useAllPostLabelAssignments,
   usePostLabelAssignments, usePostLabelPublications,
   useAllPostLabelPublications, usePublishToLabel, useUnpublishFromLabel,
+  useTogglePostLabel,
 } from "@/hooks/usePostLabels";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
