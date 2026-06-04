@@ -280,6 +280,26 @@ export default function HistoryPage() {
                 );
               })()}
 
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium text-muted-foreground">{t("labels.title")}</p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(selectedAssignedIds ?? []).map((labelId) => {
+                    const lbl = (allLabels ?? []).find((l) => l.id === labelId);
+                    if (!lbl) return null;
+                    return (
+                      <PostLabelBadge
+                        key={labelId}
+                        label={lbl}
+                        onRemove={() =>
+                          toggleLabel.mutate({ postId: selectedPost.id, labelId, assigned: true })
+                        }
+                      />
+                    );
+                  })}
+                  <PostLabelPicker postId={selectedPost.id} />
+                </div>
+              </div>
+
               {(selectedAssignedIds?.length ?? 0) > 0 && selectedPost.status === "published" && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">
