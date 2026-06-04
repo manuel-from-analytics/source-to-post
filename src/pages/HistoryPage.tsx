@@ -51,6 +51,7 @@ export default function HistoryPage() {
   const { data: selectedPublications } = usePostLabelPublications(selectedPost?.id);
   const publishToLabel = usePublishToLabel();
   const unpublishFromLabel = useUnpublishFromLabel();
+  const toggleLabel = useTogglePostLabel();
 
   // Auto-open a post if navigated here with { openPostId }
   useEffect(() => {
