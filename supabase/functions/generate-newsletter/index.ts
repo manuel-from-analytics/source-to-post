@@ -76,15 +76,16 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : inter / union;
 }
 
-async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: string, timeoutMs = 45000): Promise<any[]> {
+async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: string, timeoutMs = 25000): Promise<any[]> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const body: Record<string, unknown> = {
-      query,
-      limit,
-      scrapeOptions: { formats: ["markdown"] },
-    };
+    // NOTE: we intentionally do NOT pass scrapeOptions here. Asking Firecrawl to
+    // scrape the markdown of every result makes the search take 60-120s and was
+    // the root cause of the daily-agent IDLE_TIMEOUT (150s) failures. We only
+    // use the result `description` (snippet) downstream, which is returned
+    // without scraping in a few seconds.
+    const body: Record<string, unknown> = { query, limit };
     if (tbs) body.tbs = tbs;
     const response = await fetch("https://api.firecrawl.dev/v1/search", {
       method: "POST",
