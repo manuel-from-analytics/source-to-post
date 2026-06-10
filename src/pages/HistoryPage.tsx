@@ -134,7 +134,7 @@ export default function HistoryPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("history.title")}</h1>
         <p className="text-muted-foreground mt-1">
-          {posts?.length ?? 0} {t("history.postsGenerated")}
+          {filtered.length} {t("history.postsGenerated")}
         </p>
       </div>
 
