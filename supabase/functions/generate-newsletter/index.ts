@@ -76,15 +76,30 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : inter / union;
 }
 
-async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: string, timeoutMs = 25000): Promise<any[]> {
+// ---------- Retry helpers ----------
+const MAX_RETRIES_PER_RUN = 6; // global budget across all queries in a single run
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function isRetriable(status: number, message: string): boolean {
+  if (status === 502 || status === 503 || status === 504) return true;
+  if (message.includes("timed out") || message.includes("AbortError") || message.includes("abort")) return true;
+  if (message.includes("Failed to fetch") || message.includes("network") || message.includes("Connection")) return true;
+  return false;
+}
+
+async function firecrawlSearchRaw(
+  query: string,
+  apiKey: string,
+  limit = 10,
+  tbs?: string,
+  timeoutMs = 25000
+): Promise<any[]> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    // NOTE: we intentionally do NOT pass scrapeOptions here. Asking Firecrawl to
-    // scrape the markdown of every result makes the search take 60-120s and was
-    // the root cause of the daily-agent IDLE_TIMEOUT (150s) failures. We only
-    // use the result `description` (snippet) downstream, which is returned
-    // without scraping in a few seconds.
     const body: Record<string, unknown> = { query, limit };
     if (tbs) body.tbs = tbs;
     const response = await fetch("https://api.firecrawl.dev/v1/search", {
@@ -97,17 +112,58 @@ async function firecrawlSearch(query: string, apiKey: string, limit = 10, tbs?: 
       signal: ctrl.signal,
     });
     if (!response.ok) {
-      console.error("Firecrawl search error:", response.status);
-      return [];
+      throw new Error(`HTTP ${response.status}`);
     }
     const data = await response.json();
     return data.data || [];
-  } catch (e) {
-    console.error("Firecrawl search failed:", (e as Error)?.message || e);
-    return [];
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function firecrawlSearchWithRetries(
+  query: string,
+  apiKey: string,
+  limit = 10,
+  tbs?: string,
+  timeoutMs = 25000,
+  maxPerQueryRetries = 2,
+  retryBudgetRef: { remaining: number }
+): Promise<{ results: any[]; retriesUsed: number }> {
+  let lastError: Error | undefined;
+  for (let attempt = 0; attempt <= maxPerQueryRetries; attempt++) {
+    if (attempt > 0) {
+      if (retryBudgetRef.remaining <= 0) {
+        console.warn(`Global retry budget exhausted. Skipping retry for query: ${query}`);
+        break;
+      }
+      const backoffMs = Math.min(1000 * Math.pow(2, attempt - 1), 8000); // 1s, 2s, 4s, cap 8s
+      console.log(
+        `Firecrawl retry ${attempt}/${maxPerQueryRetries} for "${query}" after ${backoffMs}ms (global retries left: ${retryBudgetRef.remaining})`
+      );
+      await sleep(backoffMs);
+      retryBudgetRef.remaining--;
+    }
+    try {
+      const results = await firecrawlSearchRaw(query, apiKey, limit, tbs, timeoutMs);
+      return { results, retriesUsed: attempt };
+    } catch (e: any) {
+      lastError = e;
+      const statusMatch = e?.message?.match(/HTTP (\d+)/);
+      const status = statusMatch ? parseInt(statusMatch[1], 10) : 0;
+      const message = e?.message || String(e);
+      if (!isRetriable(status, message)) {
+        console.error("Firecrawl non-retriable error:", status, message);
+        break;
+      }
+      if (attempt < maxPerQueryRetries && retryBudgetRef.remaining > 0) {
+        console.warn(`Firecrawl retriable error on attempt ${attempt + 1}:`, status, message);
+        continue;
+      }
+    }
+  }
+  console.error("Firecrawl search failed after retries:", lastError?.message || lastError);
+  return { results: [], retriesUsed: maxPerQueryRetries };
 }
 
 serve(async (req) => {
