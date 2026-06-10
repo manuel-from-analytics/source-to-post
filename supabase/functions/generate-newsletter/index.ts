@@ -285,6 +285,7 @@ serve(async (req) => {
     const MIN_FRESH = 3;    // hard minimum: below this we 400
     const seenRawUrls = new Set<string>(); // dedup across retry batches
     const freshCandidates: any[] = [];
+    const retryBudget = { remaining: MAX_RETRIES_PER_RUN };
 
     // Build queries: original, then variants that exclude domains we've already used a lot.
     const usedDomainCounts = new Map<string, number>();
@@ -315,8 +316,10 @@ serve(async (req) => {
 
     for (const q of queries) {
       if (freshCandidates.length >= TARGET_FRESH) break;
-      const batch = await firecrawlSearch(q, FIRECRAWL_API_KEY, 12, tbs);
-      console.log(`Search "${q}" → ${batch.length} raw results`);
+      const { results: batch, retriesUsed } = await firecrawlSearchWithRetries(
+        q, FIRECRAWL_API_KEY, 12, tbs, 25000, 2, retryBudget
+      );
+      console.log(`Search "${q}" → ${batch.length} raw results (retries used: ${retriesUsed}, budget left: ${retryBudget.remaining})`);
       for (const r of batch) {
         const norm = normalizeUrl(r?.url || "");
         if (!norm || seenRawUrls.has(norm)) continue;
