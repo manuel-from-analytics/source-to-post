@@ -270,7 +270,6 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
                 headers: {
                   Authorization: `Bearer ${SERVICE_ROLE}`,
                   "Content-Type": "application/json",
-                  apikey: SUPABASE_ANON_KEY,
                   "x-internal-user-id": userId,
                 },
                 body: JSON.stringify({ input_id: inputId }),
