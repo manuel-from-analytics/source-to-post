@@ -9,6 +9,15 @@ verify_jwt = false
 [functions.daily-agent]
 verify_jwt = false
 
+[functions.extract-url]
+verify_jwt = false
+
+[functions.extract-pdf]
+verify_jwt = false
+
+[functions.generate-newsletter]
+verify_jwt = false
+
 [functions.process-email-queue]
 verify_jwt = true
 
