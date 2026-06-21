@@ -564,7 +564,10 @@ const httpHandler = transport.bind(mcp);
 const app = new Hono();
 app.all("/*", async (c) => {
   const userToken = c.req.header("x-user-token");
-  const agentKey = c.req.header("x-agent-key");
+  // Agent key: accept via header (x-agent-key) OR ?key= query param.
+  // Query-param support enables clients like Claude's custom connector dialog
+  // that only allow a URL (no custom headers). Long-lived, never expires.
+  const agentKey = c.req.header("x-agent-key") || c.req.query("key") || c.req.query("agent_key");
 
   let userId: string;
   let supabase: SupabaseClient;
@@ -610,8 +613,9 @@ app.all("/*", async (c) => {
       }
     }
   } else {
-    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing x-user-token or x-agent-key header" }, id: null }, 401);
+    return c.json({ jsonrpc: "2.0", error: { code: -32600, message: "Missing auth: provide ?key=<agent_key> in URL, or x-agent-key / x-user-token header" }, id: null }, 401);
   }
+
 
   _ctx = { supabase, userId, userJwt };
   try {
