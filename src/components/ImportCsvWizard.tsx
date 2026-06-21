@@ -5,10 +5,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Building2, User as UserIcon, Upload, FileText, CheckCircle2, ArrowLeft, ArrowRight, Loader2, ExternalLink } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Building2, User as UserIcon, Upload, FileText, CheckCircle2, ArrowLeft, ArrowRight,
+  Loader2, ExternalLink, AlertTriangle, AlertCircle, Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useImportLinkedinCsv } from "@/hooks/useLinkedinMetrics";
-import type { LinkedInSource } from "@/lib/linkedin-csv";
+import { analyzeLinkedInCsv, CsvValidationError, type CsvAnalysis, type LinkedInSource } from "@/lib/linkedin-csv";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -22,6 +26,9 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
   const [step, setStep] = useState<Step>(1);
   const [source, setSource] = useState<LinkedInSource>("personal");
   const [file, setFile] = useState<File | null>(null);
+  const [analysis, setAnalysis] = useState<CsvAnalysis | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [validationError, setValidationError] = useState<{ message: string; analysis?: CsvAnalysis } | null>(null);
   const [result, setResult] = useState<{ total: number; matched: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -29,6 +36,8 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     setStep(1);
     setSource("personal");
     setFile(null);
+    setAnalysis(null);
+    setValidationError(null);
     setResult(null);
   }
 
@@ -37,8 +46,28 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     onOpenChange(v);
   }
 
+  async function handleFileSelected(f: File) {
+    setFile(f);
+    setAnalysis(null);
+    setValidationError(null);
+    setAnalyzing(true);
+    try {
+      const a = await analyzeLinkedInCsv(f);
+      setAnalysis(a);
+      if (a.sourceHint && a.sourceHint !== source) setSource(a.sourceHint);
+    } catch (e) {
+      if (e instanceof CsvValidationError) {
+        setValidationError({ message: e.message, analysis: e.analysis });
+      } else {
+        setValidationError({ message: e instanceof Error ? e.message : "Error al leer el archivo" });
+      }
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
   async function runImport() {
-    if (!file) return;
+    if (!file || !analysis) return;
     try {
       const res = await importMut.mutateAsync({ file, source });
       setResult(res);
