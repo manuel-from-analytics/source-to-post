@@ -12,6 +12,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "nav.history": "Historial",
     "nav.settings": "Ajustes",
     "nav.install": "Instalar App",
+    "nav.performance": "Rendimiento",
     "nav.logout": "Cerrar sesión",
 
     // Dashboard
@@ -585,6 +586,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "nav.history": "History",
     "nav.settings": "Settings",
     "nav.install": "Install App",
+    "nav.performance": "Performance",
     "nav.logout": "Log out",
 
     // Dashboard
@@ -1159,6 +1161,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "nav.history": "Histórico",
     "nav.settings": "Configurações",
     "nav.install": "Instalar App",
+    "nav.performance": "Desempenho",
     "nav.logout": "Sair",
 
     // Dashboard

@@ -15,6 +15,7 @@ import {
   Smartphone,
   Plug,
   Bot,
+  BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useLanguage } from "@/i18n/LanguageContext";
@@ -29,6 +30,7 @@ const navItems = [
   { icon: Mic, labelKey: "nav.voice", path: "/voice" },
   { icon: PenTool, labelKey: "nav.generator", path: "/generator" },
   { icon: History, labelKey: "nav.history", path: "/history" },
+  { icon: BarChart3, labelKey: "nav.performance", path: "/performance" },
   { icon: Settings, labelKey: "nav.settings", path: "/settings" },
   { icon: Plug, labelKey: "nav.mcp", path: "/mcp" },
   { icon: Smartphone, labelKey: "nav.install", path: "/install" },
