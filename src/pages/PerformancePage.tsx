@@ -90,50 +90,11 @@ export default function PerformancePage() {
             Métricas de tus posts publicados en LinkedIn (personal y empresa). Subes el CSV exportado desde LinkedIn y se cruza con tus posts generados.
           </p>
         </div>
-        <Dialog open={importOpen} onOpenChange={setImportOpen}>
-          <DialogTrigger asChild>
-            <Button><Upload className="h-4 w-4 mr-2" />Importar CSV</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Importar CSV de LinkedIn</DialogTitle>
-              <DialogDescription>
-                En LinkedIn → tu perfil o página de empresa → Analytics → Exportar. Sube aquí el CSV.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Origen</label>
-                <Select value={importSource} onValueChange={(v) => setImportSource(v as LinkedInSource)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="personal">Cuenta personal</SelectItem>
-                    <SelectItem value="company">Página de empresa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Archivo CSV</label>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-primary-foreground"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleFile(f);
-                  }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Detectamos automáticamente impresiones, clics, reacciones, comentarios y compartidos. El cruce con tus posts se hace por URL o por contenido.
-              </p>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setImportOpen(false)}>Cancelar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setImportOpen(true)}>
+          <Upload className="h-4 w-4 mr-2" />Importar CSV
+        </Button>
+        <ImportCsvWizard open={importOpen} onOpenChange={setImportOpen} />
+
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
