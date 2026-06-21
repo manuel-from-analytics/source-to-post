@@ -1565,8 +1565,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "mcp.copied": "Copiado para a área de transferência",
     "mcp.urlTitle": "URL do servidor MCP",
     "mcp.urlDesc": "Endpoint do servidor MCP do PostFlow.",
-    "mcp.claudeTitle": "Configuração para Claude Desktop",
-    "mcp.claudeDesc": "Adicione este bloco ao arquivo de configuração do Claude Desktop.",
+    "mcp.claudeTitle": "Conectar com Claude",
+    "mcp.claudeDesc": "No Claude (web ou Desktop) → Settings → Connectors → Add custom connector:",
+
     "mcp.claudeInstructions": "Abra Claude Desktop → Settings → MCP Servers → Add e cole esta configuração:",
     "mcp.cursorTitle": "Configuração para Cursor",
     "mcp.cursorDesc": "Adicione este bloco à configuração MCP do Cursor.",
