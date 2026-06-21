@@ -25,14 +25,11 @@ type Granularity = "week" | "month";
 
 export default function PerformancePage() {
   const { data: metrics = [], isLoading } = useLinkedinMetrics();
-  const importMut = useImportLinkedinCsv();
   const deleteMut = useDeleteLinkedinMetric();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [importOpen, setImportOpen] = useState(false);
-  const [importSource, setImportSource] = useState<LinkedInSource>("personal");
   const [granularity, setGranularity] = useState<Granularity>("week");
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(
     () => (sourceFilter === "all" ? metrics : metrics.filter((m) => m.source === sourceFilter)),
@@ -80,14 +77,6 @@ export default function PerformancePage() {
     [filtered],
   );
 
-  async function handleFile(file: File) {
-    try {
-      await importMut.mutateAsync({ file, source: importSource });
-      setImportOpen(false);
-    } catch (e) {
-      // toast handled in hook
-    }
-  }
 
   return (
     <div className="container mx-auto p-4 lg:p-8 space-y-6 max-w-7xl">
