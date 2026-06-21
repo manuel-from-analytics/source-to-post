@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,33 +10,26 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from "recharts";
 import {
   Upload, BarChart3, TrendingUp, Eye, Heart, MessageCircle, Share2, MousePointerClick,
   ExternalLink, Trash2, Building2, User as UserIcon,
 } from "lucide-react";
-import { useLinkedinMetrics, useImportLinkedinCsv, useDeleteLinkedinMetric, type LinkedinMetric } from "@/hooks/useLinkedinMetrics";
+import { useLinkedinMetrics, useDeleteLinkedinMetric } from "@/hooks/useLinkedinMetrics";
 import type { LinkedInSource } from "@/lib/linkedin-csv";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { ImportCsvWizard } from "@/components/ImportCsvWizard";
 
 type SourceFilter = "all" | LinkedInSource;
 type Granularity = "week" | "month";
 
 export default function PerformancePage() {
   const { data: metrics = [], isLoading } = useLinkedinMetrics();
-  const importMut = useImportLinkedinCsv();
   const deleteMut = useDeleteLinkedinMetric();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [importOpen, setImportOpen] = useState(false);
-  const [importSource, setImportSource] = useState<LinkedInSource>("personal");
   const [granularity, setGranularity] = useState<Granularity>("week");
-  const fileRef = useRef<HTMLInputElement>(null);
 
   const filtered = useMemo(
     () => (sourceFilter === "all" ? metrics : metrics.filter((m) => m.source === sourceFilter)),
@@ -84,14 +77,6 @@ export default function PerformancePage() {
     [filtered],
   );
 
-  async function handleFile(file: File) {
-    try {
-      await importMut.mutateAsync({ file, source: importSource });
-      setImportOpen(false);
-    } catch (e) {
-      // toast handled in hook
-    }
-  }
 
   return (
     <div className="container mx-auto p-4 lg:p-8 space-y-6 max-w-7xl">
@@ -105,50 +90,11 @@ export default function PerformancePage() {
             Métricas de tus posts publicados en LinkedIn (personal y empresa). Subes el CSV exportado desde LinkedIn y se cruza con tus posts generados.
           </p>
         </div>
-        <Dialog open={importOpen} onOpenChange={setImportOpen}>
-          <DialogTrigger asChild>
-            <Button><Upload className="h-4 w-4 mr-2" />Importar CSV</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Importar CSV de LinkedIn</DialogTitle>
-              <DialogDescription>
-                En LinkedIn → tu perfil o página de empresa → Analytics → Exportar. Sube aquí el CSV.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Origen</label>
-                <Select value={importSource} onValueChange={(v) => setImportSource(v as LinkedInSource)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="personal">Cuenta personal</SelectItem>
-                    <SelectItem value="company">Página de empresa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1.5 block">Archivo CSV</label>
-                <input
-                  ref={fileRef}
-                  type="file"
-                  accept=".csv,text/csv"
-                  className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-primary-foreground"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    if (f) handleFile(f);
-                  }}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Detectamos automáticamente impresiones, clics, reacciones, comentarios y compartidos. El cruce con tus posts se hace por URL o por contenido.
-              </p>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setImportOpen(false)}>Cancelar</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={() => setImportOpen(true)}>
+          <Upload className="h-4 w-4 mr-2" />Importar CSV
+        </Button>
+        <ImportCsvWizard open={importOpen} onOpenChange={setImportOpen} />
+
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
