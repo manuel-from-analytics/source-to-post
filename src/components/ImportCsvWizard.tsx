@@ -5,10 +5,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Building2, User as UserIcon, Upload, FileText, CheckCircle2, ArrowLeft, ArrowRight, Loader2, ExternalLink } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Building2, User as UserIcon, Upload, FileText, CheckCircle2, ArrowLeft, ArrowRight,
+  Loader2, ExternalLink, AlertTriangle, AlertCircle, Sparkles,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useImportLinkedinCsv } from "@/hooks/useLinkedinMetrics";
-import type { LinkedInSource } from "@/lib/linkedin-csv";
+import { analyzeLinkedInCsv, CsvValidationError, type CsvAnalysis, type LinkedInSource } from "@/lib/linkedin-csv";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -22,6 +26,9 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
   const [step, setStep] = useState<Step>(1);
   const [source, setSource] = useState<LinkedInSource>("personal");
   const [file, setFile] = useState<File | null>(null);
+  const [analysis, setAnalysis] = useState<CsvAnalysis | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [validationError, setValidationError] = useState<{ message: string; analysis?: CsvAnalysis } | null>(null);
   const [result, setResult] = useState<{ total: number; matched: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -29,6 +36,8 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     setStep(1);
     setSource("personal");
     setFile(null);
+    setAnalysis(null);
+    setValidationError(null);
     setResult(null);
   }
 
@@ -37,8 +46,28 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     onOpenChange(v);
   }
 
+  async function handleFileSelected(f: File) {
+    setFile(f);
+    setAnalysis(null);
+    setValidationError(null);
+    setAnalyzing(true);
+    try {
+      const a = await analyzeLinkedInCsv(f);
+      setAnalysis(a);
+      if (a.sourceHint && a.sourceHint !== source) setSource(a.sourceHint);
+    } catch (e) {
+      if (e instanceof CsvValidationError) {
+        setValidationError({ message: e.message, analysis: e.analysis });
+      } else {
+        setValidationError({ message: e instanceof Error ? e.message : "Error al leer el archivo" });
+      }
+    } finally {
+      setAnalyzing(false);
+    }
+  }
+
   async function runImport() {
-    if (!file) return;
+    if (!file || !analysis) return;
     try {
       const res = await importMut.mutateAsync({ file, source });
       setResult(res);
@@ -108,21 +137,23 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
           {step === 3 && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Sube el archivo CSV. Detectaremos impresiones, reacciones, comentarios, compartidos y clics.
+                Sube el CSV. Detectaremos automáticamente el formato y validaremos las columnas.
               </p>
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 className={cn(
-                  "w-full border-2 border-dashed rounded-lg p-6 text-center transition-colors",
-                  file ? "border-primary/50 bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50",
+                  "w-full border-2 border-dashed rounded-lg p-5 text-center transition-colors",
+                  validationError ? "border-destructive/50 bg-destructive/5"
+                    : file ? "border-primary/50 bg-primary/5"
+                    : "border-muted-foreground/25 hover:border-primary/50",
                 )}
               >
                 {file ? (
                   <div className="flex items-center justify-center gap-2 text-sm">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <span className="font-medium">{file.name}</span>
-                    <span className="text-muted-foreground">({(file.size / 1024).toFixed(0)} KB)</span>
+                    <FileText className="h-5 w-5 text-primary shrink-0" />
+                    <span className="font-medium truncate">{file.name}</span>
+                    <span className="text-muted-foreground shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -135,19 +166,81 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
               <input
                 ref={fileRef}
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,.tsv,.txt,text/csv"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) setFile(f);
+                  if (f) handleFileSelected(f);
+                  e.target.value = "";
                 }}
               />
+
+              {analyzing && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Analizando archivo…
+                </div>
+              )}
+
+              {validationError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>No podemos importar este archivo</AlertTitle>
+                  <AlertDescription className="space-y-2">
+                    <p className="text-sm">{validationError.message}</p>
+                    {validationError.analysis && validationError.analysis.headers.length > 0 && (
+                      <details className="text-xs">
+                        <summary className="cursor-pointer">Ver columnas detectadas</summary>
+                        <p className="mt-1 font-mono break-all">
+                          {validationError.analysis.headers.join(" · ")}
+                        </p>
+                      </details>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {analysis && !validationError && (
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{analysis.formatLabel}</span>
+                    <span className="text-muted-foreground">· {analysis.rowCount} filas</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-xs">
+                    <DetectedField label="Impresiones" value={analysis.detected.impressions} required />
+                    <DetectedField label="Reacciones" value={analysis.detected.reactions} />
+                    <DetectedField label="Comentarios" value={analysis.detected.comments} />
+                    <DetectedField label="Compartidos" value={analysis.detected.shares} />
+                    <DetectedField label="Clics" value={analysis.detected.clicks} />
+                    <DetectedField label="Fecha" value={analysis.detected.date} />
+                    <DetectedField label="URL" value={analysis.detected.url} />
+                    <DetectedField label="Texto" value={analysis.detected.excerpt} />
+                  </div>
+                  {analysis.warnings.length > 0 && (
+                    <div className="space-y-1 pt-1 border-t">
+                      {analysis.warnings.map((w, i) => (
+                        <div key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-500" />
+                          <span>{w}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {analysis.sourceHint && analysis.sourceHint !== source && (
+                    <p className="text-xs text-muted-foreground">
+                      Sugerimos cambiar el origen a <strong>{analysis.sourceHint === "personal" ? "Personal" : "Empresa"}</strong> según el nombre del archivo.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {source === "personal" ? <UserIcon className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}
                 <span>Se etiquetará como <strong>{source === "personal" ? "Personal" : "Empresa"}</strong>.</span>
               </div>
             </div>
           )}
+
 
           {step === 4 && result && (
             <div className="text-center space-y-3 py-6">
@@ -174,7 +267,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
             </Button>
           )}
           {step === 3 && (
-            <Button onClick={runImport} disabled={!file || importMut.isPending}>
+            <Button onClick={runImport} disabled={!file || !analysis || analyzing || importMut.isPending}>
               {importMut.isPending ? (
                 <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Importando…</>
               ) : (
@@ -242,5 +335,21 @@ function SourceCard({
         <div className="text-xs text-muted-foreground">{desc}</div>
       </div>
     </Label>
+  );
+}
+
+function DetectedField({ label, value, required }: { label: string; value: string | null; required?: boolean }) {
+  const found = !!value;
+  return (
+    <div className="flex items-center gap-1.5 min-w-0">
+      <span className={cn(
+        "h-1.5 w-1.5 rounded-full shrink-0",
+        found ? "bg-primary" : required ? "bg-destructive" : "bg-muted-foreground/40",
+      )} />
+      <span className="text-muted-foreground shrink-0">{label}:</span>
+      <span className={cn("truncate", found ? "font-medium" : "text-muted-foreground/60 italic")}>
+        {value ?? "—"}
+      </span>
+    </div>
   );
 }
