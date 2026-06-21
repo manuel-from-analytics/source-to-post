@@ -420,12 +420,11 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "mcp.copied": "Copiado al portapapeles",
     "mcp.urlTitle": "URL del servidor MCP",
     "mcp.urlDesc": "Endpoint del servidor MCP de PostFlow.",
-    "mcp.claudeTitle": "Configuración para Claude Desktop",
-    "mcp.claudeDesc": "Añade este bloque a tu archivo de configuración de Claude Desktop.",
     "mcp.claudeInstructions": "Abre Claude Desktop → Settings → MCP Servers → Add y pega esta configuración:",
     "mcp.cursorTitle": "Configuración para Cursor",
     "mcp.cursorDesc": "Añade este bloque a tu configuración MCP de Cursor.",
     "mcp.cursorInstructions": "Abre Cursor → Settings → MCP → Add server y pega esta configuración:",
+
     "mcp.toolsTitle": "Herramientas disponibles",
     "mcp.toolsDesc": "Lista de herramientas que expone el servidor MCP.",
     "mcp.tool.listInputs": "Listar fuentes de la biblioteca",
