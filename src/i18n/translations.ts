@@ -987,6 +987,17 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "mcp.cursorTitle": "Cursor Configuration",
     "mcp.cursorDesc": "Add this block to your Cursor MCP configuration.",
     "mcp.cursorInstructions": "Open Cursor → Settings → MCP → Add server and paste this configuration:",
+    "mcp.noToken": "Loading token...",
+    "mcp.copyToken": "Copy token",
+    "mcp.refreshToken": "Refresh",
+    "mcp.tokenWarning": "⚠️ This token expires periodically. For long-lived automations, use an Agent Key instead.",
+    "mcp.tokenRefreshed": "Token refreshed",
+    "mcp.tokenRefreshError": "Error refreshing token",
+    "mcp.copied": "Copied to clipboard",
+    "mcp.urlTitle": "MCP Server URL",
+    "mcp.urlDesc": "PostFlow MCP server endpoint.",
+
+
 
     "mcp.toolsTitle": "Available Tools",
     "mcp.toolsDesc": "List of tools exposed by the MCP server.",
