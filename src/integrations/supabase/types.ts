@@ -288,6 +288,7 @@ export type Database = {
           is_favorite: boolean | null
           language: string | null
           length: string | null
+          linkedin_url: string | null
           published_at: string | null
           source_newsletter_id: string | null
           source_newsletter_item_id: string | null
@@ -311,6 +312,7 @@ export type Database = {
           is_favorite?: boolean | null
           language?: string | null
           length?: string | null
+          linkedin_url?: string | null
           published_at?: string | null
           source_newsletter_id?: string | null
           source_newsletter_item_id?: string | null
@@ -334,6 +336,7 @@ export type Database = {
           is_favorite?: boolean | null
           language?: string | null
           length?: string | null
+          linkedin_url?: string | null
           published_at?: string | null
           source_newsletter_id?: string | null
           source_newsletter_item_id?: string | null
@@ -479,6 +482,80 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      linkedin_post_metrics: {
+        Row: {
+          clicks: number
+          comments: number
+          created_at: string
+          engagement_rate: number
+          id: string
+          imported_at: string
+          impressions: number
+          linkedin_url: string | null
+          linkedin_urn: string | null
+          post_excerpt: string | null
+          post_id: string | null
+          post_title: string | null
+          posted_at: string | null
+          raw: Json | null
+          reactions: number
+          shares: number
+          source: Database["public"]["Enums"]["linkedin_post_source"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          clicks?: number
+          comments?: number
+          created_at?: string
+          engagement_rate?: number
+          id?: string
+          imported_at?: string
+          impressions?: number
+          linkedin_url?: string | null
+          linkedin_urn?: string | null
+          post_excerpt?: string | null
+          post_id?: string | null
+          post_title?: string | null
+          posted_at?: string | null
+          raw?: Json | null
+          reactions?: number
+          shares?: number
+          source: Database["public"]["Enums"]["linkedin_post_source"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          clicks?: number
+          comments?: number
+          created_at?: string
+          engagement_rate?: number
+          id?: string
+          imported_at?: string
+          impressions?: number
+          linkedin_url?: string | null
+          linkedin_urn?: string | null
+          post_excerpt?: string | null
+          post_id?: string | null
+          post_title?: string | null
+          posted_at?: string | null
+          raw?: Json | null
+          reactions?: number
+          shares?: number
+          source?: Database["public"]["Enums"]["linkedin_post_source"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "linkedin_post_metrics_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "generated_posts"
             referencedColumns: ["id"]
           },
         ]
@@ -875,6 +952,7 @@ export type Database = {
     }
     Enums: {
       input_type: "pdf" | "url" | "youtube" | "text" | "audio"
+      linkedin_post_source: "personal" | "company"
       post_status: "draft" | "final" | "published"
     }
     CompositeTypes: {
@@ -1004,6 +1082,7 @@ export const Constants = {
   public: {
     Enums: {
       input_type: ["pdf", "url", "youtube", "text", "audio"],
+      linkedin_post_source: ["personal", "company"],
       post_status: ["draft", "final", "published"],
     },
   },
