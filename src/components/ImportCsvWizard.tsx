@@ -267,7 +267,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
             </Button>
           )}
           {step === 3 && (
-            <Button onClick={runImport} disabled={!file || importMut.isPending}>
+            <Button onClick={runImport} disabled={!file || !analysis || analyzing || importMut.isPending}>
               {importMut.isPending ? (
                 <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Importando…</>
               ) : (
