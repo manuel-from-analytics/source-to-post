@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,19 +10,15 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
 } from "recharts";
 import {
   Upload, BarChart3, TrendingUp, Eye, Heart, MessageCircle, Share2, MousePointerClick,
   ExternalLink, Trash2, Building2, User as UserIcon,
 } from "lucide-react";
-import { useLinkedinMetrics, useImportLinkedinCsv, useDeleteLinkedinMetric, type LinkedinMetric } from "@/hooks/useLinkedinMetrics";
+import { useLinkedinMetrics, useDeleteLinkedinMetric } from "@/hooks/useLinkedinMetrics";
 import type { LinkedInSource } from "@/lib/linkedin-csv";
-import { toast } from "sonner";
-import { cn } from "@/lib/utils";
+import { ImportCsvWizard } from "@/components/ImportCsvWizard";
 
 type SourceFilter = "all" | LinkedInSource;
 type Granularity = "week" | "month";
