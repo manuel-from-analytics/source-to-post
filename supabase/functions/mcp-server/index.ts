@@ -120,13 +120,32 @@ mcp.tool("list_posts", {
 });
 
 mcp.tool("get_post", {
-  description: "Get full details of a generated post by ID.",
+  description: "Get full details of a generated post by ID, including its labels (e.g. personal, empresa) and per-label publication info.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any) => {
     const { supabase } = getCtx();
     const { data, error } = await supabase.from("generated_posts").select("*").eq("id", id).single();
     if (error) throw error;
-    return json(data);
+
+    const [{ data: assignments }, { data: publications }] = await Promise.all([
+      supabase.from("post_label_assignments").select("label_id, post_labels(id, name, color)").eq("post_id", id),
+      supabase.from("post_label_publications").select("label_id, published_at").eq("post_id", id),
+    ]);
+
+    const pubMap = new Map<string, string>();
+    for (const p of (publications ?? []) as any[]) pubMap.set(p.label_id, p.published_at);
+
+    const labels = ((assignments ?? []) as any[])
+      .map((a) => a.post_labels)
+      .filter(Boolean)
+      .map((lbl: any) => ({
+        id: lbl.id,
+        name: lbl.name,
+        color: lbl.color,
+        published_at: pubMap.get(lbl.id) ?? null,
+      }));
+
+    return json({ ...data, labels });
   },
 });
 
