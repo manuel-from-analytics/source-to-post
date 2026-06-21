@@ -93,7 +93,7 @@ mcp.tool("delete_input", {
 
 // ── POSTS ──
 mcp.tool("list_posts", {
-  description: "List generated posts. Filters: status, is_favorite, source_newsletter_id, created_after (ISO), created_before (ISO), limit.",
+  description: "List generated posts including their labels (e.g. personal, empresa) and per-label publication dates. Filters: status, is_favorite, source_newsletter_id, created_after (ISO), created_before (ISO), label (filter by label name, case-insensitive, e.g. 'personal' or 'empresa'), limit.",
   inputSchema: {
     type: "object" as const,
     properties: {
@@ -102,6 +102,7 @@ mcp.tool("list_posts", {
       source_newsletter_id: { type: "string" as const },
       created_after: { type: "string" as const },
       created_before: { type: "string" as const },
+      label: { type: "string" as const, description: "Filter posts assigned to a label by name (case-insensitive). Examples: 'personal', 'empresa'." },
       limit: { type: "number" as const },
     },
   },
@@ -115,7 +116,51 @@ mcp.tool("list_posts", {
     if (params.created_before) q = q.lte("created_at", params.created_before);
     const { data, error } = await q;
     if (error) throw error;
-    return json(data);
+
+    const posts = (data ?? []) as any[];
+    if (posts.length === 0) return json([]);
+
+    const postIds = posts.map((p) => p.id);
+    const [{ data: assignments }, { data: publications }] = await Promise.all([
+      supabase
+        .from("post_label_assignments")
+        .select("post_id, label_id, post_labels(id, name, color)")
+        .in("post_id", postIds),
+      supabase
+        .from("post_label_publications")
+        .select("post_id, label_id, published_at")
+        .in("post_id", postIds),
+    ]);
+
+    const pubMap = new Map<string, string>(); // key: postId|labelId
+    for (const p of (publications ?? []) as any[]) {
+      pubMap.set(`${p.post_id}|${p.label_id}`, p.published_at);
+    }
+
+    const labelsByPost = new Map<string, any[]>();
+    for (const a of (assignments ?? []) as any[]) {
+      const lbl = a.post_labels;
+      if (!lbl) continue;
+      const arr = labelsByPost.get(a.post_id) ?? [];
+      arr.push({
+        id: lbl.id,
+        name: lbl.name,
+        color: lbl.color,
+        published_at: pubMap.get(`${a.post_id}|${lbl.id}`) ?? null,
+      });
+      labelsByPost.set(a.post_id, arr);
+    }
+
+    let enriched = posts.map((p) => ({ ...p, labels: labelsByPost.get(p.id) ?? [] }));
+
+    if (params.label && typeof params.label === "string") {
+      const needle = params.label.toLowerCase();
+      enriched = enriched.filter((p) =>
+        (p.labels as any[]).some((l) => (l.name ?? "").toLowerCase() === needle)
+      );
+    }
+
+    return json(enriched);
   },
 });
 
