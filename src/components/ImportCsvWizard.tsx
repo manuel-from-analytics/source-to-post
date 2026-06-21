@@ -337,3 +337,19 @@ function SourceCard({
     </Label>
   );
 }
+
+function DetectedField({ label, value, required }: { label: string; value: string | null; required?: boolean }) {
+  const found = !!value;
+  return (
+    <div className="flex items-center gap-1.5 min-w-0">
+      <span className={cn(
+        "h-1.5 w-1.5 rounded-full shrink-0",
+        found ? "bg-primary" : required ? "bg-destructive" : "bg-muted-foreground/40",
+      )} />
+      <span className="text-muted-foreground shrink-0">{label}:</span>
+      <span className={cn("truncate", found ? "font-medium" : "text-muted-foreground/60 italic")}>
+        {value ?? "—"}
+      </span>
+    </div>
+  );
+}
