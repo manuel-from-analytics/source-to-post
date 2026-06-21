@@ -137,21 +137,23 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
           {step === 3 && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Sube el archivo CSV. Detectaremos impresiones, reacciones, comentarios, compartidos y clics.
+                Sube el CSV. Detectaremos automáticamente el formato y validaremos las columnas.
               </p>
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 className={cn(
-                  "w-full border-2 border-dashed rounded-lg p-6 text-center transition-colors",
-                  file ? "border-primary/50 bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50",
+                  "w-full border-2 border-dashed rounded-lg p-5 text-center transition-colors",
+                  validationError ? "border-destructive/50 bg-destructive/5"
+                    : file ? "border-primary/50 bg-primary/5"
+                    : "border-muted-foreground/25 hover:border-primary/50",
                 )}
               >
                 {file ? (
                   <div className="flex items-center justify-center gap-2 text-sm">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <span className="font-medium">{file.name}</span>
-                    <span className="text-muted-foreground">({(file.size / 1024).toFixed(0)} KB)</span>
+                    <FileText className="h-5 w-5 text-primary shrink-0" />
+                    <span className="font-medium truncate">{file.name}</span>
+                    <span className="text-muted-foreground shrink-0">({(file.size / 1024).toFixed(0)} KB)</span>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -164,19 +166,81 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
               <input
                 ref={fileRef}
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,.tsv,.txt,text/csv"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
-                  if (f) setFile(f);
+                  if (f) handleFileSelected(f);
+                  e.target.value = "";
                 }}
               />
+
+              {analyzing && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Analizando archivo…
+                </div>
+              )}
+
+              {validationError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>No podemos importar este archivo</AlertTitle>
+                  <AlertDescription className="space-y-2">
+                    <p className="text-sm">{validationError.message}</p>
+                    {validationError.analysis && validationError.analysis.headers.length > 0 && (
+                      <details className="text-xs">
+                        <summary className="cursor-pointer">Ver columnas detectadas</summary>
+                        <p className="mt-1 font-mono break-all">
+                          {validationError.analysis.headers.join(" · ")}
+                        </p>
+                      </details>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {analysis && !validationError && (
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{analysis.formatLabel}</span>
+                    <span className="text-muted-foreground">· {analysis.rowCount} filas</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-1 text-xs">
+                    <DetectedField label="Impresiones" value={analysis.detected.impressions} required />
+                    <DetectedField label="Reacciones" value={analysis.detected.reactions} />
+                    <DetectedField label="Comentarios" value={analysis.detected.comments} />
+                    <DetectedField label="Compartidos" value={analysis.detected.shares} />
+                    <DetectedField label="Clics" value={analysis.detected.clicks} />
+                    <DetectedField label="Fecha" value={analysis.detected.date} />
+                    <DetectedField label="URL" value={analysis.detected.url} />
+                    <DetectedField label="Texto" value={analysis.detected.excerpt} />
+                  </div>
+                  {analysis.warnings.length > 0 && (
+                    <div className="space-y-1 pt-1 border-t">
+                      {analysis.warnings.map((w, i) => (
+                        <div key={i} className="flex items-start gap-1.5 text-xs text-muted-foreground">
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-500" />
+                          <span>{w}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {analysis.sourceHint && analysis.sourceHint !== source && (
+                    <p className="text-xs text-muted-foreground">
+                      Sugerimos cambiar el origen a <strong>{analysis.sourceHint === "personal" ? "Personal" : "Empresa"}</strong> según el nombre del archivo.
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {source === "personal" ? <UserIcon className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}
                 <span>Se etiquetará como <strong>{source === "personal" ? "Personal" : "Empresa"}</strong>.</span>
               </div>
             </div>
           )}
+
 
           {step === 4 && result && (
             <div className="text-center space-y-3 py-6">
