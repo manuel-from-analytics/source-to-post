@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
-import { parseLinkedInCsv, normalizeContent, type LinkedInSource, type ParsedMetricRow } from "@/lib/linkedin-csv";
+import { parseLinkedInCsv, type LinkedInSource, type ParsedMetricRow } from "@/lib/linkedin-csv";
+import { buildPostMatcher } from "@/lib/match-posts";
 
 export interface LinkedinMetric {
   id: string;
@@ -61,16 +62,30 @@ export function useImportLinkedinCsv() {
       const rows = await parseLinkedInCsv(file, source, sheetName);
       if (rows.length === 0) throw new Error("No se detectaron filas con métricas en este fichero");
 
-      const { data: posts } = await supabase
-        .from("generated_posts")
-        .select("id, content, linkedin_url");
+      // Fetch posts + their "Personal" label assignments to enable date-based matching.
+      const [{ data: posts }, { data: personalLabel }] = await Promise.all([
+        supabase.from("generated_posts").select("id, content, linkedin_url, published_at"),
+        supabase.from("post_labels").select("id").eq("name", "Personal").maybeSingle(),
+      ]);
 
-      const byUrl = new Map<string, string>();
-      const byNorm = new Map<string, string>();
-      (posts ?? []).forEach((p: any) => {
-        if (p.linkedin_url) byUrl.set(p.linkedin_url, p.id);
-        if (p.content) byNorm.set(normalizeContent(p.content), p.id);
-      });
+      let personalIds = new Set<string>();
+      if (personalLabel?.id) {
+        const { data: assignments } = await supabase
+          .from("post_label_assignments")
+          .select("post_id")
+          .eq("label_id", personalLabel.id);
+        personalIds = new Set((assignments ?? []).map((a: any) => a.post_id));
+      }
+
+      const matcher = buildPostMatcher(
+        (posts ?? []).map((p: any) => ({
+          id: p.id,
+          content: p.content,
+          linkedin_url: p.linkedin_url,
+          published_at: p.published_at,
+          is_personal: personalIds.has(p.id),
+        })),
+      );
 
       // Existing metrics for the same source — used to apply the "overwrite only if impressions >= current" rule.
       const { data: existing } = await supabase
@@ -94,12 +109,13 @@ export function useImportLinkedinCsv() {
       const toUpdate: { id: string; row: any }[] = [];
 
       for (const r of rows as ParsedMetricRow[]) {
-        let post_id: string | null = null;
-        if (r.linkedin_url && byUrl.has(r.linkedin_url)) post_id = byUrl.get(r.linkedin_url)!;
-        else if (r.post_excerpt) {
-          const key = normalizeContent(r.post_excerpt);
-          if (key && byNorm.has(key)) post_id = byNorm.get(key)!;
-        }
+        const post_id = matcher({
+          source: r.source,
+          linkedin_url: r.linkedin_url,
+          post_title: r.post_title,
+          post_excerpt: r.post_excerpt,
+          posted_at: r.posted_at,
+        });
         if (post_id) matched++;
 
         const newRow = {
