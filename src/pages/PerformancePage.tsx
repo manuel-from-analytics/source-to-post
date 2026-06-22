@@ -42,9 +42,30 @@ export default function PerformancePage() {
   const [sortKey, setSortKey] = useState<SortKey>("engagement_rate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
+  // Posts that carry the "Personal" label — used for date-based matching of personal metrics.
+  const { data: personalPostIds = new Set<string>() } = useQuery({
+    queryKey: ["personal-post-ids"],
+    queryFn: async () => {
+      const { data: lbl } = await supabase
+        .from("post_labels").select("id").eq("name", "Personal").maybeSingle();
+      if (!lbl?.id) return new Set<string>();
+      const { data: assigns } = await supabase
+        .from("post_label_assignments").select("post_id").eq("label_id", lbl.id);
+      return new Set<string>((assigns ?? []).map((a: any) => a.post_id));
+    },
+  });
+
   const matcher = useMemo(
-    () => buildPostMatcher((posts ?? []).map((p: any) => ({ id: p.id, content: p.content, linkedin_url: p.linkedin_url }))),
-    [posts],
+    () => buildPostMatcher(
+      (posts ?? []).map((p: any) => ({
+        id: p.id,
+        content: p.content,
+        linkedin_url: p.linkedin_url,
+        published_at: p.published_at,
+        is_personal: personalPostIds.has(p.id),
+      })),
+    ),
+    [posts, personalPostIds],
   );
 
   const rows = useMemo<Row[]>(() => {
