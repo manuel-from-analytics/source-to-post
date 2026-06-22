@@ -85,7 +85,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Importar CSV de LinkedIn</DialogTitle>
+          <DialogTitle>Importar fichero de LinkedIn</DialogTitle>
           <DialogDescription>Paso {step} de 4</DialogDescription>
         </DialogHeader>
 
