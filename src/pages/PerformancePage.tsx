@@ -168,7 +168,10 @@ export default function PerformancePage() {
                   </TableHeader>
                   <TableBody>
                     {sorted.map((m) => (
-                      <TableRow key={m.id}>
+                      <TableRow
+                        key={m.id}
+                        className={!m.matchedPostId ? "bg-amber-50/60 dark:bg-amber-500/10 border-l-2 border-l-amber-400" : undefined}
+                      >
                         <TableCell className="max-w-[320px]">
                           {m.matchedPostId ? (
                             <button
@@ -185,8 +188,11 @@ export default function PerformancePage() {
                               </div>
                             </button>
                           ) : (
-                            <div className="font-medium truncate text-sm text-muted-foreground" title="Sin post vinculado en la app">
-                              {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
+                            <div
+                              className="font-medium truncate text-sm text-amber-700 dark:text-amber-400"
+                              title="Este post no está vinculado a ningún post de la app"
+                            >
+                              ⚠ {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
                             </div>
                           )}
                         </TableCell>
