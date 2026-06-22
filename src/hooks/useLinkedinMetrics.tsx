@@ -131,6 +131,6 @@ export function useImportLinkedinCsv() {
       qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
       toast.success(`Importadas ${total} filas (${matched} cruzadas con posts)`);
     },
-    onError: (e: any) => toast.error(e?.message ?? "Error importando CSV"),
+    onError: (e: any) => toast.error(e?.message ?? "Error importando el fichero"),
   });
 }
