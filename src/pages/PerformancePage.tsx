@@ -9,46 +9,90 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Upload, BarChart3, TrendingUp, Eye, Heart, MessageCircle, Share2, MousePointerClick,
+  Upload, BarChart3, TrendingUp, Eye, Heart,
   ExternalLink, Trash2, Building2, User as UserIcon, Link2,
+  ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useLinkedinMetrics, useDeleteLinkedinMetric } from "@/hooks/useLinkedinMetrics";
+import { useLinkedinMetrics, useDeleteLinkedinMetric, type LinkedinMetric } from "@/hooks/useLinkedinMetrics";
+import { usePosts } from "@/hooks/usePosts";
 import type { LinkedInSource } from "@/lib/linkedin-csv";
 import { ImportCsvWizard } from "@/components/ImportCsvWizard";
+import { buildPostMatcher } from "@/lib/match-posts";
 
 type SourceFilter = "all" | LinkedInSource;
+type SortKey = "post" | "source" | "posted_at" | "impressions" | "engagements" | "engagement_rate";
+type SortDir = "asc" | "desc";
+
+interface Row extends LinkedinMetric {
+  matchedPostId: string | null;
+  engagements: number;
+}
 
 export default function PerformancePage() {
   const { data: metrics = [], isLoading } = useLinkedinMetrics();
+  const { data: posts = [] } = usePosts();
   const deleteMut = useDeleteLinkedinMetric();
   const navigate = useNavigate();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [importOpen, setImportOpen] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("engagement_rate");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  const filtered = useMemo(
-    () => (sourceFilter === "all" ? metrics : metrics.filter((m) => m.source === sourceFilter)),
-    [metrics, sourceFilter],
+  const matcher = useMemo(
+    () => buildPostMatcher((posts ?? []).map((p: any) => ({ id: p.id, content: p.content, linkedin_url: p.linkedin_url }))),
+    [posts],
   );
+
+  const rows = useMemo<Row[]>(() => {
+    const base = sourceFilter === "all" ? metrics : metrics.filter((m) => m.source === sourceFilter);
+    return base.map((m) => ({
+      ...m,
+      matchedPostId: matcher(m),
+      engagements: Math.round(m.impressions * m.engagement_rate),
+    }));
+  }, [metrics, sourceFilter, matcher]);
 
   const summary = useMemo(() => {
-    const total = filtered.length;
-    const impressions = filtered.reduce((a, b) => a + b.impressions, 0);
-    const reactions = filtered.reduce((a, b) => a + b.reactions, 0);
-    const comments = filtered.reduce((a, b) => a + b.comments, 0);
-    const shares = filtered.reduce((a, b) => a + b.shares, 0);
-    const clicks = filtered.reduce((a, b) => a + b.clicks, 0);
-    const er = impressions > 0 ? (reactions + comments + shares + clicks) / impressions : 0;
-    const top = [...filtered].sort((a, b) => b.engagement_rate - a.engagement_rate)[0];
-    return { total, impressions, reactions, comments, shares, clicks, er, top };
-  }, [filtered]);
+    const total = rows.length;
+    const impressions = rows.reduce((a, b) => a + b.impressions, 0);
+    const engagements = rows.reduce((a, b) => a + b.engagements, 0);
+    const er = impressions > 0 ? engagements / impressions : 0;
+    return { total, impressions, engagements, er };
+  }, [rows]);
 
-  const topPosts = useMemo(
-    () => [...filtered].sort((a, b) => b.engagement_rate - a.engagement_rate).slice(0, 20),
-    [filtered],
-  );
+  const sorted = useMemo(() => {
+    const arr = [...rows];
+    const dir = sortDir === "asc" ? 1 : -1;
+    arr.sort((a, b) => {
+      let av: any, bv: any;
+      switch (sortKey) {
+        case "post":
+          av = (a.post_title || a.post_excerpt || "").toLowerCase();
+          bv = (b.post_title || b.post_excerpt || "").toLowerCase();
+          return av < bv ? -1 * dir : av > bv ? 1 * dir : 0;
+        case "source":
+          return a.source.localeCompare(b.source) * dir;
+        case "posted_at":
+          av = a.posted_at ? new Date(a.posted_at).getTime() : 0;
+          bv = b.posted_at ? new Date(b.posted_at).getTime() : 0;
+          return (av - bv) * dir;
+        case "impressions":
+          return (a.impressions - b.impressions) * dir;
+        case "engagements":
+          return (a.engagements - b.engagements) * dir;
+        case "engagement_rate":
+          return (a.engagement_rate - b.engagement_rate) * dir;
+      }
+    });
+    return arr;
+  }, [rows, sortKey, sortDir]);
 
+  const toggleSort = (k: SortKey) => {
+    if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
+    else { setSortKey(k); setSortDir(k === "post" || k === "source" ? "asc" : "desc"); }
+  };
 
   return (
     <div className="container mx-auto p-4 lg:p-8 space-y-6 max-w-7xl">
@@ -66,7 +110,6 @@ export default function PerformancePage() {
           <Upload className="h-4 w-4 mr-2" />Importar fichero
         </Button>
         <ImportCsvWizard open={importOpen} onOpenChange={setImportOpen} />
-
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -98,39 +141,41 @@ export default function PerformancePage() {
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <KPI icon={<Eye className="h-4 w-4" />} label="Impresiones" value={summary.impressions.toLocaleString()} />
+            <KPI icon={<Heart className="h-4 w-4" />} label="Engagements" value={summary.engagements.toLocaleString()} />
             <KPI icon={<TrendingUp className="h-4 w-4" />} label="Engagement rate medio" value={`${(summary.er * 100).toFixed(2)}%`} />
-            <KPI icon={<Heart className="h-4 w-4" />} label="Reacciones" value={summary.reactions.toLocaleString()} />
             <KPI icon={<BarChart3 className="h-4 w-4" />} label="Posts" value={summary.total.toLocaleString()} />
           </div>
 
           <Card>
-            <CardHeader><CardTitle className="text-base">Top 20 por engagement rate</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="text-base">
+                Posts ({sorted.length})
+              </CardTitle>
+            </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Post</TableHead>
-                      <TableHead>Origen</TableHead>
-                      <TableHead className="text-right">Impr.</TableHead>
-                      <TableHead className="text-right"><Heart className="h-3.5 w-3.5 inline" /></TableHead>
-                      <TableHead className="text-right"><MessageCircle className="h-3.5 w-3.5 inline" /></TableHead>
-                      <TableHead className="text-right"><Share2 className="h-3.5 w-3.5 inline" /></TableHead>
-                      <TableHead className="text-right"><MousePointerClick className="h-3.5 w-3.5 inline" /></TableHead>
-                      <TableHead className="text-right">ER</TableHead>
+                      <SortableHead label="Post" k="post" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                      <SortableHead label="Origen" k="source" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                      <SortableHead label="Fecha" k="posted_at" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                      <SortableHead label="Impresiones" k="impressions" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                      <SortableHead label="Engagements" k="engagements" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                      <SortableHead label="ER" k="engagement_rate" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {topPosts.map((m) => (
+                    {sorted.map((m) => (
                       <TableRow key={m.id}>
-                        <TableCell className="max-w-[280px]">
-                          {m.post_id ? (
+                        <TableCell className="max-w-[320px]">
+                          {m.matchedPostId ? (
                             <button
                               type="button"
-                              onClick={() => navigate("/history", { state: { openPostId: m.post_id } })}
+                              onClick={() => navigate("/history", { state: { openPostId: m.matchedPostId } })}
                               className="text-left w-full group/title"
-                              title="Ver detalle del post"
+                              title="Ver detalle del post en la app"
                             >
                               <div className="font-medium truncate text-sm group-hover/title:text-primary group-hover/title:underline flex items-center gap-1">
                                 <Link2 className="h-3 w-3 shrink-0 opacity-60" />
@@ -138,40 +183,26 @@ export default function PerformancePage() {
                                   {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
                                 </span>
                               </div>
-                              {m.posted_at && (
-                                <div className="text-xs text-muted-foreground">
-                                  {new Date(m.posted_at).toLocaleDateString()}
-                                </div>
-                              )}
                             </button>
                           ) : (
-                            <>
-                              <div className="font-medium truncate text-sm">
-                                {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
-                              </div>
-                              {m.posted_at && (
-                                <div className="text-xs text-muted-foreground">
-                                  {new Date(m.posted_at).toLocaleDateString()}
-                                </div>
-                              )}
-                            </>
+                            <div className="font-medium truncate text-sm text-muted-foreground" title="Sin post vinculado en la app">
+                              {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
+                            </div>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <SourceBadge source={m.source} />
+                        <TableCell><SourceBadge source={m.source} /></TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {m.posted_at ? new Date(m.posted_at).toLocaleDateString() : "—"}
                         </TableCell>
                         <TableCell className="text-right tabular-nums">{m.impressions.toLocaleString()}</TableCell>
-                        <TableCell className="text-right tabular-nums">{m.reactions.toLocaleString()}</TableCell>
-                        <TableCell className="text-right tabular-nums">{m.comments.toLocaleString()}</TableCell>
-                        <TableCell className="text-right tabular-nums">{m.shares.toLocaleString()}</TableCell>
-                        <TableCell className="text-right tabular-nums">{m.clicks.toLocaleString()}</TableCell>
+                        <TableCell className="text-right tabular-nums">{m.engagements.toLocaleString()}</TableCell>
                         <TableCell className="text-right tabular-nums font-medium">
                           {(m.engagement_rate * 100).toFixed(2)}%
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             {m.linkedin_url && (
-                              <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground">
+                              <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground" title="Abrir en LinkedIn">
                                 <ExternalLink className="h-4 w-4" />
                               </a>
                             )}
@@ -197,13 +228,34 @@ export default function PerformancePage() {
   );
 }
 
+function SortableHead({
+  label, k, sortKey, sortDir, onClick, align = "left",
+}: {
+  label: string; k: SortKey; sortKey: SortKey; sortDir: SortDir;
+  onClick: (k: SortKey) => void; align?: "left" | "right";
+}) {
+  const active = sortKey === k;
+  const Icon = !active ? ArrowUpDown : sortDir === "asc" ? ArrowUp : ArrowDown;
+  return (
+    <TableHead className={align === "right" ? "text-right" : undefined}>
+      <button
+        type="button"
+        onClick={() => onClick(k)}
+        className={`inline-flex items-center gap-1 hover:text-foreground ${active ? "text-foreground" : ""} ${align === "right" ? "justify-end w-full" : ""}`}
+      >
+        <span>{label}</span>
+        <Icon className="h-3 w-3 opacity-60" />
+      </button>
+    </TableHead>
+  );
+}
+
 function KPI({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <Card>
       <CardContent className="p-4">
         <div className="flex items-center gap-2 text-muted-foreground text-xs">
-          {icon}
-          <span>{label}</span>
+          {icon}<span>{label}</span>
         </div>
         <div className="text-xl lg:text-2xl font-bold mt-1 tabular-nums">{value}</div>
       </CardContent>
