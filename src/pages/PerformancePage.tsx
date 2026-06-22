@@ -71,8 +71,9 @@ export default function PerformancePage() {
         id: p.id, content: p.content, linkedin_url: p.linkedin_url,
       })),
       personalPublications,
+      { personalMetrics: metrics.filter((m) => m.source === "personal") },
     ),
-    [posts, personalPublications],
+    [posts, personalPublications, metrics],
   );
 
   const rows = useMemo<Row[]>(() => {
