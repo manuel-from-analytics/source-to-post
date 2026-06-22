@@ -93,7 +93,7 @@ mcp.tool("delete_input", {
 
 // ── POSTS ──
 mcp.tool("list_posts", {
-  description: "List generated posts including their labels (e.g. personal, empresa) and per-label publication dates. Filters: status, is_favorite, source_newsletter_id, created_after (ISO), created_before (ISO), label (filter by label name, case-insensitive, e.g. 'personal' or 'empresa'), limit.",
+  description: "List generated posts including their labels (e.g. personal, empresa), per-label publication dates, and aggregated LinkedIn performance metrics (impressions, engagements, engagement_rate per source) imported from LinkedIn analytics files. Filters: status, is_favorite, source_newsletter_id, created_after (ISO), created_before (ISO), label (filter by label name, case-insensitive, e.g. 'personal' or 'empresa'), limit.",
   inputSchema: {
     type: "object" as const,
     properties: {
@@ -121,7 +121,7 @@ mcp.tool("list_posts", {
     if (posts.length === 0) return json([]);
 
     const postIds = posts.map((p) => p.id);
-    const [{ data: assignments }, { data: publications }] = await Promise.all([
+    const [{ data: assignments }, { data: publications }, { data: metrics }] = await Promise.all([
       supabase
         .from("post_label_assignments")
         .select("post_id, label_id, post_labels(id, name, color)")
@@ -129,6 +129,10 @@ mcp.tool("list_posts", {
       supabase
         .from("post_label_publications")
         .select("post_id, label_id, published_at")
+        .in("post_id", postIds),
+      supabase
+        .from("linkedin_post_metrics")
+        .select("post_id, source, impressions, engagement_rate, posted_at, linkedin_url, imported_at")
         .in("post_id", postIds),
     ]);
 
@@ -151,7 +155,32 @@ mcp.tool("list_posts", {
       labelsByPost.set(a.post_id, arr);
     }
 
-    let enriched = posts.map((p) => ({ ...p, labels: labelsByPost.get(p.id) ?? [] }));
+    // Aggregate metrics per post: keep the row with the highest impressions per source.
+    const metricsByPost = new Map<string, any[]>();
+    for (const m of (metrics ?? []) as any[]) {
+      if (!m.post_id) continue;
+      const arr = metricsByPost.get(m.post_id) ?? [];
+      const engagements = Math.round((m.impressions || 0) * (m.engagement_rate || 0));
+      const existing = arr.find((x) => x.source === m.source);
+      const row = {
+        source: m.source,
+        impressions: m.impressions || 0,
+        engagements,
+        engagement_rate: m.engagement_rate || 0,
+        posted_at: m.posted_at,
+        linkedin_url: m.linkedin_url,
+        imported_at: m.imported_at,
+      };
+      if (!existing) arr.push(row);
+      else if (row.impressions > existing.impressions) Object.assign(existing, row);
+      metricsByPost.set(m.post_id, arr);
+    }
+
+    let enriched = posts.map((p) => ({
+      ...p,
+      labels: labelsByPost.get(p.id) ?? [],
+      metrics: metricsByPost.get(p.id) ?? [],
+    }));
 
     if (params.label && typeof params.label === "string") {
       const needle = params.label.toLowerCase();
@@ -165,16 +194,17 @@ mcp.tool("list_posts", {
 });
 
 mcp.tool("get_post", {
-  description: "Get full details of a generated post by ID, including its labels (e.g. personal, empresa) and per-label publication info.",
+  description: "Get full details of a generated post by ID, including its labels (e.g. personal, empresa), per-label publication info, and aggregated LinkedIn performance metrics (impressions, engagements, engagement_rate per source) imported from LinkedIn analytics files.",
   inputSchema: { type: "object" as const, properties: { id: { type: "string" as const } }, required: ["id"] as const },
   handler: async ({ id }: any) => {
     const { supabase } = getCtx();
     const { data, error } = await supabase.from("generated_posts").select("*").eq("id", id).single();
     if (error) throw error;
 
-    const [{ data: assignments }, { data: publications }] = await Promise.all([
+    const [{ data: assignments }, { data: publications }, { data: metrics }] = await Promise.all([
       supabase.from("post_label_assignments").select("label_id, post_labels(id, name, color)").eq("post_id", id),
       supabase.from("post_label_publications").select("label_id, published_at").eq("post_id", id),
+      supabase.from("linkedin_post_metrics").select("source, impressions, engagement_rate, posted_at, linkedin_url, imported_at").eq("post_id", id),
     ]);
 
     const pubMap = new Map<string, string>();
@@ -190,7 +220,25 @@ mcp.tool("get_post", {
         published_at: pubMap.get(lbl.id) ?? null,
       }));
 
-    return json({ ...data, labels });
+    // Aggregate metrics: keep highest-impressions row per source.
+    const metricsAgg: any[] = [];
+    for (const m of (metrics ?? []) as any[]) {
+      const engagements = Math.round((m.impressions || 0) * (m.engagement_rate || 0));
+      const row = {
+        source: m.source,
+        impressions: m.impressions || 0,
+        engagements,
+        engagement_rate: m.engagement_rate || 0,
+        posted_at: m.posted_at,
+        linkedin_url: m.linkedin_url,
+        imported_at: m.imported_at,
+      };
+      const existing = metricsAgg.find((x) => x.source === m.source);
+      if (!existing) metricsAgg.push(row);
+      else if (row.impressions > existing.impressions) Object.assign(existing, row);
+    }
+
+    return json({ ...data, labels, metrics: metricsAgg });
   },
 });
 

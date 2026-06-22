@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Files, Library } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -53,16 +53,20 @@ export default function HistoryPage() {
   const unpublishFromLabel = useUnpublishFromLabel();
   const toggleLabel = useTogglePostLabel();
 
-  // Auto-open a post if navigated here with { openPostId }
+  // Auto-open a post if navigated here with { openPostId } — once
+  const openedOnceRef = useRef(false);
   useEffect(() => {
+    if (openedOnceRef.current) return;
     const id = (location.state as any)?.openPostId as string | undefined;
     if (!id || !posts) return;
     const found = posts.find((p) => p.id === id);
     if (found) {
+      openedOnceRef.current = true;
       setSelectedPost(found);
-      navigate(location.pathname, { replace: true, state: {} });
+      // Clear state via history API to avoid re-rendering the route
+      window.history.replaceState({}, "");
     }
-  }, [location.state, posts, navigate, location.pathname]);
+  }, [location.state, posts]);
 
   const statusLabels: Record<PostStatus, string> = {
     draft: t("history.draft"),
@@ -242,7 +246,7 @@ export default function HistoryPage() {
       )}
 
       {/* Detail dialog */}
-      <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>
+      <Dialog open={!!selectedPost} onOpenChange={(open) => { if (!open) setSelectedPost(null); }}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">
