@@ -108,7 +108,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
 
           {step === 2 && (
             <div className="space-y-3 text-sm">
-              <p className="font-medium">Cómo descargar el CSV en LinkedIn:</p>
+              <p className="font-medium">Cómo descargar el fichero en LinkedIn:</p>
               {source === "personal" ? (
                 <ol className="list-decimal pl-5 space-y-1.5 text-muted-foreground">
                   <li>Abre LinkedIn y ve a <strong>Yo → Ver perfil</strong>.</li>
@@ -121,7 +121,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
                   <li>Abre tu <strong>página de empresa</strong> como administrador.</li>
                   <li>Ve a <strong>Analítica → Contenido</strong>.</li>
                   <li>Selecciona el rango de fechas que quieras analizar.</li>
-                  <li>Pulsa <strong>Exportar</strong> y descarga el archivo.</li>
+                  <li>Pulsa <strong>Exportar</strong> y descarga el archivo (.xls / .xlsx / .csv).</li>
                 </ol>
               )}
               <a href={exportUrl} target="_blank" rel="noreferrer"
@@ -129,7 +129,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
                 Abrir LinkedIn Analytics <ExternalLink className="h-3.5 w-3.5" />
               </a>
               <p className="text-xs text-muted-foreground pt-2">
-                Si descargas un .xlsx, ábrelo y guárdalo como CSV antes de subirlo.
+                Aceptamos <strong>.csv</strong>, <strong>.xls</strong> y <strong>.xlsx</strong> directamente — no hace falta convertir.
               </p>
             </div>
           )}
@@ -137,7 +137,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
           {step === 3 && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Sube el CSV. Detectaremos automáticamente el formato y validaremos las columnas.
+                Sube el fichero exportado (.csv, .xls o .xlsx). Detectaremos automáticamente el formato y validaremos las columnas.
               </p>
               <button
                 type="button"
@@ -158,15 +158,15 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
                 ) : (
                   <div className="space-y-2">
                     <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
-                    <p className="text-sm font-medium">Haz clic para seleccionar un CSV</p>
-                    <p className="text-xs text-muted-foreground">o arrástralo aquí</p>
+                    <p className="text-sm font-medium">Haz clic para seleccionar un fichero</p>
+                    <p className="text-xs text-muted-foreground">.csv, .xls o .xlsx</p>
                   </div>
                 )}
               </button>
               <input
                 ref={fileRef}
                 type="file"
-                accept=".csv,.tsv,.txt,text/csv"
+                accept=".csv,.tsv,.txt,.xls,.xlsx,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 className="hidden"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
