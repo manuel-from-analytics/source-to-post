@@ -2,16 +2,12 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import {
-  ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-} from "recharts";
 import {
   Upload, BarChart3, TrendingUp, Eye, Heart, MessageCircle, Share2, MousePointerClick,
   ExternalLink, Trash2, Building2, User as UserIcon, Link2,
@@ -22,7 +18,6 @@ import type { LinkedInSource } from "@/lib/linkedin-csv";
 import { ImportCsvWizard } from "@/components/ImportCsvWizard";
 
 type SourceFilter = "all" | LinkedInSource;
-type Granularity = "week" | "month";
 
 export default function PerformancePage() {
   const { data: metrics = [], isLoading } = useLinkedinMetrics();
@@ -31,7 +26,6 @@ export default function PerformancePage() {
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [importOpen, setImportOpen] = useState(false);
-  const [granularity, setGranularity] = useState<Granularity>("week");
 
   const filtered = useMemo(
     () => (sourceFilter === "all" ? metrics : metrics.filter((m) => m.source === sourceFilter)),
@@ -49,30 +43,6 @@ export default function PerformancePage() {
     const top = [...filtered].sort((a, b) => b.engagement_rate - a.engagement_rate)[0];
     return { total, impressions, reactions, comments, shares, clicks, er, top };
   }, [filtered]);
-
-  const timeline = useMemo(() => {
-    const buckets = new Map<string, { key: string; impressions: number; engagement: number; count: number; er: number }>();
-    for (const m of filtered) {
-      if (!m.posted_at) continue;
-      const d = new Date(m.posted_at);
-      let key: string;
-      if (granularity === "week") {
-        const day = d.getUTCDay();
-        const monday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - ((day + 6) % 7)));
-        key = monday.toISOString().slice(0, 10);
-      } else {
-        key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-      }
-      const cur = buckets.get(key) ?? { key, impressions: 0, engagement: 0, count: 0, er: 0 };
-      cur.impressions += m.impressions;
-      cur.engagement += m.reactions + m.comments + m.shares + m.clicks;
-      cur.count += 1;
-      buckets.set(key, cur);
-    }
-    return Array.from(buckets.values())
-      .sort((a, b) => a.key.localeCompare(b.key))
-      .map((b) => ({ ...b, er: b.impressions > 0 ? (b.engagement / b.impressions) * 100 : 0 }));
-  }, [filtered, granularity]);
 
   const topPosts = useMemo(
     () => [...filtered].sort((a, b) => b.engagement_rate - a.engagement_rate).slice(0, 20),
@@ -133,145 +103,94 @@ export default function PerformancePage() {
             <KPI icon={<BarChart3 className="h-4 w-4" />} label="Posts" value={summary.total.toLocaleString()} />
           </div>
 
-          <Tabs defaultValue="top">
-            <TabsList>
-              <TabsTrigger value="top">Top posts</TabsTrigger>
-              <TabsTrigger value="timeline">Evolución</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="top" className="mt-4">
-              <Card>
-                <CardHeader><CardTitle className="text-base">Top 20 por engagement rate</CardTitle></CardHeader>
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Post</TableHead>
-                          <TableHead>Origen</TableHead>
-                          <TableHead className="text-right">Impr.</TableHead>
-                          <TableHead className="text-right"><Heart className="h-3.5 w-3.5 inline" /></TableHead>
-                          <TableHead className="text-right"><MessageCircle className="h-3.5 w-3.5 inline" /></TableHead>
-                          <TableHead className="text-right"><Share2 className="h-3.5 w-3.5 inline" /></TableHead>
-                          <TableHead className="text-right"><MousePointerClick className="h-3.5 w-3.5 inline" /></TableHead>
-                          <TableHead className="text-right">ER</TableHead>
-                          <TableHead></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {topPosts.map((m) => (
-                          <TableRow key={m.id}>
-                          <TableCell className="max-w-[280px]">
-                            {m.post_id ? (
-                              <button
-                                type="button"
-                                onClick={() => navigate("/history", { state: { openPostId: m.post_id } })}
-                                className="text-left w-full group/title"
-                                title="Ver detalle del post"
-                              >
-                                <div className="font-medium truncate text-sm group-hover/title:text-primary group-hover/title:underline flex items-center gap-1">
-                                  <Link2 className="h-3 w-3 shrink-0 opacity-60" />
-                                  <span className="truncate">
-                                    {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
-                                  </span>
-                                </div>
-                                {m.posted_at && (
-                                  <div className="text-xs text-muted-foreground">
-                                    {new Date(m.posted_at).toLocaleDateString()}
-                                  </div>
-                                )}
-                              </button>
-                            ) : (
-                              <>
-                                <div className="font-medium truncate text-sm">
+          <Card>
+            <CardHeader><CardTitle className="text-base">Top 20 por engagement rate</CardTitle></CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Post</TableHead>
+                      <TableHead>Origen</TableHead>
+                      <TableHead className="text-right">Impr.</TableHead>
+                      <TableHead className="text-right"><Heart className="h-3.5 w-3.5 inline" /></TableHead>
+                      <TableHead className="text-right"><MessageCircle className="h-3.5 w-3.5 inline" /></TableHead>
+                      <TableHead className="text-right"><Share2 className="h-3.5 w-3.5 inline" /></TableHead>
+                      <TableHead className="text-right"><MousePointerClick className="h-3.5 w-3.5 inline" /></TableHead>
+                      <TableHead className="text-right">ER</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {topPosts.map((m) => (
+                      <TableRow key={m.id}>
+                        <TableCell className="max-w-[280px]">
+                          {m.post_id ? (
+                            <button
+                              type="button"
+                              onClick={() => navigate("/history", { state: { openPostId: m.post_id } })}
+                              className="text-left w-full group/title"
+                              title="Ver detalle del post"
+                            >
+                              <div className="font-medium truncate text-sm group-hover/title:text-primary group-hover/title:underline flex items-center gap-1">
+                                <Link2 className="h-3 w-3 shrink-0 opacity-60" />
+                                <span className="truncate">
                                   {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
-                                </div>
-                                {m.posted_at && (
-                                  <div className="text-xs text-muted-foreground">
-                                    {new Date(m.posted_at).toLocaleDateString()}
-                                  </div>
-                                )}
-                              </>
-                            )}
-                          </TableCell>
-                            <TableCell>
-                              <SourceBadge source={m.source} />
-                            </TableCell>
-                            <TableCell className="text-right tabular-nums">{m.impressions.toLocaleString()}</TableCell>
-                            <TableCell className="text-right tabular-nums">{m.reactions.toLocaleString()}</TableCell>
-                            <TableCell className="text-right tabular-nums">{m.comments.toLocaleString()}</TableCell>
-                            <TableCell className="text-right tabular-nums">{m.shares.toLocaleString()}</TableCell>
-                            <TableCell className="text-right tabular-nums">{m.clicks.toLocaleString()}</TableCell>
-                            <TableCell className="text-right tabular-nums font-medium">
-                              {(m.engagement_rate * 100).toFixed(2)}%
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                {m.linkedin_url && (
-                                  <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground">
-                                    <ExternalLink className="h-4 w-4" />
-                                  </a>
-                                )}
-                                <button
-                                  onClick={() => deleteMut.mutate(m.id)}
-                                  className="text-muted-foreground hover:text-destructive"
-                                  aria-label="Eliminar"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
+                                </span>
                               </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="timeline" className="mt-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Select value={granularity} onValueChange={(v) => setGranularity(v as Granularity)}>
-                  <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="week">Semanal</SelectItem>
-                    <SelectItem value="month">Mensual</SelectItem>
-                  </SelectContent>
-                </Select>
+                              {m.posted_at && (
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(m.posted_at).toLocaleDateString()}
+                                </div>
+                              )}
+                            </button>
+                          ) : (
+                            <>
+                              <div className="font-medium truncate text-sm">
+                                {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
+                              </div>
+                              {m.posted_at && (
+                                <div className="text-xs text-muted-foreground">
+                                  {new Date(m.posted_at).toLocaleDateString()}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <SourceBadge source={m.source} />
+                        </TableCell>
+                        <TableCell className="text-right tabular-nums">{m.impressions.toLocaleString()}</TableCell>
+                        <TableCell className="text-right tabular-nums">{m.reactions.toLocaleString()}</TableCell>
+                        <TableCell className="text-right tabular-nums">{m.comments.toLocaleString()}</TableCell>
+                        <TableCell className="text-right tabular-nums">{m.shares.toLocaleString()}</TableCell>
+                        <TableCell className="text-right tabular-nums">{m.clicks.toLocaleString()}</TableCell>
+                        <TableCell className="text-right tabular-nums font-medium">
+                          {(m.engagement_rate * 100).toFixed(2)}%
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            {m.linkedin_url && (
+                              <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground">
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            )}
+                            <button
+                              onClick={() => deleteMut.mutate(m.id)}
+                              className="text-muted-foreground hover:text-destructive"
+                              aria-label="Eliminar"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
-              <Card>
-                <CardHeader><CardTitle className="text-base">Impresiones</CardTitle></CardHeader>
-                <CardContent className="h-[280px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={timeline}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="key" fontSize={12} />
-                      <YAxis fontSize={12} />
-                      <Tooltip />
-                      <Legend />
-                      <Line type="monotone" dataKey="impressions" name="Impresiones" stroke="hsl(var(--primary))" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader><CardTitle className="text-base">Engagement rate (%)</CardTitle></CardHeader>
-                <CardContent className="h-[280px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={timeline}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="key" fontSize={12} />
-                      <YAxis fontSize={12} />
-                      <Tooltip formatter={(v: number) => `${v.toFixed(2)}%`} />
-                      <Legend />
-                      <Line type="monotone" dataKey="er" name="ER %" stroke="hsl(var(--primary))" />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>
