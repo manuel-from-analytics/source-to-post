@@ -87,11 +87,11 @@ export default function PerformancePage() {
             Rendimiento
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Métricas de tus posts publicados en LinkedIn (personal y empresa). Subes el CSV exportado desde LinkedIn y se cruza con tus posts generados.
+            Métricas de tus posts publicados en LinkedIn (personal y empresa). Sube el fichero exportado desde LinkedIn (.csv, .xls o .xlsx) y se cruza con tus posts generados.
           </p>
         </div>
         <Button onClick={() => setImportOpen(true)}>
-          <Upload className="h-4 w-4 mr-2" />Importar CSV
+          <Upload className="h-4 w-4 mr-2" />Importar fichero
         </Button>
         <ImportCsvWizard open={importOpen} onOpenChange={setImportOpen} />
 
