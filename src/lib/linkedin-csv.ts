@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 
 export type LinkedInSource = "personal" | "company";
 
@@ -27,6 +28,8 @@ export interface ParsedMetricRow {
 export interface CsvAnalysis {
   format: LinkedInCsvFormat;
   formatLabel: string;
+  fileKind: "csv" | "xlsx" | "xls";
+  sheetName?: string;
   headers: string[];
   rowCount: number;
   detected: {
@@ -57,16 +60,16 @@ export class CsvValidationError extends Error {
 const numberKeys: Record<string, RegExp[]> = {
   impressions: [/^impressions$/i, /^impresiones$/i, /^impressões$/i, /impression/i],
   clicks: [/^clicks$/i, /^clics$/i, /^cliques$/i, /click/i],
-  reactions: [/^reactions$/i, /^reacciones$/i, /^reações$/i, /^likes$/i, /^me gusta$/i, /reaction/i],
+  reactions: [/^reactions$/i, /^reacciones$/i, /^reações$/i, /^likes$/i, /^me gusta$/i, /reaction/i, /\blikes?\b/i],
   comments: [/^comments$/i, /^comentarios$/i, /^comentários$/i, /comment/i],
   shares: [/^shares$/i, /^reposts$/i, /^compartidos$/i, /^compartilhamentos$/i, /share/i, /repost/i],
 };
 
 const stringKeys = {
-  url: [/post.*url/i, /\burl\b/i, /\blink\b/i, /enlace/i],
+  url: [/post.*link/i, /post.*url/i, /\burl\b/i, /\blink\b/i, /enlace/i],
   title: [/^post title$/i, /^t[ií]tulo/i, /headline/i, /asunto/i],
   excerpt: [/post text/i, /^content$/i, /\btexto\b/i, /conte[úu]do/i, /publicaci[oó]n/i],
-  date: [/posted/i, /created/i, /publicad/i, /fecha/i, /\bdata\b/i, /\bdate\b/i],
+  date: [/^date$/i, /\bdate\b/i, /post.*date/i, /created.*date/i, /publish.*date/i, /^posted at$/i, /^posted on$/i, /publicad/i, /fecha/i, /\bdata\b/i],
 } as const;
 
 function findHeader(headers: string[], patterns: readonly RegExp[]): string | null {
@@ -83,9 +86,14 @@ function getByHeader(row: Record<string, string>, header: string | null): string
 
 function parseNumber(raw: string): number {
   if (!raw) return 0;
-  const cleaned = raw.replace(/[^\d.,-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(/,/g, ".");
+  const s = String(raw).trim();
+  if (!s) return 0;
+  // Handle percentages like "1.23%"
+  const isPct = s.includes("%");
+  const cleaned = s.replace(/%/g, "").replace(/[^\d.,-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(/,/g, ".");
   const n = parseFloat(cleaned);
-  return Number.isNaN(n) ? 0 : n;
+  if (Number.isNaN(n)) return 0;
+  return isPct ? n / 100 : n;
 }
 
 function extractUrn(url: string | null): string | null {
@@ -100,20 +108,54 @@ function extractUrn(url: string | null): string | null {
 
 function parseDate(raw: string | null): string | null {
   if (!raw) return null;
-  const d = new Date(raw);
+  const s = String(raw).trim();
+  if (!s) return null;
+  // Excel serial date number
+  if (/^\d{4,6}(\.\d+)?$/.test(s)) {
+    const n = parseFloat(s);
+    if (n > 20000 && n < 80000) {
+      // Excel epoch: 1899-12-30
+      const ms = (n - 25569) * 86400 * 1000;
+      const d = new Date(ms);
+      if (!Number.isNaN(d.getTime())) return d.toISOString();
+    }
+  }
+  const d = new Date(s);
   if (!Number.isNaN(d.getTime())) return d.toISOString();
-  // Try DD/MM/YYYY
-  const m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  // Try DD/MM/YYYY or MM/DD/YYYY
+  const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
   if (m) {
-    const [, dd, mm, yy] = m;
+    const [, a, b, yy] = m;
     const year = yy.length === 2 ? 2000 + parseInt(yy) : parseInt(yy);
-    const d2 = new Date(year, parseInt(mm) - 1, parseInt(dd));
+    // Heuristic: if first part > 12, must be DD/MM/YYYY; else assume MM/DD/YYYY (LinkedIn US format)
+    const aN = parseInt(a), bN = parseInt(b);
+    let day: number, month: number;
+    if (aN > 12) { day = aN; month = bN; }
+    else { month = aN; day = bN; }
+    const d2 = new Date(year, month - 1, day);
     if (!Number.isNaN(d2.getTime())) return d2.toISOString();
   }
   return null;
 }
 
-async function readCleanedText(file: File): Promise<{ text: string; allLines: string[] }> {
+const SUPPORTED_EXT = /\.(csv|tsv|txt|xls|xlsx)$/i;
+
+function fileKindOf(name: string): "csv" | "xls" | "xlsx" | null {
+  const m = name.toLowerCase().match(/\.(csv|tsv|txt|xls|xlsx)$/);
+  if (!m) return null;
+  if (m[1] === "xlsx") return "xlsx";
+  if (m[1] === "xls") return "xls";
+  return "csv";
+}
+
+interface ExtractedTable {
+  kind: "csv" | "xlsx" | "xls";
+  sheetName?: string;
+  headers: string[];
+  records: Record<string, string>[];
+}
+
+async function readCsvCleanedText(file: File): Promise<string> {
   const text = await file.text();
   const lines = text.split(/\r?\n/);
   let startIdx = 0;
@@ -127,23 +169,137 @@ async function readCleanedText(file: File): Promise<{ text: string; allLines: st
       break;
     }
   }
-  return { text: lines.slice(startIdx).join("\n"), allLines: lines };
+  return lines.slice(startIdx).join("\n");
+}
+
+async function extractFromCsv(file: File): Promise<ExtractedTable> {
+  const text = await readCsvCleanedText(file);
+  const parsed = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true });
+  if (parsed.errors.length && parsed.data.length === 0) {
+    throw new CsvValidationError(`No se pudo leer el CSV: ${parsed.errors[0].message}.`);
+  }
+  const headers = (parsed.meta.fields ?? []).map((h) => h.trim()).filter(Boolean);
+  return { kind: "csv", headers, records: parsed.data as Record<string, string>[] };
+}
+
+const KNOWN_HEADER_TOKENS = [
+  "impression", "impresion", "impressões",
+  "click", "clic", "cliques",
+  "reaction", "reaccion", "reações", "likes",
+  "comment", "comentario", "comentário",
+  "share", "repost", "compartid", "compartilh",
+  "post title", "post link", "post url",
+  "engagement", "views", "follows",
+];
+
+function scoreHeaderRow(cells: unknown[]): number {
+  let score = 0;
+  let nonEmpty = 0;
+  for (const c of cells) {
+    const s = String(c ?? "").toLowerCase().trim();
+    if (!s) continue;
+    nonEmpty++;
+    if (KNOWN_HEADER_TOKENS.some((t) => s.includes(t))) score += 2;
+  }
+  return nonEmpty >= 3 ? score : 0;
+}
+
+function aoaToRecords(aoa: unknown[][]): { headers: string[]; records: Record<string, string>[] } | null {
+  let bestIdx = -1;
+  let bestScore = 0;
+  const limit = Math.min(aoa.length, 15);
+  for (let i = 0; i < limit; i++) {
+    const s = scoreHeaderRow(aoa[i] || []);
+    if (s > bestScore) {
+      bestScore = s;
+      bestIdx = i;
+    }
+  }
+  if (bestIdx === -1 || bestScore < 4) return null;
+  const headerRow = (aoa[bestIdx] || []).map((c) => String(c ?? "").trim());
+  const records: Record<string, string>[] = [];
+  for (let i = bestIdx + 1; i < aoa.length; i++) {
+    const row = aoa[i] || [];
+    if (row.every((c) => c === null || c === undefined || String(c).trim() === "")) continue;
+    const rec: Record<string, string> = {};
+    let hasContent = false;
+    for (let j = 0; j < headerRow.length; j++) {
+      const key = headerRow[j];
+      if (!key) continue;
+      const val = row[j];
+      const sval = val === null || val === undefined ? "" : String(val);
+      rec[key] = sval;
+      if (sval.trim()) hasContent = true;
+    }
+    if (hasContent) records.push(rec);
+  }
+  return { headers: headerRow.filter(Boolean), records };
+}
+
+async function extractFromExcel(file: File, kind: "xls" | "xlsx"): Promise<ExtractedTable> {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array", cellDates: false });
+  let best: { sheetName: string; headers: string[]; records: Record<string, string>[]; score: number } | null = null;
+
+  for (const sheetName of wb.SheetNames) {
+    const ws = wb.Sheets[sheetName];
+    if (!ws) continue;
+    const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, blankrows: false, defval: "", raw: false });
+    const parsed = aoaToRecords(aoa);
+    if (!parsed || parsed.records.length === 0) continue;
+
+    // Score: prefer sheets that look post-level (have url/title)
+    const lcHeaders = parsed.headers.map((h) => h.toLowerCase());
+    let score = parsed.records.length;
+    if (lcHeaders.some((h) => h.includes("url") || h.includes("link"))) score += 1000;
+    if (lcHeaders.some((h) => h.includes("post title") || h.includes("title") || h.includes("título"))) score += 500;
+    // Penalize daily-aggregate sheets (have 'date' but no url/title)
+    const hasDateOnly = lcHeaders.some((h) => h === "date" || h.includes("fecha"))
+      && !lcHeaders.some((h) => h.includes("url") || h.includes("link") || h.includes("title"));
+    if (hasDateOnly) score -= 2000;
+
+    if (!best || score > best.score) {
+      best = { sheetName, headers: parsed.headers, records: parsed.records, score };
+    }
+  }
+
+  if (!best) {
+    throw new CsvValidationError("No se encontró ninguna hoja con datos por publicación. Asegúrate de exportar las analíticas de contenido (no solo agregados diarios).");
+  }
+  return { kind, sheetName: best.sheetName, headers: best.headers, records: best.records };
+}
+
+async function extractTable(file: File): Promise<ExtractedTable> {
+  const kind = fileKindOf(file.name);
+  if (!kind) {
+    throw new CsvValidationError(
+      "Formato no soportado. Sube un archivo .csv, .xls o .xlsx exportado desde LinkedIn Analytics.",
+    );
+  }
+  if (kind === "csv") return extractFromCsv(file);
+  return extractFromExcel(file, kind);
 }
 
 function detectFormat(headers: string[], filename: string): { format: LinkedInCsvFormat; label: string; sourceHint: LinkedInSource | null } {
   const lc = headers.map((h) => h.toLowerCase().trim());
   const fn = filename.toLowerCase();
   const hasImpressions = lc.some((h) => h.includes("impression") || h.includes("impresion"));
-  const hasReactions = lc.some((h) => h.includes("reaction") || h.includes("reaccion") || h === "likes");
+  const hasReactions = lc.some((h) => h.includes("reaction") || h.includes("reaccion") || h === "likes" || h.includes("likes"));
   const hasUrl = lc.some((h) => h.includes("url") || h.includes("link"));
+  const hasFollows = lc.some((h) => h.includes("follows"));
+  const hasContentType = lc.some((h) => h === "content type");
 
-  if (fn.includes("company") || fn.includes("empresa") || fn.includes("page-posts")) {
+  // LinkedIn company page export: has Likes + Reposts + Follows + Content Type
+  if (hasFollows && hasContentType) {
     return { format: "linkedin-company-content", label: "LinkedIn — Página de empresa", sourceHint: "company" };
   }
-  if (fn.includes("creator") || fn.includes("content_") || fn.includes("posts_")) {
+  if (fn.includes("company") || fn.includes("empresa") || fn.includes("page-posts") || fn.includes("from-analytics")) {
+    return { format: "linkedin-company-content", label: "LinkedIn — Página de empresa", sourceHint: "company" };
+  }
+  if (fn.includes("aggregateanalytics") || fn.includes("creator") || fn.includes("content_") || fn.includes("posts_")) {
     return { format: "linkedin-personal-content", label: "LinkedIn — Cuenta personal", sourceHint: "personal" };
   }
-  if (hasImpressions && hasReactions && hasUrl) {
+  if (hasImpressions && (hasReactions || hasUrl)) {
     return { format: "linkedin-generic", label: "LinkedIn (formato genérico)", sourceHint: null };
   }
   if (hasImpressions) {
@@ -152,35 +308,20 @@ function detectFormat(headers: string[], filename: string): { format: LinkedInCs
   return { format: "unknown", label: "Formato no reconocido", sourceHint: null };
 }
 
-export async function analyzeLinkedInCsv(file: File): Promise<CsvAnalysis> {
-  if (!file.name.toLowerCase().match(/\.(csv|tsv|txt)$/)) {
+export async function analyzeLinkedInFile(file: File): Promise<CsvAnalysis> {
+  if (!SUPPORTED_EXT.test(file.name)) {
     throw new CsvValidationError(
-      "El archivo debe ser un CSV. Si descargaste un .xlsx desde LinkedIn, ábrelo y guárdalo como CSV.",
+      "Formato no soportado. Sube un archivo .csv, .xls o .xlsx exportado desde LinkedIn Analytics.",
     );
   }
-  if (file.size === 0) {
-    throw new CsvValidationError("El archivo está vacío.");
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    throw new CsvValidationError("El archivo supera los 10 MB. Reduce el rango de fechas exportado.");
+  if (file.size === 0) throw new CsvValidationError("El archivo está vacío.");
+  if (file.size > 15 * 1024 * 1024) {
+    throw new CsvValidationError("El archivo supera los 15 MB. Reduce el rango de fechas exportado.");
   }
 
-  const { text } = await readCleanedText(file);
-  const parsed = Papa.parse<Record<string, string>>(text, {
-    header: true,
-    skipEmptyLines: true,
-  });
-
-  if (parsed.errors.length && parsed.data.length === 0) {
-    throw new CsvValidationError(
-      `No se pudo leer el CSV: ${parsed.errors[0].message}. Comprueba que el archivo no esté corrupto.`,
-    );
-  }
-
-  const headers = (parsed.meta.fields ?? []).map((h) => h.trim()).filter(Boolean);
-  if (headers.length === 0) {
-    throw new CsvValidationError("No se detectaron columnas en el CSV.");
-  }
+  const table = await extractTable(file);
+  const { headers, records } = table;
+  if (headers.length === 0) throw new CsvValidationError("No se detectaron columnas en el archivo.");
 
   const detected = {
     impressions: findHeader(headers, numberKeys.impressions),
@@ -208,6 +349,9 @@ export async function analyzeLinkedInCsv(file: File): Promise<CsvAnalysis> {
   const warnings: string[] = [];
   if (!detected.date) warnings.push("No se detectó columna de fecha — los gráficos de evolución no podrán incluir estas filas.");
   if (!detected.url) warnings.push("No se detectó URL del post — el cruce con tus posts generados será solo por contenido.");
+  if (table.kind !== "csv" && table.sheetName) {
+    warnings.push(`Se está usando la hoja "${table.sheetName}" del archivo Excel.`);
+  }
   if (format === "unknown" && missingRequired.length === 0) {
     warnings.push("No reconocemos el formato exacto, pero las columnas necesarias parecen presentes.");
   }
@@ -215,8 +359,10 @@ export async function analyzeLinkedInCsv(file: File): Promise<CsvAnalysis> {
   const analysis: CsvAnalysis = {
     format,
     formatLabel: label,
+    fileKind: table.kind,
+    sheetName: table.sheetName,
     headers,
-    rowCount: parsed.data.length,
+    rowCount: records.length,
     detected,
     missingRequired,
     warnings,
@@ -229,27 +375,26 @@ export async function analyzeLinkedInCsv(file: File): Promise<CsvAnalysis> {
       analysis,
     );
   }
-  if (parsed.data.length === 0) {
-    throw new CsvValidationError("El CSV no contiene filas de datos.", analysis);
+  if (records.length === 0) {
+    throw new CsvValidationError("El archivo no contiene filas de datos.", analysis);
   }
 
   return analysis;
 }
 
-export async function parseLinkedInCsv(
+// Backward-compatible alias
+export const analyzeLinkedInCsv = analyzeLinkedInFile;
+
+export async function parseLinkedInFile(
   file: File,
   source: LinkedInSource,
 ): Promise<ParsedMetricRow[]> {
-  const analysis = await analyzeLinkedInCsv(file);
-  const { text } = await readCleanedText(file);
-  const parsed = Papa.parse<Record<string, string>>(text, {
-    header: true,
-    skipEmptyLines: true,
-  });
+  const analysis = await analyzeLinkedInFile(file);
+  const table = await extractTable(file);
 
   const d = analysis.detected;
   const rows: ParsedMetricRow[] = [];
-  for (const row of parsed.data) {
+  for (const row of table.records) {
     if (!row || typeof row !== "object") continue;
 
     const url = getByHeader(row, d.url).trim() || null;
@@ -286,6 +431,9 @@ export async function parseLinkedInCsv(
   }
   return rows;
 }
+
+// Backward-compatible alias
+export const parseLinkedInCsv = parseLinkedInFile;
 
 export function normalizeContent(s: string): string {
   return s
