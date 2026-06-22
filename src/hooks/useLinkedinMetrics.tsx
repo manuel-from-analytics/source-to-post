@@ -61,7 +61,6 @@ export function useImportLinkedinCsv() {
       const rows = await parseLinkedInCsv(file, source, sheetName);
       if (rows.length === 0) throw new Error("No se detectaron filas con métricas en este fichero");
 
-      // Fetch posts for matching
       const { data: posts } = await supabase
         .from("generated_posts")
         .select("id, content, linkedin_url");
@@ -73,8 +72,28 @@ export function useImportLinkedinCsv() {
         if (p.content) byNorm.set(normalizeContent(p.content), p.id);
       });
 
+      // Existing metrics for the same source — used to apply the "overwrite only if impressions >= current" rule.
+      const { data: existing } = await supabase
+        .from("linkedin_post_metrics")
+        .select("id, linkedin_urn, linkedin_url, impressions")
+        .eq("source", source);
+
+      const existingByUrn = new Map<string, { id: string; impressions: number }>();
+      const existingByUrl = new Map<string, { id: string; impressions: number }>();
+      (existing ?? []).forEach((e: any) => {
+        const entry = { id: e.id, impressions: e.impressions ?? 0 };
+        if (e.linkedin_urn) existingByUrn.set(e.linkedin_urn, entry);
+        else if (e.linkedin_url) existingByUrl.set(e.linkedin_url, entry);
+      });
+
       let matched = 0;
-      const payload = rows.map((r: ParsedMetricRow) => {
+      let inserted = 0;
+      let overwritten = 0;
+      let kept = 0;
+      const toInsert: any[] = [];
+      const toUpdate: { id: string; row: any }[] = [];
+
+      for (const r of rows as ParsedMetricRow[]) {
         let post_id: string | null = null;
         if (r.linkedin_url && byUrl.has(r.linkedin_url)) post_id = byUrl.get(r.linkedin_url)!;
         else if (r.post_excerpt) {
@@ -82,7 +101,8 @@ export function useImportLinkedinCsv() {
           if (key && byNorm.has(key)) post_id = byNorm.get(key)!;
         }
         if (post_id) matched++;
-        return {
+
+        const newRow = {
           user_id: user.id,
           post_id,
           source: r.source,
@@ -99,37 +119,41 @@ export function useImportLinkedinCsv() {
           engagement_rate: r.engagement_rate,
           raw: r.raw,
         };
-      });
 
-      // Upsert in chunks. Use urn-based conflict if available; otherwise plain insert.
-      const withUrn = payload.filter((p) => p.linkedin_urn);
-      const withoutUrn = payload.filter((p) => !p.linkedin_urn);
+        const prev =
+          (r.linkedin_urn ? existingByUrn.get(r.linkedin_urn) : null) ||
+          (r.linkedin_url ? existingByUrl.get(r.linkedin_url) : null);
 
-      if (withUrn.length) {
+        if (!prev) {
+          toInsert.push(newRow);
+          inserted++;
+        } else if (newRow.impressions >= prev.impressions) {
+          toUpdate.push({ id: prev.id, row: newRow });
+          overwritten++;
+        } else {
+          kept++;
+        }
+      }
+
+      const CHUNK = 500;
+      for (let i = 0; i < toInsert.length; i += CHUNK) {
         const { error } = await supabase
           .from("linkedin_post_metrics")
-          .upsert(withUrn as any, { onConflict: "user_id,source,linkedin_urn" });
+          .insert(toInsert.slice(i, i + CHUNK) as any);
         if (error) throw error;
       }
-      if (withoutUrn.length) {
-        // fall back to URL-based dedup: delete existing same-url rows then insert.
-        const urls = withoutUrn.map((p) => p.linkedin_url).filter(Boolean) as string[];
-        if (urls.length) {
-          await supabase
-            .from("linkedin_post_metrics")
-            .delete()
-            .eq("source", withoutUrn[0].source)
-            .in("linkedin_url", urls);
-        }
-        const { error } = await supabase.from("linkedin_post_metrics").insert(withoutUrn as any);
+      for (const u of toUpdate) {
+        const { error } = await supabase.from("linkedin_post_metrics").update(u.row as any).eq("id", u.id);
         if (error) throw error;
       }
 
-      return { total: rows.length, matched };
+      return { total: rows.length, matched, inserted, overwritten, kept };
     },
-    onSuccess: ({ total, matched }) => {
+    onSuccess: ({ total, matched, inserted, overwritten, kept }) => {
       qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
-      toast.success(`Importadas ${total} filas (${matched} cruzadas con posts)`);
+      toast.success(
+        `Importadas ${total} filas · ${inserted} nuevas, ${overwritten} actualizadas, ${kept} sin cambios (datos menores) · ${matched} cruzadas con posts`,
+      );
     },
     onError: (e: any) => toast.error(e?.message ?? "Error importando el fichero"),
   });
