@@ -19,6 +19,8 @@ import { usePosts } from "@/hooks/usePosts";
 import type { LinkedInSource } from "@/lib/linkedin-csv";
 import { ImportCsvWizard } from "@/components/ImportCsvWizard";
 import { buildPostMatcher } from "@/lib/match-posts";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 type SourceFilter = "all" | LinkedInSource;
 type SortKey = "post" | "source" | "posted_at" | "impressions" | "engagements" | "engagement_rate";
