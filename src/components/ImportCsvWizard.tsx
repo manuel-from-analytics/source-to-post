@@ -31,6 +31,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [analysis, setAnalysis] = useState<CsvAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [selectedSheet, setSelectedSheet] = useState<string | undefined>(undefined);
   const [validationError, setValidationError] = useState<{ message: string; analysis?: CsvAnalysis } | null>(null);
   const [result, setResult] = useState<{ total: number; matched: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -40,6 +41,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     setSource("personal");
     setFile(null);
     setAnalysis(null);
+    setSelectedSheet(undefined);
     setValidationError(null);
     setResult(null);
   }
@@ -49,18 +51,19 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     onOpenChange(v);
   }
 
-  async function handleFileSelected(f: File) {
-    setFile(f);
-    setAnalysis(null);
-    setValidationError(null);
+  async function analyzeFile(f: File, sheet?: string) {
     setAnalyzing(true);
+    setValidationError(null);
     try {
-      const a = await analyzeLinkedInCsv(f);
+      const a = await analyzeLinkedInFile(f, sheet);
       setAnalysis(a);
+      setSelectedSheet(a.sheetName);
       if (a.sourceHint && a.sourceHint !== source) setSource(a.sourceHint);
     } catch (e) {
+      setAnalysis(null);
       if (e instanceof CsvValidationError) {
         setValidationError({ message: e.message, analysis: e.analysis });
+        if (e.analysis?.sheetName) setSelectedSheet(e.analysis.sheetName);
       } else {
         setValidationError({ message: e instanceof Error ? e.message : "Error al leer el archivo" });
       }
@@ -69,10 +72,23 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     }
   }
 
+  async function handleFileSelected(f: File) {
+    setFile(f);
+    setAnalysis(null);
+    setSelectedSheet(undefined);
+    await analyzeFile(f);
+  }
+
+  async function handleSheetChange(sheet: string) {
+    if (!file) return;
+    setSelectedSheet(sheet);
+    await analyzeFile(file, sheet);
+  }
+
   async function runImport() {
     if (!file || !analysis) return;
     try {
-      const res = await importMut.mutateAsync({ file, source });
+      const res = await importMut.mutateAsync({ file, source, sheetName: selectedSheet });
       setResult(res);
       setStep(4);
     } catch {
