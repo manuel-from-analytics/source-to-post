@@ -62,19 +62,20 @@ export function useImportLinkedinCsv() {
       const rows = await parseLinkedInCsv(file, source, sheetName);
       if (rows.length === 0) throw new Error("No se detectaron filas con métricas en este fichero");
 
-      // Fetch posts + their "Personal" label assignments to enable date-based matching.
+      // Fetch posts + per-label publication dates (Personal) so personal metrics
+      // are matched against the date the post was actually published as Personal.
       const [{ data: posts }, { data: personalLabel }] = await Promise.all([
-        supabase.from("generated_posts").select("id, content, linkedin_url, published_at"),
+        supabase.from("generated_posts").select("id, content, linkedin_url"),
         supabase.from("post_labels").select("id").eq("name", "Personal").maybeSingle(),
       ]);
 
-      let personalIds = new Set<string>();
+      let personalPubs: { post_id: string; published_at: string }[] = [];
       if (personalLabel?.id) {
-        const { data: assignments } = await supabase
-          .from("post_label_assignments")
-          .select("post_id")
+        const { data: pubs } = await supabase
+          .from("post_label_publications")
+          .select("post_id, published_at")
           .eq("label_id", personalLabel.id);
-        personalIds = new Set((assignments ?? []).map((a: any) => a.post_id));
+        personalPubs = (pubs ?? []).filter((p: any) => p.published_at) as any;
       }
 
       const matcher = buildPostMatcher(
@@ -82,9 +83,8 @@ export function useImportLinkedinCsv() {
           id: p.id,
           content: p.content,
           linkedin_url: p.linkedin_url,
-          published_at: p.published_at,
-          is_personal: personalIds.has(p.id),
         })),
+        personalPubs,
       );
 
       // Existing metrics for the same source — used to apply the "overwrite only if impressions >= current" rule.
