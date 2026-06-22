@@ -14,8 +14,9 @@ import {
 } from "recharts";
 import {
   Upload, BarChart3, TrendingUp, Eye, Heart, MessageCircle, Share2, MousePointerClick,
-  ExternalLink, Trash2, Building2, User as UserIcon,
+  ExternalLink, Trash2, Building2, User as UserIcon, Link2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useLinkedinMetrics, useDeleteLinkedinMetric } from "@/hooks/useLinkedinMetrics";
 import type { LinkedInSource } from "@/lib/linkedin-csv";
 import { ImportCsvWizard } from "@/components/ImportCsvWizard";
@@ -26,6 +27,7 @@ type Granularity = "week" | "month";
 export default function PerformancePage() {
   const { data: metrics = [], isLoading } = useLinkedinMetrics();
   const deleteMut = useDeleteLinkedinMetric();
+  const navigate = useNavigate();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [importOpen, setImportOpen] = useState(false);
@@ -159,16 +161,39 @@ export default function PerformancePage() {
                       <TableBody>
                         {topPosts.map((m) => (
                           <TableRow key={m.id}>
-                            <TableCell className="max-w-[280px]">
-                              <div className="font-medium truncate text-sm">
-                                {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
-                              </div>
-                              {m.posted_at && (
-                                <div className="text-xs text-muted-foreground">
-                                  {new Date(m.posted_at).toLocaleDateString()}
+                          <TableCell className="max-w-[280px]">
+                            {m.post_id ? (
+                              <button
+                                type="button"
+                                onClick={() => navigate("/history", { state: { openPostId: m.post_id } })}
+                                className="text-left w-full group/title"
+                                title="Ver detalle del post"
+                              >
+                                <div className="font-medium truncate text-sm group-hover/title:text-primary group-hover/title:underline flex items-center gap-1">
+                                  <Link2 className="h-3 w-3 shrink-0 opacity-60" />
+                                  <span className="truncate">
+                                    {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
+                                  </span>
                                 </div>
-                              )}
-                            </TableCell>
+                                {m.posted_at && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {new Date(m.posted_at).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </button>
+                            ) : (
+                              <>
+                                <div className="font-medium truncate text-sm">
+                                  {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
+                                </div>
+                                {m.posted_at && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {new Date(m.posted_at).toLocaleDateString()}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </TableCell>
                             <TableCell>
                               <SourceBadge source={m.source} />
                             </TableCell>
