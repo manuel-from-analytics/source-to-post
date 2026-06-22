@@ -1,0 +1,1 @@
+UPDATE public.linkedin_post_metrics SET post_id = NULL WHERE source = 'personal';
