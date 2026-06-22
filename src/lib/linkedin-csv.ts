@@ -69,7 +69,7 @@ const stringKeys = {
   url: [/post.*link/i, /post.*url/i, /\burl\b/i, /\blink\b/i, /enlace/i],
   title: [/^post title$/i, /^t[ií]tulo/i, /headline/i, /asunto/i],
   excerpt: [/post text/i, /^content$/i, /\btexto\b/i, /conte[úu]do/i, /publicaci[oó]n/i],
-  date: [/posted/i, /created/i, /publicad/i, /fecha/i, /\bdata\b/i, /\bdate\b/i],
+  date: [/^date$/i, /\bdate\b/i, /post.*date/i, /created.*date/i, /publish.*date/i, /^posted at$/i, /^posted on$/i, /publicad/i, /fecha/i, /\bdata\b/i],
 } as const;
 
 function findHeader(headers: string[], patterns: readonly RegExp[]): string | null {
