@@ -85,6 +85,7 @@ export function useImportLinkedinCsv() {
           linkedin_url: p.linkedin_url,
         })),
         personalPubs,
+        { personalMetrics: rows.filter((r) => r.source === "personal") },
       );
 
       // Existing metrics for the same source — used to apply the "overwrite only if impressions >= current" rule.
