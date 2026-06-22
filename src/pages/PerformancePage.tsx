@@ -9,8 +9,12 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
   Upload, BarChart3, TrendingUp, Eye, Heart,
-  ExternalLink, Trash2, Building2, User as UserIcon, Link2,
+  ExternalLink, Trash2, Building2, User as UserIcon, Link2, Link as LinkIcon,
   ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -18,9 +22,10 @@ import { useLinkedinMetrics, useDeleteLinkedinMetric, type LinkedinMetric } from
 import { usePosts } from "@/hooks/usePosts";
 import type { LinkedInSource } from "@/lib/linkedin-csv";
 import { ImportCsvWizard } from "@/components/ImportCsvWizard";
-import { buildPostMatcher } from "@/lib/match-posts";
+import { buildPostMatcher, type PersonalPublication } from "@/lib/match-posts";
 import { supabase } from "@/integrations/supabase/client";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 type SourceFilter = "all" | LinkedInSource;
 type SortKey = "post" | "source" | "posted_at" | "impressions" | "engagements" | "engagement_rate";
@@ -36,43 +41,45 @@ export default function PerformancePage() {
   const { data: posts = [] } = usePosts();
   const deleteMut = useDeleteLinkedinMetric();
   const navigate = useNavigate();
+  const qc = useQueryClient();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [importOpen, setImportOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("engagement_rate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [linkingMetric, setLinkingMetric] = useState<LinkedinMetric | null>(null);
 
-  // Posts that carry the "Personal" label — used for date-based matching of personal metrics.
-  const { data: personalPostIds = new Set<string>() } = useQuery({
-    queryKey: ["personal-post-ids"],
+  // Per-label publication dates for the "Personal" label — used to match
+  // personal LinkedIn metrics by date even when a post is also tagged Empresa.
+  const { data: personalPublications = [] as PersonalPublication[] } = useQuery({
+    queryKey: ["personal-publications"],
     queryFn: async () => {
       const { data: lbl } = await supabase
         .from("post_labels").select("id").eq("name", "Personal").maybeSingle();
-      if (!lbl?.id) return new Set<string>();
-      const { data: assigns } = await supabase
-        .from("post_label_assignments").select("post_id").eq("label_id", lbl.id);
-      return new Set<string>((assigns ?? []).map((a: any) => a.post_id));
+      if (!lbl?.id) return [] as PersonalPublication[];
+      const { data: pubs } = await supabase
+        .from("post_label_publications")
+        .select("post_id, published_at")
+        .eq("label_id", lbl.id);
+      return ((pubs ?? []) as any[]).filter((p) => p.published_at) as PersonalPublication[];
     },
   });
 
   const matcher = useMemo(
     () => buildPostMatcher(
       (posts ?? []).map((p: any) => ({
-        id: p.id,
-        content: p.content,
-        linkedin_url: p.linkedin_url,
-        published_at: p.published_at,
-        is_personal: personalPostIds.has(p.id),
+        id: p.id, content: p.content, linkedin_url: p.linkedin_url,
       })),
+      personalPublications,
     ),
-    [posts, personalPostIds],
+    [posts, personalPublications],
   );
 
   const rows = useMemo<Row[]>(() => {
     const base = sourceFilter === "all" ? metrics : metrics.filter((m) => m.source === sourceFilter);
     return base.map((m) => ({
       ...m,
-      matchedPostId: matcher(m),
+      matchedPostId: m.post_id ?? matcher(m),
       engagements: Math.round(m.impressions * m.engagement_rate),
     }));
   }, [metrics, sourceFilter, matcher]);
@@ -116,6 +123,25 @@ export default function PerformancePage() {
     if (sortKey === k) setSortDir(sortDir === "asc" ? "desc" : "asc");
     else { setSortKey(k); setSortDir(k === "post" || k === "source" ? "asc" : "desc"); }
   };
+
+  const linkMut = useMutation({
+    mutationFn: async ({ metricId, postId, linkedinUrl }: { metricId: string; postId: string; linkedinUrl: string | null }) => {
+      const { error } = await supabase
+        .from("linkedin_post_metrics").update({ post_id: postId }).eq("id", metricId);
+      if (error) throw error;
+      // Persist the LinkedIn URL on the post so future imports auto-match by URL/URN.
+      if (linkedinUrl) {
+        await supabase.from("generated_posts").update({ linkedin_url: linkedinUrl }).eq("id", postId);
+      }
+    },
+    onSuccess: () => {
+      toast.success("Post vinculado");
+      qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
+      qc.invalidateQueries({ queryKey: ["posts"] });
+      setLinkingMetric(null);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo vincular"),
+  });
 
   return (
     <div className="container mx-auto p-4 lg:p-8 space-y-6 max-w-7xl">
@@ -230,6 +256,16 @@ export default function PerformancePage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
+                            {!m.matchedPostId && (
+                              <button
+                                onClick={() => setLinkingMetric(m)}
+                                className="text-amber-600 hover:text-amber-700 dark:text-amber-400"
+                                title="Vincular con un post de la biblioteca"
+                                aria-label="Vincular post"
+                              >
+                                <LinkIcon className="h-4 w-4" />
+                              </button>
+                            )}
                             {m.linkedin_url && (
                               <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground" title="Abrir en LinkedIn">
                                 <ExternalLink className="h-4 w-4" />
@@ -253,7 +289,79 @@ export default function PerformancePage() {
           </Card>
         </>
       )}
+
+      <LinkPostDialog
+        metric={linkingMetric}
+        posts={posts}
+        onClose={() => setLinkingMetric(null)}
+        onSelect={(postId) =>
+          linkingMetric &&
+          linkMut.mutate({ metricId: linkingMetric.id, postId, linkedinUrl: linkingMetric.linkedin_url })
+        }
+      />
     </div>
+  );
+}
+
+function LinkPostDialog({
+  metric, posts, onClose, onSelect,
+}: {
+  metric: LinkedinMetric | null;
+  posts: any[];
+  onClose: () => void;
+  onSelect: (postId: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const filtered = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    const list = (posts ?? []).slice().sort((a: any, b: any) => {
+      const at = a.published_at ? new Date(a.published_at).getTime() : 0;
+      const bt = b.published_at ? new Date(b.published_at).getTime() : 0;
+      return bt - at;
+    });
+    if (!needle) return list.slice(0, 50);
+    return list
+      .filter((p: any) =>
+        (p.title || "").toLowerCase().includes(needle) ||
+        (p.content || "").toLowerCase().includes(needle))
+      .slice(0, 50);
+  }, [posts, q]);
+
+  return (
+    <Dialog open={!!metric} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Vincular con un post de la biblioteca</DialogTitle>
+          <DialogDescription>
+            {metric?.linkedin_url ? (
+              <>Se guardará la URL de LinkedIn en el post seleccionado para que las próximas importaciones lo emparejen automáticamente.</>
+            ) : (
+              <>Se vinculará la métrica al post elegido.</>
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <Input placeholder="Buscar por título o contenido…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+        <div className="max-h-[50vh] overflow-y-auto divide-y rounded border">
+          {filtered.length === 0 ? (
+            <div className="p-4 text-sm text-muted-foreground text-center">Sin resultados</div>
+          ) : filtered.map((p: any) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onSelect(p.id)}
+              className="w-full text-left p-3 hover:bg-muted/50 transition-colors"
+            >
+              <div className="font-medium text-sm truncate">{p.title || "(sin título)"}</div>
+              <div className="text-xs text-muted-foreground truncate">
+                {p.published_at ? new Date(p.published_at).toLocaleDateString() : "Sin publicar"}
+                {" · "}
+                {(p.content || "").slice(0, 100)}
+              </div>
+            </button>
+          ))}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
