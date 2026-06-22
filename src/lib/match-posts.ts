@@ -108,29 +108,35 @@ export function buildPostMatcher(
   }
 
   if (options.personalMetrics && personal.length > 0) {
-    // Build all candidate pairs (metric, pub) within tolerance, sorted by
-    // distance ascending. Greedily assign — each metric and each pub used once.
-    type Pair = { mKey: string; postId: string; dist: number };
-    const pairs: Pair[] = [];
-    for (const m of options.personalMetrics) {
-      if (m.source !== "personal" || !m.posted_at) continue;
-      const mDay = madridDateKey(m.posted_at);
-      if (!mDay) continue;
-      const key = metricKey(m);
-      for (const p of personal) {
-        const d = dayDiff(mDay, p.day);
-        if (d > PERSONAL_DAY_TOLERANCE) continue;
-        pairs.push({ mKey: key, postId: p.post_id, dist: d });
+    // Sequential merge: with "≈1 personal post per day", sort both lists by
+    // date and pair them in order. Tolerates a ±2-day drift between LinkedIn's
+    // reported date and the app's "published as Personal" date, while still
+    // preserving order — so a 1-day systematic offset doesn't cascade into the
+    // wrong pairing.
+    const sortedMetrics = options.personalMetrics
+      .filter((m) => m.source === "personal" && m.posted_at)
+      .map((m) => ({ key: metricKey(m), day: madridDateKey(m.posted_at!) }))
+      .filter((m): m is { key: string; day: string } => !!m.day)
+      .sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : 0));
+    const sortedPubs = [...personal].sort((a, b) =>
+      a.day < b.day ? -1 : a.day > b.day ? 1 : 0,
+    );
+
+    let i = 0;
+    let j = 0;
+    while (i < sortedMetrics.length && j < sortedPubs.length) {
+      const m = sortedMetrics[i];
+      const p = sortedPubs[j];
+      const diff = dayDiff(m.day, p.day);
+      if (diff <= PERSONAL_DAY_TOLERANCE) {
+        personalAssignment.set(m.key, p.post_id);
+        i++;
+        j++;
+      } else if (m.day < p.day) {
+        i++;
+      } else {
+        j++;
       }
-    }
-    pairs.sort((a, b) => a.dist - b.dist);
-    const usedMetrics = new Set<string>();
-    const usedPosts = new Set<string>();
-    for (const pair of pairs) {
-      if (usedMetrics.has(pair.mKey) || usedPosts.has(pair.postId)) continue;
-      personalAssignment.set(pair.mKey, pair.postId);
-      usedMetrics.add(pair.mKey);
-      usedPosts.add(pair.postId);
     }
   }
 
