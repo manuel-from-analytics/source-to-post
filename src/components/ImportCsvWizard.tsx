@@ -200,6 +200,29 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
                 </div>
               )}
 
+              {file && !analyzing && (analysis?.availableSheets?.length ?? validationError?.analysis?.availableSheets?.length ?? 0) > 1 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Hoja a importar</Label>
+                  <Select value={selectedSheet} onValueChange={handleSheetChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecciona una hoja" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(analysis?.availableSheets ?? validationError?.analysis?.availableSheets ?? []).map((s) => (
+                        <SelectItem key={s.name} value={s.name}>
+                          <span className="flex items-center gap-2">
+                            <span className="font-medium">{s.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {s.recordCount} filas{s.isAutoSelected ? " · sugerida" : ""}
+                            </span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {validationError && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
