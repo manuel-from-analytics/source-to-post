@@ -55,11 +55,11 @@ export function useImportLinkedinCsv() {
   const { user } = useAuth();
 
   return useMutation({
-    mutationFn: async ({ file, source }: { file: File; source: LinkedInSource }) => {
+    mutationFn: async ({ file, source, sheetName }: { file: File; source: LinkedInSource; sheetName?: string }) => {
       if (!user) throw new Error("Not authenticated");
 
-      const rows = await parseLinkedInCsv(file, source);
-      if (rows.length === 0) throw new Error("No metric rows detected in this CSV");
+      const rows = await parseLinkedInCsv(file, source, sheetName);
+      if (rows.length === 0) throw new Error("No se detectaron filas con métricas en este fichero");
 
       // Fetch posts for matching
       const { data: posts } = await supabase
