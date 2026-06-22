@@ -246,7 +246,7 @@ export default function HistoryPage() {
       )}
 
       {/* Detail dialog */}
-      <Dialog open={!!selectedPost} onOpenChange={() => setSelectedPost(null)}>
+      <Dialog open={!!selectedPost} onOpenChange={(open) => { if (!open) setSelectedPost(null); }}>
         <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-base">
