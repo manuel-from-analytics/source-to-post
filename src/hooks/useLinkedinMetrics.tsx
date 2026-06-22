@@ -2,7 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 import { toast } from "sonner";
-import { parseLinkedInCsv, normalizeContent, type LinkedInSource, type ParsedMetricRow } from "@/lib/linkedin-csv";
+import { parseLinkedInCsv, type LinkedInSource, type ParsedMetricRow } from "@/lib/linkedin-csv";
+import { buildPostMatcher } from "@/lib/match-posts";
 
 export interface LinkedinMetric {
   id: string;
