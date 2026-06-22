@@ -108,7 +108,7 @@ mcp.tool("list_posts", {
   },
   handler: async (params: any) => {
     const { supabase } = getCtx();
-    let q = supabase.from("generated_posts").select("id, title, content, status, goal, tone, language, is_favorite, source_newsletter_id, source_newsletter_item_id, created_at").order("created_at", { ascending: false }).limit(params.limit || 50);
+    let q = supabase.from("generated_posts").select("id, title, content, status, goal, tone, language, is_favorite, source_newsletter_id, source_newsletter_item_id, created_at, published_at").order("created_at", { ascending: false }).limit(params.limit || 50);
     if (params.status) q = q.eq("status", params.status);
     if (params.is_favorite !== undefined) q = q.eq("is_favorite", params.is_favorite);
     if (params.source_newsletter_id) q = q.eq("source_newsletter_id", params.source_newsletter_id);
