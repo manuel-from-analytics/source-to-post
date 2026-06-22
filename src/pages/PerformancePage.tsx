@@ -117,9 +117,9 @@ export default function PerformancePage() {
             <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/50" />
             <p className="font-medium">Aún no has importado métricas</p>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              LinkedIn no expone una API pública de analytics, así que la fuente de verdad es el export CSV que descargas desde LinkedIn (perfil personal o página de empresa).
+              LinkedIn no expone una API pública de analytics, así que la fuente de verdad es el fichero exportado desde LinkedIn (perfil personal o página de empresa).
             </p>
-            <Button onClick={() => setImportOpen(true)}><Upload className="h-4 w-4 mr-2" />Importar mi primer CSV</Button>
+            <Button onClick={() => setImportOpen(true)}><Upload className="h-4 w-4 mr-2" />Importar mi primer fichero</Button>
           </CardContent>
         </Card>
       ) : (

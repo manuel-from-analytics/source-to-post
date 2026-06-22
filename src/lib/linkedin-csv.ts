@@ -25,11 +25,20 @@ export interface ParsedMetricRow {
   raw: Record<string, unknown>;
 }
 
+export interface SheetSummary {
+  name: string;
+  recordCount: number;
+  headers: string[];
+  hasUsableData: boolean;
+  isAutoSelected: boolean;
+}
+
 export interface CsvAnalysis {
   format: LinkedInCsvFormat;
   formatLabel: string;
   fileKind: "csv" | "xlsx" | "xls";
   sheetName?: string;
+  availableSheets?: SheetSummary[];
   headers: string[];
   rowCount: number;
   detected: {
@@ -57,10 +66,20 @@ export class CsvValidationError extends Error {
   }
 }
 
+// IMPORTANT: order of patterns matters within a category. For "reactions", we
+// accept LinkedIn's personal-account "Engagements" aggregate column as a
+// fallback when no per-post reactions/likes column exists.
 const numberKeys: Record<string, RegExp[]> = {
   impressions: [/^impressions$/i, /^impresiones$/i, /^impressões$/i, /impression/i],
   clicks: [/^clicks$/i, /^clics$/i, /^cliques$/i, /click/i],
-  reactions: [/^reactions$/i, /^reacciones$/i, /^reações$/i, /^likes$/i, /^me gusta$/i, /reaction/i, /\blikes?\b/i],
+  reactions: [
+    /^reactions$/i, /^reacciones$/i, /^reações$/i,
+    /^likes$/i, /^me gusta$/i,
+    /reaction/i, /\blikes?\b/i,
+    // Personal export aggregate: "Engagements" (sum of reactions+comments+shares).
+    // We map it to reactions so ER = engagements/impressions stays correct.
+    /^engagements?$/i,
+  ],
   comments: [/^comments$/i, /^comentarios$/i, /^comentários$/i, /comment/i],
   shares: [/^shares$/i, /^reposts$/i, /^compartidos$/i, /^compartilhamentos$/i, /share/i, /repost/i],
 };
@@ -88,7 +107,6 @@ function parseNumber(raw: string): number {
   if (!raw) return 0;
   const s = String(raw).trim();
   if (!s) return 0;
-  // Handle percentages like "1.23%"
   const isPct = s.includes("%");
   const cleaned = s.replace(/%/g, "").replace(/[^\d.,-]/g, "").replace(/\.(?=\d{3}\b)/g, "").replace(/,/g, ".");
   const n = parseFloat(cleaned);
@@ -110,11 +128,9 @@ function parseDate(raw: string | null): string | null {
   if (!raw) return null;
   const s = String(raw).trim();
   if (!s) return null;
-  // Excel serial date number
   if (/^\d{4,6}(\.\d+)?$/.test(s)) {
     const n = parseFloat(s);
     if (n > 20000 && n < 80000) {
-      // Excel epoch: 1899-12-30
       const ms = (n - 25569) * 86400 * 1000;
       const d = new Date(ms);
       if (!Number.isNaN(d.getTime())) return d.toISOString();
@@ -122,12 +138,10 @@ function parseDate(raw: string | null): string | null {
   }
   const d = new Date(s);
   if (!Number.isNaN(d.getTime())) return d.toISOString();
-  // Try DD/MM/YYYY or MM/DD/YYYY
   const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
   if (m) {
     const [, a, b, yy] = m;
     const year = yy.length === 2 ? 2000 + parseInt(yy) : parseInt(yy);
-    // Heuristic: if first part > 12, must be DD/MM/YYYY; else assume MM/DD/YYYY (LinkedIn US format)
     const aN = parseInt(a), bN = parseInt(b);
     let day: number, month: number;
     if (aN > 12) { day = aN; month = bN; }
@@ -153,6 +167,7 @@ interface ExtractedTable {
   sheetName?: string;
   headers: string[];
   records: Record<string, string>[];
+  availableSheets?: SheetSummary[];
 }
 
 async function readCsvCleanedText(file: File): Promise<string> {
@@ -201,13 +216,13 @@ function scoreHeaderRow(cells: unknown[]): number {
     nonEmpty++;
     if (KNOWN_HEADER_TOKENS.some((t) => s.includes(t))) score += 2;
   }
-  return nonEmpty >= 3 ? score : 0;
+  return nonEmpty >= 2 ? score : 0;
 }
 
 function aoaToRecords(aoa: unknown[][]): { headers: string[]; records: Record<string, string>[] } | null {
   let bestIdx = -1;
   let bestScore = 0;
-  const limit = Math.min(aoa.length, 15);
+  const limit = Math.min(aoa.length, 20);
   for (let i = 0; i < limit; i++) {
     const s = scoreHeaderRow(aoa[i] || []);
     if (s > bestScore) {
@@ -236,40 +251,84 @@ function aoaToRecords(aoa: unknown[][]): { headers: string[]; records: Record<st
   return { headers: headerRow.filter(Boolean), records };
 }
 
-async function extractFromExcel(file: File, kind: "xls" | "xlsx"): Promise<ExtractedTable> {
+function scoreSheet(headers: string[], recordCount: number): number {
+  const lc = headers.map((h) => h.toLowerCase());
+  let score = recordCount;
+  if (lc.some((h) => h.includes("url") || h.includes("link"))) score += 1000;
+  if (lc.some((h) => h.includes("post title") || h === "title" || h.includes("título"))) score += 500;
+  // Penalize daily-aggregate sheets (have 'date' but no url/title)
+  const hasDateOnly = lc.some((h) => h === "date" || h.includes("fecha"))
+    && !lc.some((h) => h.includes("url") || h.includes("link") || h.includes("title"));
+  if (hasDateOnly) score -= 2000;
+  return score;
+}
+
+interface SheetParsed {
+  name: string;
+  headers: string[];
+  records: Record<string, string>[];
+  score: number;
+}
+
+async function parseAllSheets(file: File): Promise<{ all: SheetParsed[]; rawNames: string[] }> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: "array", cellDates: false });
-  let best: { sheetName: string; headers: string[]; records: Record<string, string>[]; score: number } | null = null;
-
+  const all: SheetParsed[] = [];
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
     const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, blankrows: false, defval: "", raw: false });
     const parsed = aoaToRecords(aoa);
-    if (!parsed || parsed.records.length === 0) continue;
-
-    // Score: prefer sheets that look post-level (have url/title)
-    const lcHeaders = parsed.headers.map((h) => h.toLowerCase());
-    let score = parsed.records.length;
-    if (lcHeaders.some((h) => h.includes("url") || h.includes("link"))) score += 1000;
-    if (lcHeaders.some((h) => h.includes("post title") || h.includes("title") || h.includes("título"))) score += 500;
-    // Penalize daily-aggregate sheets (have 'date' but no url/title)
-    const hasDateOnly = lcHeaders.some((h) => h === "date" || h.includes("fecha"))
-      && !lcHeaders.some((h) => h.includes("url") || h.includes("link") || h.includes("title"));
-    if (hasDateOnly) score -= 2000;
-
-    if (!best || score > best.score) {
-      best = { sheetName, headers: parsed.headers, records: parsed.records, score };
-    }
+    if (!parsed) continue;
+    all.push({
+      name: sheetName,
+      headers: parsed.headers,
+      records: parsed.records,
+      score: scoreSheet(parsed.headers, parsed.records.length),
+    });
   }
-
-  if (!best) {
-    throw new CsvValidationError("No se encontró ninguna hoja con datos por publicación. Asegúrate de exportar las analíticas de contenido (no solo agregados diarios).");
-  }
-  return { kind, sheetName: best.sheetName, headers: best.headers, records: best.records };
+  return { all, rawNames: wb.SheetNames };
 }
 
-async function extractTable(file: File): Promise<ExtractedTable> {
+async function extractFromExcel(
+  file: File,
+  kind: "xls" | "xlsx",
+  preferredSheet?: string,
+): Promise<ExtractedTable> {
+  const { all } = await parseAllSheets(file);
+  if (all.length === 0) {
+    throw new CsvValidationError(
+      "No se encontró ninguna hoja con datos legibles. Asegúrate de exportar las analíticas de contenido (no solo agregados diarios).",
+    );
+  }
+
+  const sorted = [...all].sort((a, b) => b.score - a.score);
+  const auto = sorted[0];
+
+  let chosen = auto;
+  if (preferredSheet) {
+    const found = all.find((s) => s.name === preferredSheet);
+    if (found) chosen = found;
+  }
+
+  const availableSheets: SheetSummary[] = all.map((s) => ({
+    name: s.name,
+    recordCount: s.records.length,
+    headers: s.headers,
+    hasUsableData: s.score > 0,
+    isAutoSelected: s.name === auto.name,
+  }));
+
+  return {
+    kind,
+    sheetName: chosen.name,
+    headers: chosen.headers,
+    records: chosen.records,
+    availableSheets,
+  };
+}
+
+async function extractTable(file: File, preferredSheet?: string): Promise<ExtractedTable> {
   const kind = fileKindOf(file.name);
   if (!kind) {
     throw new CsvValidationError(
@@ -277,7 +336,7 @@ async function extractTable(file: File): Promise<ExtractedTable> {
     );
   }
   if (kind === "csv") return extractFromCsv(file);
-  return extractFromExcel(file, kind);
+  return extractFromExcel(file, kind, preferredSheet);
 }
 
 function detectFormat(headers: string[], filename: string): { format: LinkedInCsvFormat; label: string; sourceHint: LinkedInSource | null } {
@@ -288,10 +347,15 @@ function detectFormat(headers: string[], filename: string): { format: LinkedInCs
   const hasUrl = lc.some((h) => h.includes("url") || h.includes("link"));
   const hasFollows = lc.some((h) => h.includes("follows"));
   const hasContentType = lc.some((h) => h === "content type");
+  const hasEngagementsOnly =
+    lc.some((h) => h === "engagements") &&
+    !lc.some((h) => h === "likes" || h.includes("reaction") || h.includes("comment"));
 
-  // LinkedIn company page export: has Likes + Reposts + Follows + Content Type
   if (hasFollows && hasContentType) {
     return { format: "linkedin-company-content", label: "LinkedIn — Página de empresa", sourceHint: "company" };
+  }
+  if (hasEngagementsOnly && hasImpressions) {
+    return { format: "linkedin-personal-content", label: "LinkedIn — Cuenta personal (agregado)", sourceHint: "personal" };
   }
   if (fn.includes("company") || fn.includes("empresa") || fn.includes("page-posts") || fn.includes("from-analytics")) {
     return { format: "linkedin-company-content", label: "LinkedIn — Página de empresa", sourceHint: "company" };
@@ -308,7 +372,7 @@ function detectFormat(headers: string[], filename: string): { format: LinkedInCs
   return { format: "unknown", label: "Formato no reconocido", sourceHint: null };
 }
 
-export async function analyzeLinkedInFile(file: File): Promise<CsvAnalysis> {
+export async function analyzeLinkedInFile(file: File, sheetName?: string): Promise<CsvAnalysis> {
   if (!SUPPORTED_EXT.test(file.name)) {
     throw new CsvValidationError(
       "Formato no soportado. Sube un archivo .csv, .xls o .xlsx exportado desde LinkedIn Analytics.",
@@ -319,7 +383,7 @@ export async function analyzeLinkedInFile(file: File): Promise<CsvAnalysis> {
     throw new CsvValidationError("El archivo supera los 15 MB. Reduce el rango de fechas exportado.");
   }
 
-  const table = await extractTable(file);
+  const table = await extractTable(file, sheetName);
   const { headers, records } = table;
   if (headers.length === 0) throw new CsvValidationError("No se detectaron columnas en el archivo.");
 
@@ -338,7 +402,7 @@ export async function analyzeLinkedInFile(file: File): Promise<CsvAnalysis> {
   const missingRequired: string[] = [];
   if (!detected.impressions) missingRequired.push("Impresiones");
   if (!detected.reactions && !detected.clicks && !detected.comments) {
-    missingRequired.push("Reacciones / Comentarios / Clics (al menos una)");
+    missingRequired.push("Engagements / Reacciones / Comentarios / Clics (al menos una)");
   }
   if (!detected.url && !detected.excerpt && !detected.title) {
     missingRequired.push("URL del post o texto/título (al menos uno)");
@@ -350,7 +414,10 @@ export async function analyzeLinkedInFile(file: File): Promise<CsvAnalysis> {
   if (!detected.date) warnings.push("No se detectó columna de fecha — los gráficos de evolución no podrán incluir estas filas.");
   if (!detected.url) warnings.push("No se detectó URL del post — el cruce con tus posts generados será solo por contenido.");
   if (table.kind !== "csv" && table.sheetName) {
-    warnings.push(`Se está usando la hoja "${table.sheetName}" del archivo Excel.`);
+    warnings.push(`Hoja seleccionada: "${table.sheetName}".`);
+  }
+  if (format === "linkedin-personal-content" && /engagements?/i.test(detected.reactions ?? "")) {
+    warnings.push("Export personal: solo guardamos Impresiones y Engagements (agregado). El desglose por reacción/comentario/repost no está disponible en este export.");
   }
   if (format === "unknown" && missingRequired.length === 0) {
     warnings.push("No reconocemos el formato exacto, pero las columnas necesarias parecen presentes.");
@@ -361,6 +428,7 @@ export async function analyzeLinkedInFile(file: File): Promise<CsvAnalysis> {
     formatLabel: label,
     fileKind: table.kind,
     sheetName: table.sheetName,
+    availableSheets: table.availableSheets,
     headers,
     rowCount: records.length,
     detected,
@@ -376,23 +444,34 @@ export async function analyzeLinkedInFile(file: File): Promise<CsvAnalysis> {
     );
   }
   if (records.length === 0) {
-    throw new CsvValidationError("El archivo no contiene filas de datos.", analysis);
+    throw new CsvValidationError("La hoja seleccionada no contiene filas de datos.", analysis);
   }
 
   return analysis;
 }
 
-// Backward-compatible alias
 export const analyzeLinkedInCsv = analyzeLinkedInFile;
 
 export async function parseLinkedInFile(
   file: File,
   source: LinkedInSource,
+  sheetName?: string,
 ): Promise<ParsedMetricRow[]> {
-  const analysis = await analyzeLinkedInFile(file);
-  const table = await extractTable(file);
+  const analysis = await analyzeLinkedInFile(file, sheetName);
+  const table = await extractTable(file, sheetName);
 
   const d = analysis.detected;
+  // For personal export we only have an aggregate "Engagements" column. We
+  // store it in `reactions` (engagements ≈ reactions+comments+shares) so the
+  // engagement_rate denominator/numerator calc remains consistent with the
+  // company export, which has a real per-metric breakdown.
+  const isPersonalAggregate =
+    source === "personal" &&
+    !!d.reactions &&
+    /engagements?/i.test(d.reactions) &&
+    !d.comments &&
+    !d.shares;
+
   const rows: ParsedMetricRow[] = [];
   for (const row of table.records) {
     if (!row || typeof row !== "object") continue;
@@ -410,8 +489,10 @@ export async function parseLinkedInFile(
 
     if (!impressions && !clicks && !reactions && !comments && !shares && !url) continue;
 
-    const engagement_rate =
-      impressions > 0 ? (reactions + comments + shares + clicks) / impressions : 0;
+    const engagementSum = isPersonalAggregate
+      ? reactions // already the aggregate
+      : reactions + comments + shares + clicks;
+    const engagement_rate = impressions > 0 ? engagementSum / impressions : 0;
 
     rows.push({
       source,
@@ -432,7 +513,6 @@ export async function parseLinkedInFile(
   return rows;
 }
 
-// Backward-compatible alias
 export const parseLinkedInCsv = parseLinkedInFile;
 
 export function normalizeContent(s: string): string {

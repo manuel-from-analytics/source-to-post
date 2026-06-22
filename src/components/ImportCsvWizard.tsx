@@ -7,12 +7,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Building2, User as UserIcon, Upload, FileText, CheckCircle2, ArrowLeft, ArrowRight,
   Loader2, ExternalLink, AlertTriangle, AlertCircle, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useImportLinkedinCsv } from "@/hooks/useLinkedinMetrics";
-import { analyzeLinkedInCsv, CsvValidationError, type CsvAnalysis, type LinkedInSource } from "@/lib/linkedin-csv";
+import { analyzeLinkedInFile, CsvValidationError, type CsvAnalysis, type LinkedInSource } from "@/lib/linkedin-csv";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -28,6 +31,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [analysis, setAnalysis] = useState<CsvAnalysis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [selectedSheet, setSelectedSheet] = useState<string | undefined>(undefined);
   const [validationError, setValidationError] = useState<{ message: string; analysis?: CsvAnalysis } | null>(null);
   const [result, setResult] = useState<{ total: number; matched: number } | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -37,6 +41,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     setSource("personal");
     setFile(null);
     setAnalysis(null);
+    setSelectedSheet(undefined);
     setValidationError(null);
     setResult(null);
   }
@@ -46,18 +51,19 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     onOpenChange(v);
   }
 
-  async function handleFileSelected(f: File) {
-    setFile(f);
-    setAnalysis(null);
-    setValidationError(null);
+  async function analyzeFile(f: File, sheet?: string) {
     setAnalyzing(true);
+    setValidationError(null);
     try {
-      const a = await analyzeLinkedInCsv(f);
+      const a = await analyzeLinkedInFile(f, sheet);
       setAnalysis(a);
+      setSelectedSheet(a.sheetName);
       if (a.sourceHint && a.sourceHint !== source) setSource(a.sourceHint);
     } catch (e) {
+      setAnalysis(null);
       if (e instanceof CsvValidationError) {
         setValidationError({ message: e.message, analysis: e.analysis });
+        if (e.analysis?.sheetName) setSelectedSheet(e.analysis.sheetName);
       } else {
         setValidationError({ message: e instanceof Error ? e.message : "Error al leer el archivo" });
       }
@@ -66,10 +72,23 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     }
   }
 
+  async function handleFileSelected(f: File) {
+    setFile(f);
+    setAnalysis(null);
+    setSelectedSheet(undefined);
+    await analyzeFile(f);
+  }
+
+  async function handleSheetChange(sheet: string) {
+    if (!file) return;
+    setSelectedSheet(sheet);
+    await analyzeFile(file, sheet);
+  }
+
   async function runImport() {
     if (!file || !analysis) return;
     try {
-      const res = await importMut.mutateAsync({ file, source });
+      const res = await importMut.mutateAsync({ file, source, sheetName: selectedSheet });
       setResult(res);
       setStep(4);
     } catch {
@@ -178,6 +197,29 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
               {analyzing && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" /> Analizando archivo…
+                </div>
+              )}
+
+              {file && !analyzing && (analysis?.availableSheets?.length ?? validationError?.analysis?.availableSheets?.length ?? 0) > 1 && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Hoja a importar</Label>
+                  <Select value={selectedSheet} onValueChange={handleSheetChange}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Selecciona una hoja" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(analysis?.availableSheets ?? validationError?.analysis?.availableSheets ?? []).map((s) => (
+                        <SelectItem key={s.name} value={s.name}>
+                          <span className="flex items-center gap-2">
+                            <span className="font-medium">{s.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {s.recordCount} filas{s.isAutoSelected ? " · sugerida" : ""}
+                            </span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
