@@ -109,12 +109,13 @@ export function useImportLinkedinCsv() {
       const toUpdate: { id: string; row: any }[] = [];
 
       for (const r of rows as ParsedMetricRow[]) {
-        let post_id: string | null = null;
-        if (r.linkedin_url && byUrl.has(r.linkedin_url)) post_id = byUrl.get(r.linkedin_url)!;
-        else if (r.post_excerpt) {
-          const key = normalizeContent(r.post_excerpt);
-          if (key && byNorm.has(key)) post_id = byNorm.get(key)!;
-        }
+        const post_id = matcher({
+          source: r.source,
+          linkedin_url: r.linkedin_url,
+          post_title: r.post_title,
+          post_excerpt: r.post_excerpt,
+          posted_at: r.posted_at,
+        });
         if (post_id) matched++;
 
         const newRow = {
