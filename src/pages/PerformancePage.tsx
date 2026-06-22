@@ -14,8 +14,9 @@ import {
 } from "recharts";
 import {
   Upload, BarChart3, TrendingUp, Eye, Heart, MessageCircle, Share2, MousePointerClick,
-  ExternalLink, Trash2, Building2, User as UserIcon,
+  ExternalLink, Trash2, Building2, User as UserIcon, Link2,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useLinkedinMetrics, useDeleteLinkedinMetric } from "@/hooks/useLinkedinMetrics";
 import type { LinkedInSource } from "@/lib/linkedin-csv";
 import { ImportCsvWizard } from "@/components/ImportCsvWizard";
