@@ -27,6 +27,7 @@ type Granularity = "week" | "month";
 export default function PerformancePage() {
   const { data: metrics = [], isLoading } = useLinkedinMetrics();
   const deleteMut = useDeleteLinkedinMetric();
+  const navigate = useNavigate();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
   const [importOpen, setImportOpen] = useState(false);
