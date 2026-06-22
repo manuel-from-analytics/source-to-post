@@ -7,12 +7,15 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Building2, User as UserIcon, Upload, FileText, CheckCircle2, ArrowLeft, ArrowRight,
   Loader2, ExternalLink, AlertTriangle, AlertCircle, Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useImportLinkedinCsv } from "@/hooks/useLinkedinMetrics";
-import { analyzeLinkedInCsv, CsvValidationError, type CsvAnalysis, type LinkedInSource } from "@/lib/linkedin-csv";
+import { analyzeLinkedInFile, CsvValidationError, type CsvAnalysis, type LinkedInSource } from "@/lib/linkedin-csv";
 
 type Step = 1 | 2 | 3 | 4;
 
