@@ -132,6 +132,12 @@ export default function PerformancePage() {
       if (error) throw error;
       // Persist the LinkedIn URL on the post so future imports auto-match by URL/URN.
       if (linkedinUrl) {
+        // Clear this URL from any other post that had it (in case of re-link).
+        await supabase
+          .from("generated_posts")
+          .update({ linkedin_url: null })
+          .eq("linkedin_url", linkedinUrl)
+          .neq("id", postId);
         await supabase.from("generated_posts").update({ linkedin_url: linkedinUrl }).eq("id", postId);
       }
     },
