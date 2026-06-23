@@ -318,17 +318,20 @@ async function parseAllSheets(file: File): Promise<{ all: SheetParsed[]; rawName
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
     const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, blankrows: false, defval: "", raw: false });
-    const parsed = aoaToRecords(aoa);
-    if (!parsed) continue;
-    all.push({
-      name: sheetName,
-      headers: parsed.headers,
-      records: parsed.records,
-      score: scoreSheet(parsed.headers, parsed.records.length),
+    const tables = aoaToTables(aoa);
+    if (tables.length === 0) continue;
+    tables.forEach((t, idx) => {
+      all.push({
+        name: tables.length > 1 ? `${sheetName} (${idx + 1})` : sheetName,
+        headers: t.headers,
+        records: t.records,
+        score: scoreSheet(t.headers, t.records.length),
+      });
     });
   }
   return { all, rawNames: wb.SheetNames };
 }
+
 
 async function extractFromExcel(
   file: File,
