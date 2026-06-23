@@ -85,6 +85,33 @@ export default function PerformancePage() {
     }));
   }, [metrics, sourceFilter, matcher]);
 
+  // Persist on-the-fly: any metric without post_id in DB but resolvable via the
+  // client matcher gets written back so MCP / future imports see the link.
+  const backfilledRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!metrics.length || !posts.length) return;
+    const pending: { id: string; postId: string }[] = [];
+    for (const m of metrics) {
+      if (m.post_id) continue;
+      if (backfilledRef.current.has(m.id)) continue;
+      const pid = matcher(m);
+      if (pid) {
+        pending.push({ id: m.id, postId: pid });
+        backfilledRef.current.add(m.id);
+      }
+    }
+    if (!pending.length) return;
+    (async () => {
+      await Promise.all(
+        pending.map(({ id, postId }) =>
+          supabase.from("linkedin_post_metrics").update({ post_id: postId }).eq("id", id),
+        ),
+      );
+      qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
+    })();
+  }, [metrics, posts, matcher, qc]);
+
+
   const summary = useMemo(() => {
     const total = rows.length;
     const impressions = rows.reduce((a, b) => a + b.impressions, 0);
