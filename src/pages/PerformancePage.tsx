@@ -132,6 +132,12 @@ export default function PerformancePage() {
       if (error) throw error;
       // Persist the LinkedIn URL on the post so future imports auto-match by URL/URN.
       if (linkedinUrl) {
+        // Clear this URL from any other post that had it (in case of re-link).
+        await supabase
+          .from("generated_posts")
+          .update({ linkedin_url: null })
+          .eq("linkedin_url", linkedinUrl)
+          .neq("id", postId);
         await supabase.from("generated_posts").update({ linkedin_url: linkedinUrl }).eq("id", postId);
       }
     },
@@ -257,16 +263,18 @@ export default function PerformancePage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            {!m.matchedPostId && (
-                              <button
-                                onClick={() => setLinkingMetric(m)}
-                                className="text-amber-600 hover:text-amber-700 dark:text-amber-400"
-                                title="Vincular con un post de la biblioteca"
-                                aria-label="Vincular post"
-                              >
-                                <LinkIcon className="h-4 w-4" />
-                              </button>
-                            )}
+                            <button
+                              onClick={() => setLinkingMetric(m)}
+                              className={
+                                m.matchedPostId
+                                  ? "text-muted-foreground hover:text-foreground"
+                                  : "text-amber-600 hover:text-amber-700 dark:text-amber-400"
+                              }
+                              title={m.matchedPostId ? "Cambiar el post vinculado" : "Vincular con un post de la biblioteca"}
+                              aria-label={m.matchedPostId ? "Cambiar post vinculado" : "Vincular post"}
+                            >
+                              <LinkIcon className="h-4 w-4" />
+                            </button>
                             {m.linkedin_url && (
                               <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground" title="Abrir en LinkedIn">
                                 <ExternalLink className="h-4 w-4" />
