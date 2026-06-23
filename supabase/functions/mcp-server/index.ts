@@ -93,7 +93,7 @@ mcp.tool("delete_input", {
 
 // ── POSTS ──
 mcp.tool("list_posts", {
-  description: "List generated posts including their labels (e.g. personal, empresa), per-label publication dates, and aggregated LinkedIn performance metrics (impressions, engagements, engagement_rate per source) imported from LinkedIn analytics files. Filters: status, is_favorite, source_newsletter_id, created_after (ISO), created_before (ISO), label (filter by label name, case-insensitive, e.g. 'personal' or 'empresa'), limit.",
+  description: "List generated posts including their labels (e.g. personal, empresa), per-label publication dates, and LinkedIn performance metrics imported from analytics files. Each post includes a `metrics` array (per source: personal/company, with impressions, clicks, reactions, comments, shares, engagements, engagement_rate, posted_at, linkedin_url) and a `performance` object aggregating totals across sources. Filters: status, is_favorite, source_newsletter_id, created_after (ISO), created_before (ISO), label (filter by label name, case-insensitive, e.g. 'personal' or 'empresa'), limit.",
   inputSchema: {
     type: "object" as const,
     properties: {
