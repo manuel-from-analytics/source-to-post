@@ -219,7 +219,18 @@ function scoreHeaderRow(cells: unknown[]): number {
   return nonEmpty >= 2 ? score : 0;
 }
 
-function aoaToRecords(aoa: unknown[][]): { headers: string[]; records: Record<string, string>[] } | null {
+/**
+ * Splits a sheet into one or more sub-tables. LinkedIn's "TOP POSTS" sheet
+ * lays out two mini-tables side by side separated by a blank column — one
+ * ranked by engagements, the other by impressions — both reusing headers like
+ * "Post URL". A single header row + single record per source row collapses
+ * both into one and loses the engagements column. We split the header row on
+ * blank cells and emit one sub-table per non-empty header group; the
+ * downstream merge-by-URL recombines the metrics correctly.
+ */
+function aoaToTables(
+  aoa: unknown[][],
+): { headers: string[]; records: Record<string, string>[] }[] {
   let bestIdx = -1;
   let bestScore = 0;
   const limit = Math.min(aoa.length, 20);
@@ -230,25 +241,54 @@ function aoaToRecords(aoa: unknown[][]): { headers: string[]; records: Record<st
       bestIdx = i;
     }
   }
-  if (bestIdx === -1 || bestScore < 4) return null;
+  if (bestIdx === -1 || bestScore < 4) return [];
   const headerRow = (aoa[bestIdx] || []).map((c) => String(c ?? "").trim());
-  const records: Record<string, string>[] = [];
-  for (let i = bestIdx + 1; i < aoa.length; i++) {
-    const row = aoa[i] || [];
-    if (row.every((c) => c === null || c === undefined || String(c).trim() === "")) continue;
-    const rec: Record<string, string> = {};
-    let hasContent = false;
-    for (let j = 0; j < headerRow.length; j++) {
-      const key = headerRow[j];
-      if (!key) continue;
-      const val = row[j];
-      const sval = val === null || val === undefined ? "" : String(val);
-      rec[key] = sval;
-      if (sval.trim()) hasContent = true;
-    }
-    if (hasContent) records.push(rec);
+
+  const groups: { start: number; headers: string[] }[] = [];
+  let i = 0;
+  while (i < headerRow.length) {
+    if (!headerRow[i]) { i++; continue; }
+    const start = i;
+    const hs: string[] = [];
+    while (i < headerRow.length && headerRow[i]) { hs.push(headerRow[i]); i++; }
+    groups.push({ start, headers: hs });
   }
-  return { headers: headerRow.filter(Boolean), records };
+  if (groups.length === 0) return [];
+
+  const tables = groups.map((g) => ({
+    headers: g.headers,
+    records: [] as Record<string, string>[],
+  }));
+
+  for (let r = bestIdx + 1; r < aoa.length; r++) {
+    const row = aoa[r] || [];
+    if (row.every((c) => c === null || c === undefined || String(c).trim() === "")) continue;
+    groups.forEach((g, gi) => {
+      const rec: Record<string, string> = {};
+      let hasContent = false;
+      for (let k = 0; k < g.headers.length; k++) {
+        const key = g.headers[k];
+        const val = row[g.start + k];
+        const sval = val === null || val === undefined ? "" : String(val);
+        rec[key] = sval;
+        if (sval.trim()) hasContent = true;
+      }
+      if (hasContent) tables[gi].records.push(rec);
+    });
+  }
+
+  return tables.filter((t) => t.records.length > 0);
+}
+
+function aoaToRecords(aoa: unknown[][]): { headers: string[]; records: Record<string, string>[] } | null {
+  const tables = aoaToTables(aoa);
+  if (tables.length === 0) return null;
+  // For legacy single-table consumers (analyze/UI preview), pick the table that
+  // looks most post-like. The parser uses aoaToTables directly to merge.
+  const scored = tables
+    .map((t) => ({ t, s: scoreSheet(t.headers, t.records.length) }))
+    .sort((a, b) => b.s - a.s);
+  return scored[0].t;
 }
 
 function scoreSheet(headers: string[], recordCount: number): number {
