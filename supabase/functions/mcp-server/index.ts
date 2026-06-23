@@ -207,6 +207,7 @@ mcp.tool("list_posts", {
       ...p,
       labels: labelsByPost.get(p.id) ?? [],
       metrics: metricsByPost.get(p.id) ?? [],
+      performance: performanceByPost.get(p.id) ?? null,
     }));
 
     if (params.label && typeof params.label === "string") {
