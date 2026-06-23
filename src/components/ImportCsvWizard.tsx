@@ -102,7 +102,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Importar fichero de LinkedIn</DialogTitle>
           <DialogDescription>Paso {step} de 4</DialogDescription>
@@ -110,7 +110,8 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
 
         <Stepper step={step} />
 
-        <div className="py-2 min-h-[220px]">
+        <div className="py-2 flex-1 overflow-y-auto -mx-1 px-1">
+
           {step === 1 && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">

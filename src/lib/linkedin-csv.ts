@@ -452,52 +452,72 @@ export async function analyzeLinkedInFile(file: File, sheetName?: string): Promi
 
 export const analyzeLinkedInCsv = analyzeLinkedInFile;
 
-export async function parseLinkedInFile(
-  file: File,
+interface DetectedFields {
+  impressions: string | null;
+  clicks: string | null;
+  reactions: string | null;
+  comments: string | null;
+  shares: string | null;
+  url: string | null;
+  title: string | null;
+  excerpt: string | null;
+  date: string | null;
+}
+
+function detectFields(headers: string[]): DetectedFields {
+  return {
+    impressions: findHeader(headers, numberKeys.impressions),
+    clicks: findHeader(headers, numberKeys.clicks),
+    reactions: findHeader(headers, numberKeys.reactions),
+    comments: findHeader(headers, numberKeys.comments),
+    shares: findHeader(headers, numberKeys.shares),
+    url: findHeader(headers, stringKeys.url),
+    title: findHeader(headers, stringKeys.title),
+    excerpt: findHeader(headers, stringKeys.excerpt),
+    date: findHeader(headers, stringKeys.date),
+  };
+}
+
+interface ParsedRowDraft extends ParsedMetricRow {
+  _isAggregate?: boolean;
+}
+
+function mergeRow(
+  byKey: Map<string, ParsedRowDraft>,
   source: LinkedInSource,
-  sheetName?: string,
-): Promise<ParsedMetricRow[]> {
-  const analysis = await analyzeLinkedInFile(file, sheetName);
-  const table = await extractTable(file, sheetName);
+  d: DetectedFields,
+  row: Record<string, string>,
+) {
+  const url = getByHeader(row, d.url).trim() || null;
+  const title = getByHeader(row, d.title).trim() || null;
+  const excerpt = getByHeader(row, d.excerpt).trim() || null;
+  const date = getByHeader(row, d.date).trim() || null;
+  const urn = extractUrn(url);
+  // Key on URN > URL > title (so rows split across sheets can be merged).
+  const key = urn || url || (title ? `t:${title.toLowerCase()}` : null);
+  if (!key) return;
 
-  const d = analysis.detected;
-  // For personal export the only engagement signal is LinkedIn's aggregate
-  // "Engagements" column (sum of reactions+comments+reposts as LinkedIn defines
-  // it — NOT including clicks). We store it in `reactions` and must NOT add
-  // clicks/comments/shares on top, even if those columns happen to exist
-  // (clicks especially inflate the total — e.g. 5 engagements + 4 clicks were
-  // being shown as 9).
-  const isPersonalAggregate =
-    source === "personal" &&
-    !!d.reactions &&
-    /engagements?/i.test(d.reactions);
+  const impressions = parseNumber(getByHeader(row, d.impressions));
+  const clicks = parseNumber(getByHeader(row, d.clicks));
+  const reactions = parseNumber(getByHeader(row, d.reactions));
+  const comments = parseNumber(getByHeader(row, d.comments));
+  const shares = parseNumber(getByHeader(row, d.shares));
 
-  const rows: ParsedMetricRow[] = [];
-  for (const row of table.records) {
-    if (!row || typeof row !== "object") continue;
+  // Skip totally empty rows (no metrics, no identifying content).
+  if (!impressions && !clicks && !reactions && !comments && !shares && !url && !title) return;
 
-    const url = getByHeader(row, d.url).trim() || null;
-    const title = getByHeader(row, d.title).trim() || null;
-    const excerpt = getByHeader(row, d.excerpt).trim() || null;
-    const date = getByHeader(row, d.date).trim() || null;
+  // Personal exports use an aggregate "Engagements" column (= reactions + comments
+  // + reposts as LinkedIn defines it, NOT clicks). When that header is present we
+  // store it in `reactions` and skip summing the other fields on top.
+  const isAggregate =
+    source === "personal" && !!d.reactions && /engagements?/i.test(d.reactions);
 
-    const impressions = parseNumber(getByHeader(row, d.impressions));
-    const clicks = parseNumber(getByHeader(row, d.clicks));
-    const reactions = parseNumber(getByHeader(row, d.reactions));
-    const comments = parseNumber(getByHeader(row, d.comments));
-    const shares = parseNumber(getByHeader(row, d.shares));
-
-    if (!impressions && !clicks && !reactions && !comments && !shares && !url) continue;
-
-    const engagementSum = isPersonalAggregate
-      ? reactions // already the aggregate
-      : reactions + comments + shares + clicks;
-    const engagement_rate = impressions > 0 ? engagementSum / impressions : 0;
-
-    rows.push({
+  const existing = byKey.get(key);
+  if (!existing) {
+    byKey.set(key, {
       source,
       linkedin_url: url,
-      linkedin_urn: extractUrn(url),
+      linkedin_urn: urn,
       post_title: title,
       post_excerpt: excerpt ? excerpt.slice(0, 500) : null,
       posted_at: parseDate(date),
@@ -506,12 +526,98 @@ export async function parseLinkedInFile(
       reactions,
       comments,
       shares,
-      engagement_rate: Math.round(engagement_rate * 100000) / 100000,
+      engagement_rate: 0,
       raw: row,
+      _isAggregate: isAggregate,
     });
+    return;
   }
-  return rows;
+  existing.impressions = Math.max(existing.impressions, impressions);
+  existing.clicks = Math.max(existing.clicks, clicks);
+  existing.reactions = Math.max(existing.reactions, reactions);
+  existing.comments = Math.max(existing.comments, comments);
+  existing.shares = Math.max(existing.shares, shares);
+  if (!existing.linkedin_url && url) existing.linkedin_url = url;
+  if (!existing.linkedin_urn && urn) existing.linkedin_urn = urn;
+  if (!existing.post_title && title) existing.post_title = title;
+  if (!existing.post_excerpt && excerpt) existing.post_excerpt = excerpt.slice(0, 500);
+  if (!existing.posted_at && date) existing.posted_at = parseDate(date);
+  existing._isAggregate = existing._isAggregate || isAggregate;
+  // Keep widest raw for debugging.
+  existing.raw = { ...existing.raw, ...row };
 }
+
+function finalizeRows(byKey: Map<string, ParsedRowDraft>): ParsedMetricRow[] {
+  const out: ParsedMetricRow[] = [];
+  for (const r of byKey.values()) {
+    const sum = r._isAggregate
+      ? r.reactions
+      : r.reactions + r.comments + r.shares + r.clicks;
+    r.engagement_rate =
+      r.impressions > 0 ? Math.round((sum / r.impressions) * 100000) / 100000 : 0;
+    delete r._isAggregate;
+    if (
+      r.impressions ||
+      r.clicks ||
+      r.reactions ||
+      r.comments ||
+      r.shares ||
+      r.linkedin_url
+    ) {
+      out.push(r);
+    }
+  }
+  return out;
+}
+
+export async function parseLinkedInFile(
+  file: File,
+  source: LinkedInSource,
+  sheetName?: string,
+): Promise<ParsedMetricRow[]> {
+  const kind = fileKindOf(file.name);
+  if (!kind) {
+    throw new CsvValidationError("Formato no soportado.");
+  }
+
+  const byKey = new Map<string, ParsedRowDraft>();
+
+  if (kind === "csv") {
+    const table = await extractFromCsv(file);
+    const d = detectFields(table.headers);
+    for (const row of table.records) {
+      if (!row || typeof row !== "object") continue;
+      mergeRow(byKey, source, d, row);
+    }
+    return finalizeRows(byKey);
+  }
+
+  // For Excel exports, parse ALL sheets and merge by URL/URN. LinkedIn often
+  // splits "Impressions" and "Engagements" into separate sheets, so the only
+  // way to get both numbers on the same post is to merge across sheets.
+  const { all } = await parseAllSheets(file);
+  if (all.length === 0) {
+    throw new CsvValidationError("No se encontró ninguna hoja con datos legibles.");
+  }
+  for (const sheet of all) {
+    const d = detectFields(sheet.headers);
+    // Skip sheets that have no identifying column AND no metrics — they can't
+    // contribute anything useful and would just inflate the raw map.
+    const hasMetric =
+      d.impressions || d.clicks || d.reactions || d.comments || d.shares;
+    const hasId = d.url || d.title;
+    if (!hasMetric || !hasId) continue;
+    for (const row of sheet.records) {
+      if (!row || typeof row !== "object") continue;
+      mergeRow(byKey, source, d, row);
+    }
+  }
+  // sheetName arg is preserved in the signature for backwards compatibility
+  // but is intentionally ignored now that we merge across all sheets.
+  void sheetName;
+  return finalizeRows(byKey);
+}
+
 
 export const parseLinkedInCsv = parseLinkedInFile;
 
