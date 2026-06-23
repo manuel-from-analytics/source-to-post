@@ -1,0 +1,1 @@
+DELETE FROM public.linkedin_post_metrics WHERE source = 'personal';
