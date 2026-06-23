@@ -461,16 +461,16 @@ export async function parseLinkedInFile(
   const table = await extractTable(file, sheetName);
 
   const d = analysis.detected;
-  // For personal export we only have an aggregate "Engagements" column. We
-  // store it in `reactions` (engagements ≈ reactions+comments+shares) so the
-  // engagement_rate denominator/numerator calc remains consistent with the
-  // company export, which has a real per-metric breakdown.
+  // For personal export the only engagement signal is LinkedIn's aggregate
+  // "Engagements" column (sum of reactions+comments+reposts as LinkedIn defines
+  // it — NOT including clicks). We store it in `reactions` and must NOT add
+  // clicks/comments/shares on top, even if those columns happen to exist
+  // (clicks especially inflate the total — e.g. 5 engagements + 4 clicks were
+  // being shown as 9).
   const isPersonalAggregate =
     source === "personal" &&
     !!d.reactions &&
-    /engagements?/i.test(d.reactions) &&
-    !d.comments &&
-    !d.shares;
+    /engagements?/i.test(d.reactions);
 
   const rows: ParsedMetricRow[] = [];
   for (const row of table.records) {
