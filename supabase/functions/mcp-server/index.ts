@@ -132,7 +132,7 @@ mcp.tool("list_posts", {
         .in("post_id", postIds),
       supabase
         .from("linkedin_post_metrics")
-        .select("post_id, source, impressions, engagement_rate, posted_at, linkedin_url, imported_at")
+        .select("post_id, source, impressions, clicks, reactions, comments, shares, engagement_rate, posted_at, linkedin_url, imported_at")
         .in("post_id", postIds),
     ]);
 
@@ -160,11 +160,19 @@ mcp.tool("list_posts", {
     for (const m of (metrics ?? []) as any[]) {
       if (!m.post_id) continue;
       const arr = metricsByPost.get(m.post_id) ?? [];
-      const engagements = Math.round((m.impressions || 0) * (m.engagement_rate || 0));
+      const clicks = m.clicks || 0;
+      const reactions = m.reactions || 0;
+      const comments = m.comments || 0;
+      const shares = m.shares || 0;
+      const engagements = clicks + reactions + comments + shares;
       const existing = arr.find((x) => x.source === m.source);
       const row = {
         source: m.source,
         impressions: m.impressions || 0,
+        clicks,
+        reactions,
+        comments,
+        shares,
         engagements,
         engagement_rate: m.engagement_rate || 0,
         posted_at: m.posted_at,
@@ -174,6 +182,25 @@ mcp.tool("list_posts", {
       if (!existing) arr.push(row);
       else if (row.impressions > existing.impressions) Object.assign(existing, row);
       metricsByPost.set(m.post_id, arr);
+    }
+
+    // Add aggregated totals across sources for quick performance overview.
+    const performanceByPost = new Map<string, any>();
+    for (const [pid, rows] of metricsByPost.entries()) {
+      const totals = rows.reduce(
+        (acc: any, r: any) => {
+          acc.impressions += r.impressions;
+          acc.clicks += r.clicks;
+          acc.reactions += r.reactions;
+          acc.comments += r.comments;
+          acc.shares += r.shares;
+          acc.engagements += r.engagements;
+          return acc;
+        },
+        { impressions: 0, clicks: 0, reactions: 0, comments: 0, shares: 0, engagements: 0 },
+      );
+      const engagement_rate = totals.impressions > 0 ? totals.engagements / totals.impressions : 0;
+      performanceByPost.set(pid, { ...totals, engagement_rate });
     }
 
     let enriched = posts.map((p) => ({
