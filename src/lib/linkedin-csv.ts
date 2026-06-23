@@ -430,16 +430,28 @@ export async function analyzeLinkedInFile(file: File, sheetName?: string): Promi
   const { headers, records } = table;
   if (headers.length === 0) throw new CsvValidationError("No se detectaron columnas en el archivo.");
 
+  // For Excel files we merge across ALL sheets/sub-tables, so detection must
+  // also look at the union of headers — not just the "best" sub-table. This
+  // fixes cases like LinkedIn's "TOP POSTS" sheet which is split into two
+  // mini-tables (impressions in one, engagements in the other).
+  let allHeaders = headers;
+  if (table.kind !== "csv") {
+    const { all } = await parseAllSheets(file);
+    const union = new Set<string>(headers);
+    for (const s of all) for (const h of s.headers) union.add(h);
+    allHeaders = Array.from(union);
+  }
+
   const detected = {
-    impressions: findHeader(headers, numberKeys.impressions),
-    clicks: findHeader(headers, numberKeys.clicks),
-    reactions: findHeader(headers, numberKeys.reactions),
-    comments: findHeader(headers, numberKeys.comments),
-    shares: findHeader(headers, numberKeys.shares),
-    url: findHeader(headers, stringKeys.url),
-    title: findHeader(headers, stringKeys.title),
-    excerpt: findHeader(headers, stringKeys.excerpt),
-    date: findHeader(headers, stringKeys.date),
+    impressions: findHeader(allHeaders, numberKeys.impressions),
+    clicks: findHeader(allHeaders, numberKeys.clicks),
+    reactions: findHeader(allHeaders, numberKeys.reactions),
+    comments: findHeader(allHeaders, numberKeys.comments),
+    shares: findHeader(allHeaders, numberKeys.shares),
+    url: findHeader(allHeaders, stringKeys.url),
+    title: findHeader(allHeaders, stringKeys.title),
+    excerpt: findHeader(allHeaders, stringKeys.excerpt),
+    date: findHeader(allHeaders, stringKeys.date),
   };
 
   const missingRequired: string[] = [];
