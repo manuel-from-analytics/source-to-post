@@ -219,7 +219,18 @@ function scoreHeaderRow(cells: unknown[]): number {
   return nonEmpty >= 2 ? score : 0;
 }
 
-function aoaToRecords(aoa: unknown[][]): { headers: string[]; records: Record<string, string>[] } | null {
+/**
+ * Splits a sheet into one or more sub-tables. LinkedIn's "TOP POSTS" sheet
+ * lays out two mini-tables side by side separated by a blank column — one
+ * ranked by engagements, the other by impressions — both reusing headers like
+ * "Post URL". A single header row + single record per source row collapses
+ * both into one and loses the engagements column. We split the header row on
+ * blank cells and emit one sub-table per non-empty header group; the
+ * downstream merge-by-URL recombines the metrics correctly.
+ */
+function aoaToTables(
+  aoa: unknown[][],
+): { headers: string[]; records: Record<string, string>[] }[] {
   let bestIdx = -1;
   let bestScore = 0;
   const limit = Math.min(aoa.length, 20);
@@ -230,25 +241,54 @@ function aoaToRecords(aoa: unknown[][]): { headers: string[]; records: Record<st
       bestIdx = i;
     }
   }
-  if (bestIdx === -1 || bestScore < 4) return null;
+  if (bestIdx === -1 || bestScore < 4) return [];
   const headerRow = (aoa[bestIdx] || []).map((c) => String(c ?? "").trim());
-  const records: Record<string, string>[] = [];
-  for (let i = bestIdx + 1; i < aoa.length; i++) {
-    const row = aoa[i] || [];
-    if (row.every((c) => c === null || c === undefined || String(c).trim() === "")) continue;
-    const rec: Record<string, string> = {};
-    let hasContent = false;
-    for (let j = 0; j < headerRow.length; j++) {
-      const key = headerRow[j];
-      if (!key) continue;
-      const val = row[j];
-      const sval = val === null || val === undefined ? "" : String(val);
-      rec[key] = sval;
-      if (sval.trim()) hasContent = true;
-    }
-    if (hasContent) records.push(rec);
+
+  const groups: { start: number; headers: string[] }[] = [];
+  let i = 0;
+  while (i < headerRow.length) {
+    if (!headerRow[i]) { i++; continue; }
+    const start = i;
+    const hs: string[] = [];
+    while (i < headerRow.length && headerRow[i]) { hs.push(headerRow[i]); i++; }
+    groups.push({ start, headers: hs });
   }
-  return { headers: headerRow.filter(Boolean), records };
+  if (groups.length === 0) return [];
+
+  const tables = groups.map((g) => ({
+    headers: g.headers,
+    records: [] as Record<string, string>[],
+  }));
+
+  for (let r = bestIdx + 1; r < aoa.length; r++) {
+    const row = aoa[r] || [];
+    if (row.every((c) => c === null || c === undefined || String(c).trim() === "")) continue;
+    groups.forEach((g, gi) => {
+      const rec: Record<string, string> = {};
+      let hasContent = false;
+      for (let k = 0; k < g.headers.length; k++) {
+        const key = g.headers[k];
+        const val = row[g.start + k];
+        const sval = val === null || val === undefined ? "" : String(val);
+        rec[key] = sval;
+        if (sval.trim()) hasContent = true;
+      }
+      if (hasContent) tables[gi].records.push(rec);
+    });
+  }
+
+  return tables.filter((t) => t.records.length > 0);
+}
+
+function aoaToRecords(aoa: unknown[][]): { headers: string[]; records: Record<string, string>[] } | null {
+  const tables = aoaToTables(aoa);
+  if (tables.length === 0) return null;
+  // For legacy single-table consumers (analyze/UI preview), pick the table that
+  // looks most post-like. The parser uses aoaToTables directly to merge.
+  const scored = tables
+    .map((t) => ({ t, s: scoreSheet(t.headers, t.records.length) }))
+    .sort((a, b) => b.s - a.s);
+  return scored[0].t;
 }
 
 function scoreSheet(headers: string[], recordCount: number): number {
@@ -278,17 +318,20 @@ async function parseAllSheets(file: File): Promise<{ all: SheetParsed[]; rawName
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
     const aoa = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, blankrows: false, defval: "", raw: false });
-    const parsed = aoaToRecords(aoa);
-    if (!parsed) continue;
-    all.push({
-      name: sheetName,
-      headers: parsed.headers,
-      records: parsed.records,
-      score: scoreSheet(parsed.headers, parsed.records.length),
+    const tables = aoaToTables(aoa);
+    if (tables.length === 0) continue;
+    tables.forEach((t, idx) => {
+      all.push({
+        name: tables.length > 1 ? `${sheetName} (${idx + 1})` : sheetName,
+        headers: t.headers,
+        records: t.records,
+        score: scoreSheet(t.headers, t.records.length),
+      });
     });
   }
   return { all, rawNames: wb.SheetNames };
 }
+
 
 async function extractFromExcel(
   file: File,
@@ -387,16 +430,28 @@ export async function analyzeLinkedInFile(file: File, sheetName?: string): Promi
   const { headers, records } = table;
   if (headers.length === 0) throw new CsvValidationError("No se detectaron columnas en el archivo.");
 
+  // For Excel files we merge across ALL sheets/sub-tables, so detection must
+  // also look at the union of headers — not just the "best" sub-table. This
+  // fixes cases like LinkedIn's "TOP POSTS" sheet which is split into two
+  // mini-tables (impressions in one, engagements in the other).
+  let allHeaders = headers;
+  if (table.kind !== "csv") {
+    const { all } = await parseAllSheets(file);
+    const union = new Set<string>(headers);
+    for (const s of all) for (const h of s.headers) union.add(h);
+    allHeaders = Array.from(union);
+  }
+
   const detected = {
-    impressions: findHeader(headers, numberKeys.impressions),
-    clicks: findHeader(headers, numberKeys.clicks),
-    reactions: findHeader(headers, numberKeys.reactions),
-    comments: findHeader(headers, numberKeys.comments),
-    shares: findHeader(headers, numberKeys.shares),
-    url: findHeader(headers, stringKeys.url),
-    title: findHeader(headers, stringKeys.title),
-    excerpt: findHeader(headers, stringKeys.excerpt),
-    date: findHeader(headers, stringKeys.date),
+    impressions: findHeader(allHeaders, numberKeys.impressions),
+    clicks: findHeader(allHeaders, numberKeys.clicks),
+    reactions: findHeader(allHeaders, numberKeys.reactions),
+    comments: findHeader(allHeaders, numberKeys.comments),
+    shares: findHeader(allHeaders, numberKeys.shares),
+    url: findHeader(allHeaders, stringKeys.url),
+    title: findHeader(allHeaders, stringKeys.title),
+    excerpt: findHeader(allHeaders, stringKeys.excerpt),
+    date: findHeader(allHeaders, stringKeys.date),
   };
 
   const missingRequired: string[] = [];
