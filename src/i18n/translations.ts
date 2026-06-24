@@ -643,6 +643,11 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "library.noResultsHint": "Try a different search",
     "library.empty": "Your library is empty",
     "library.emptyHint": "Add your first source to start generating content",
+    "library.noExtractedContent": "No extracted content",
+    "library.noExtractedContentHint": "This source has no extracted content yet. Open it to extract.",
+    "performance.unlinkPost": "Don't link (not from the app)",
+    "performance.unlink": "Remove link",
+    "performance.noMatchedMetrics": "No metrics linked to this post.",
 
     // Generator
     "generator.title": "Post Generator",
