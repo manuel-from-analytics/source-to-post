@@ -86,6 +86,7 @@ export function buildPostMatcher(
 
   return function match(m: MetricLike): string | null {
     if (m.post_id) return m.post_id;
+    if (m.manually_unmatched) return null;
 
     // Direct URL/URN match first (works for both sources when known).
     if (m.linkedin_url && byUrl.has(m.linkedin_url)) return byUrl.get(m.linkedin_url)!;
