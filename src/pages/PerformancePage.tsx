@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import {
   Upload, BarChart3, TrendingUp, Eye, Heart,
   ExternalLink, Trash2, Building2, User as UserIcon, Link2, Link as LinkIcon,
-  ArrowUpDown, ArrowUp, ArrowDown,
+  ArrowUpDown, ArrowUp, ArrowDown, Clock, X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLinkedinMetrics, useDeleteLinkedinMetric, type LinkedinMetric } from "@/hooks/useLinkedinMetrics";
@@ -26,6 +26,7 @@ import { buildPostMatcher, type PersonalPublication } from "@/lib/match-posts";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useScheduledPublications, useCancelScheduledPublication } from "@/hooks/usePublishLinkedin";
 
 type SourceFilter = "all" | LinkedInSource;
 type SortKey = "post" | "source" | "posted_at" | "impressions" | "engagements" | "engagement_rate";
@@ -325,6 +326,10 @@ export default function PerformancePage() {
           </Card>
         </>
       )}
+
+      <ScheduledPublicationsSection />
+
+
 
       <LinkPostDialog
         metric={linkingMetric}
