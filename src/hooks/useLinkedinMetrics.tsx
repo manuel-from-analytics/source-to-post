@@ -184,6 +184,25 @@ export function useImportLinkedinCsv() {
         if (error) throw error;
       }
 
+      // Backfill linkedin_url onto matched posts (only when the post has no URL yet),
+      // so the URL becomes the durable common key across future imports / publications.
+      if (urlsToBackfillByPost.size > 0) {
+        const postIds = Array.from(urlsToBackfillByPost.keys());
+        const { data: postRows } = await supabase
+          .from("generated_posts")
+          .select("id, linkedin_url")
+          .in("id", postIds);
+        const updates = (postRows ?? [])
+          .filter((p: any) => !p.linkedin_url)
+          .map((p: any) => ({ id: p.id, url: urlsToBackfillByPost.get(p.id)! }))
+          .filter((u) => u.url);
+        await Promise.all(
+          updates.map((u) =>
+            supabase.from("generated_posts").update({ linkedin_url: u.url }).eq("id", u.id),
+          ),
+        );
+      }
+
       return { total: rows.length, matched, inserted, overwritten, kept };
     },
     onSuccess: ({ total, matched, inserted, overwritten, kept }) => {
