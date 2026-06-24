@@ -22,6 +22,7 @@ export interface LinkedinMetric {
   shares: number;
   engagement_rate: number;
   imported_at: string;
+  manually_unmatched?: boolean | null;
 }
 
 export function useLinkedinMetrics() {
