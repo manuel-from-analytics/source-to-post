@@ -1,102 +1,134 @@
-## Contexto y por qué CSV
+## Objetivo
 
-El conector de LinkedIn de Lovable solo tiene los scopes `openid, profile, email, w_member_social` y `available_scopes = none`, es decir, no permite pedir más. Eso solo da para publicar y leer tu identidad — **ningún endpoint de analytics ni de listar posts publicados**. La única vía fiable hoy es el export CSV que LinkedIn ofrece desde la propia plataforma. La parte de auto-publish (otro requerimiento) sí podrá usar el conector más adelante.
-
-Vinculo las dos conexiones de LinkedIn al proyecto ahora para tener las credenciales listas, aunque el módulo de Rendimiento no las use.
+Publicar posts generados directamente en LinkedIn desde la app, usando el conector ya vinculado. Solo perfil personal (tu cuenta) en esta iteración. Empresa visible pero deshabilitada con tooltip "Próximamente — requiere aprobación de LinkedIn".
 
 ## Alcance
 
-Nuevo apartado **Rendimiento** (página `/performance`) con:
+1. **Publicar ahora** (texto plano).
+2. **Programar publicación** (fecha/hora futura).
+3. **Guardar `linkedin_url`** en `generated_posts` tras publicar, para que el match con `linkedin_post_metrics` sea exacto.
 
-- Subida de CSV de LinkedIn (uno o varios), distinguiendo origen: **Personal** o **Empresa** (lo eliges al subir).
-- Cruce automático con `generated_posts` por URL del post o, si no hay URL, por similitud de contenido (primeros ~200 chars normalizados).
-- Vista **Top posts** (ordenable por cualquier métrica, filtrable por origen y por etiqueta `personal/empresa`).
-- Vista **Evolución temporal** (gráfico de líneas: impresiones, engagement rate, etc. agrupado por semana/mes).
-- Métricas: impresiones, clics, reacciones, comentarios, compartidos, **engagement rate** (`(reacciones + comentarios + compartidos + clics) / impresiones`).
-- Botón "Refrescar datos" = volver a subir CSV (la última subida por origen pisa la anterior para esos posts).
+Fuera de alcance: imágenes/vídeo, edición tras publicar, publicación en Company Page, OAuth per-user.
 
-## Modelo de datos
+## Backend
 
-Una nueva tabla `linkedin_post_metrics`:
+### Edge function `publish-linkedin`
+- Valida JWT del usuario (mismo patrón que `generate-post`).
+- Body: `{ post_id: string }`.
+- Lee `generated_posts.content` y valida pertenencia al usuario.
+- Llama gateway: `POST https://connector-gateway.lovable.dev/linkedin/v2/userinfo` para obtener `sub` (URN del miembro), luego `POST .../v2/ugcPosts` con:
+  ```json
+  {
+    "author": "urn:li:person:{sub}",
+    "lifecycleState": "PUBLISHED",
+    "specificContent": {
+      "com.linkedin.ugc.ShareContent": {
+        "shareCommentary": { "text": "<content>" },
+        "shareMediaCategory": "NONE"
+      }
+    },
+    "visibility": { "com.linkedin.ugc.MemberNetworkVisibility": "PUBLIC" }
+  }
+  ```
+- Headers: `Authorization: Bearer $LOVABLE_API_KEY`, `X-Connection-Api-Key: $LINKEDIN_API_KEY`, `X-Restli-Protocol-Version: 2.0.0`.
+- Toma el URN del response (`id` o `x-restli-id` header) → construye `https://www.linkedin.com/feed/update/{urn}/` y guarda en `generated_posts.linkedin_url` + nueva columna `linkedin_published_at timestamptz`.
 
+### Programación: tabla `scheduled_publications`
 ```text
-linkedin_post_metrics
-- id (uuid, pk)
-- user_id (uuid, fk auth.users)
-- post_id (uuid, fk generated_posts, nullable)   -- null si no se logró cruzar
-- source ('personal' | 'company')
-- linkedin_url (text, nullable)
-- linkedin_urn (text, nullable)
-- post_title (text, nullable)
-- posted_at (timestamptz, nullable)
-- impressions (int)
-- clicks (int)
-- reactions (int)
-- comments (int)
-- shares (int)
-- engagement_rate (numeric)                       -- calculada en cliente al insertar
-- raw (jsonb)                                     -- fila CSV original para auditoría
-- imported_at (timestamptz default now())
-- unique (user_id, source, linkedin_urn) where linkedin_urn is not null
+- id uuid pk
+- user_id uuid fk auth.users
+- post_id uuid fk generated_posts
+- target ('personal' | 'company')   -- por ahora solo 'personal'
+- scheduled_at timestamptz
+- status ('pending' | 'publishing' | 'done' | 'failed')
+- attempts int default 0
+- error text nullable
+- linkedin_url text nullable
+- created_at, updated_at
 ```
+RLS: solo dueño. GRANTs `authenticated` + `service_role`. Trigger `update_updated_at_column`.
 
-RLS: solo el dueño. GRANTs estándar para `authenticated` y `service_role`.
+### Cron `publish-linkedin-cron`
+- Edge function que cada minuto (`pg_cron` → `SELECT net.http_post(...)`) busca filas `status='pending' AND scheduled_at <= now()`, marca `publishing`, llama internamente la lógica de `publish-linkedin`, actualiza a `done`/`failed`.
+- Reintentos: máximo 3, backoff exponencial dentro del propio cron.
 
-## Flujo de subida
+## Frontend
 
-Componente cliente en `src/pages/PerformancePage.tsx`:
+### Componente `PublishToLinkedinDialog`
+Disparado desde `HistoryPage` (botón nuevo en cada post) y `GeneratorPage` (tras generar).
 
-1. Selector "Origen": Personal / Empresa.
-2. Drag & drop del CSV exportado por LinkedIn (formato distinto entre perfil y página, lo detectamos por columnas).
-3. Parsing en cliente con `papaparse` (ya común en el ecosistema; si no está instalado lo añadimos).
-4. Normalización a un esquema único, cálculo de engagement rate.
-5. Cruce con `generated_posts`:
-   - 1ª pasada: match exacto de `linkedin_url` si la guardas en el post (campo nuevo opcional `linkedin_url` en `generated_posts`, ver más abajo).
-   - 2ª pasada: similitud de contenido (lowercased + sin emojis + primeros 200 chars) contra `generated_posts.content`.
-6. `upsert` en `linkedin_post_metrics` con conflict en `(user_id, source, linkedin_urn)`.
-7. Toast con "X filas importadas, Y cruzadas con posts generados, Z sin cruzar".
+Contenido:
+- **Destino**: radio "Perfil personal" (activo) / "Página de empresa" (deshabilitado con tooltip i18n).
+- **Cuándo**: "Publicar ahora" / "Programar".
+- Si programar: `<input type="datetime-local">` con validación min = ahora + 5 min.
+- Vista previa del contenido (read-only, primer párrafo + "ver más").
+- Botón "Publicar" / "Programar".
 
-Filas sin cruzar siguen visibles en Rendimiento (no obligamos a que el post venga de la app).
+Tras publicar OK:
+- Toast con link a LinkedIn.
+- `linkedin_url` se rellena → `linkedin_post_metrics` matchea automáticamente en próximos imports.
 
-## Cambio menor en `generated_posts`
+### Hook `usePublishLinkedin`
+- `publishNow(postId)` → invoca edge function `publish-linkedin`.
+- `schedule(postId, datetime)` → insert en `scheduled_publications`.
+- `useScheduledPublications()` query para listar programadas en una nueva sección "Programadas" dentro de Rendimiento (o un drawer en History).
 
-Añadir columna opcional `linkedin_url text` para que, cuando publiques (manual o por API) puedas pegarla y mejorar el match. No es bloqueante para esta entrega.
+### i18n
+Strings nuevos en `src/i18n/translations.ts` (es/en/pt): título dialog, labels, tooltip empresa, errores.
 
-## UI
+## Migración SQL
 
-- Sidebar: nuevo enlace "Rendimiento" (icono BarChart3).
-- Página `/performance` con tabs: **Resumen**, **Top posts**, **Evolución**, **Importar CSV**.
-- Filtros globales: rango de fechas, origen (Personal / Empresa / Ambas), etiqueta (`personal`, `empresa`, otras existentes), solo posts generados por la app.
-- Resumen: 4 KPIs (impresiones totales, engagement rate medio, posts publicados, top post).
-- Top posts: tabla con título, fecha, origen, etiqueta, métricas, link a LinkedIn, link al post original en la app si está cruzado.
-- Evolución: line chart con `recharts` (ya instalado, ver `src/components/ui/chart.tsx`).
+```sql
+ALTER TABLE public.generated_posts
+  ADD COLUMN IF NOT EXISTS linkedin_published_at timestamptz;
 
-## Internacionalización
+CREATE TABLE public.scheduled_publications (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  post_id uuid not null references public.generated_posts(id) on delete cascade,
+  target text not null check (target in ('personal','company')),
+  scheduled_at timestamptz not null,
+  status text not null default 'pending' check (status in ('pending','publishing','done','failed')),
+  attempts int not null default 0,
+  error text,
+  linkedin_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.scheduled_publications TO authenticated;
+GRANT ALL ON public.scheduled_publications TO service_role;
+ALTER TABLE public.scheduled_publications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own rows" ON public.scheduled_publications
+  FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
+CREATE TRIGGER set_updated_at BEFORE UPDATE ON public.scheduled_publications
+  FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
-Strings nuevos en `src/i18n/translations.ts` (es/en/pt) para el módulo Rendimiento.
-
-## Detalles técnicos
-
-- Migración SQL para `linkedin_post_metrics` + columna `linkedin_url` en `generated_posts` (con GRANTs y RLS).
-- Hook `useLinkedinMetrics()` con TanStack Query.
-- Hook `useImportLinkedinCsv()` que parsea y hace upsert.
-- Parser CSV tolerante: detecta cabeceras tanto del export de perfil personal como del de Company Page (los nombres de columnas difieren).
-- No tocamos `mcp-server` en esta iteración; si quieres, en una pasada posterior añadimos una tool MCP `get_post_performance`.
+-- cron cada minuto
+SELECT cron.schedule(
+  'publish-linkedin-cron',
+  '* * * * *',
+  $$ SELECT net.http_post(
+       url := 'https://ofpnsqvcagowvaavzzxh.supabase.co/functions/v1/publish-linkedin-cron',
+       headers := jsonb_build_object('Content-Type','application/json','Authorization','Bearer ' || current_setting('app.cron_secret', true))
+     ) $$
+);
+```
 
 ## Pasos de implementación
 
-1. Vincular las dos conexiones de LinkedIn al proyecto (`standard_connectors--connect linkedin`, dos veces).
-2. Migración: crear `linkedin_post_metrics`, añadir `linkedin_url` a `generated_posts`, RLS + GRANTs.
-3. Añadir `papaparse` si no está.
-4. Parser CSV (`src/lib/linkedin-csv.ts`) con detección de formato personal vs company.
-5. Hook `useLinkedinMetrics`, `useImportLinkedinCsv`.
-6. Página `PerformancePage` + ruta + entrada de sidebar.
-7. Componentes: `PerformanceSummary`, `TopPostsTable`, `PerformanceTimeline`, `ImportCsvDialog`.
+1. Migración (tabla + columna + cron).
+2. Edge function `publish-linkedin`.
+3. Edge function `publish-linkedin-cron`.
+4. Hook `usePublishLinkedin` + query de programadas.
+5. Componente `PublishToLinkedinDialog`.
+6. Botones de disparo en `HistoryPage` y `GeneratorPage`.
+7. Sección "Programadas" en `PerformancePage` (lista + cancelar pendiente).
 8. Traducciones es/en/pt.
-9. Verificar build y abrir la página, importar un CSV de prueba.
+9. Verificar publicando un post real.
 
-## Fuera de alcance
+## Limitaciones a comunicar en UI
 
-- Lectura en vivo de analytics vía API de LinkedIn (no posible con el conector actual).
-- Auto-publish (otro requerimiento).
-- MCP tool de rendimiento (siguiente iteración si interesa).
+- Solo perfil personal por ahora.
+- Las publicaciones salen de **tu** cuenta de LinkedIn (la del conector), no de la de cada usuario.
+- LinkedIn no permite editar un post una vez publicado; sí borrarlo.
+- Métricas no llegan vía API; siguen importándose por CSV pero el match será exacto gracias a la URL guardada.

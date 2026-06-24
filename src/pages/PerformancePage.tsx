@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import {
   Upload, BarChart3, TrendingUp, Eye, Heart,
   ExternalLink, Trash2, Building2, User as UserIcon, Link2, Link as LinkIcon,
-  ArrowUpDown, ArrowUp, ArrowDown,
+  ArrowUpDown, ArrowUp, ArrowDown, Clock, X,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useLinkedinMetrics, useDeleteLinkedinMetric, type LinkedinMetric } from "@/hooks/useLinkedinMetrics";
@@ -26,6 +26,7 @@ import { buildPostMatcher, type PersonalPublication } from "@/lib/match-posts";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { useScheduledPublications, useCancelScheduledPublication } from "@/hooks/usePublishLinkedin";
 
 type SourceFilter = "all" | LinkedInSource;
 type SortKey = "post" | "source" | "posted_at" | "impressions" | "engagements" | "engagement_rate";
@@ -326,6 +327,10 @@ export default function PerformancePage() {
         </>
       )}
 
+      <ScheduledPublicationsSection />
+
+
+
       <LinkPostDialog
         metric={linkingMetric}
         posts={posts}
@@ -441,5 +446,76 @@ function SourceBadge({ source }: { source: LinkedInSource }) {
     <Badge variant="secondary" className="gap-1"><Building2 className="h-3 w-3" />Empresa</Badge>
   ) : (
     <Badge variant="outline" className="gap-1"><UserIcon className="h-3 w-3" />Personal</Badge>
+  );
+}
+
+function ScheduledPublicationsSection() {
+  const { data: scheduled = [] } = useScheduledPublications();
+  const { data: posts = [] } = usePosts();
+  const cancel = useCancelScheduledPublication();
+  const pending = scheduled.filter((s) => s.status === "pending" || s.status === "publishing");
+  const recent = scheduled
+    .filter((s) => s.status === "done" || s.status === "failed")
+    .slice(0, 5);
+  if (scheduled.length === 0) return null;
+  const postById = new Map(posts.map((p) => [p.id, p]));
+
+  const statusBadge = (s: string) => {
+    if (s === "pending") return <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Programado</Badge>;
+    if (s === "publishing") return <Badge variant="secondary">Publicando…</Badge>;
+    if (s === "done") return <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-0">Publicado</Badge>;
+    if (s === "failed") return <Badge variant="destructive">Falló</Badge>;
+    return <Badge variant="outline">{s}</Badge>;
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Clock className="h-4 w-4" /> Publicaciones programadas
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {[...pending, ...recent].map((s) => {
+          const post = postById.get(s.post_id);
+          return (
+            <div key={s.id} className="flex items-start gap-3 rounded-md border p-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  {statusBadge(s.status)}
+                  <span className="text-muted-foreground">
+                    {new Date(s.scheduled_at).toLocaleString()}
+                  </span>
+                  {s.attempts > 0 && (
+                    <span className="text-muted-foreground">· {s.attempts} intento{s.attempts > 1 ? "s" : ""}</span>
+                  )}
+                </div>
+                <p className="text-sm mt-1.5 line-clamp-2 text-muted-foreground">
+                  {post?.title || post?.content?.slice(0, 120) || "(post eliminado)"}
+                </p>
+                {s.error && (
+                  <p className="text-xs text-destructive mt-1 break-all">{s.error}</p>
+                )}
+                {s.linkedin_url && (
+                  <a href={s.linkedin_url} target="_blank" rel="noreferrer"
+                     className="inline-flex items-center gap-1 text-xs text-primary mt-1">
+                    <ExternalLink className="h-3 w-3" /> Ver en LinkedIn
+                  </a>
+                )}
+              </div>
+              {(s.status === "pending" || s.status === "failed") && (
+                <Button
+                  variant="ghost" size="icon" className="h-8 w-8 shrink-0"
+                  onClick={() => cancel.mutate(s.id)}
+                  title="Cancelar"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
   );
 }

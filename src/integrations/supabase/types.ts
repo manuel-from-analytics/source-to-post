@@ -288,6 +288,7 @@ export type Database = {
           is_favorite: boolean | null
           language: string | null
           length: string | null
+          linkedin_published_at: string | null
           linkedin_url: string | null
           published_at: string | null
           source_newsletter_id: string | null
@@ -312,6 +313,7 @@ export type Database = {
           is_favorite?: boolean | null
           language?: string | null
           length?: string | null
+          linkedin_published_at?: string | null
           linkedin_url?: string | null
           published_at?: string | null
           source_newsletter_id?: string | null
@@ -336,6 +338,7 @@ export type Database = {
           is_favorite?: boolean | null
           language?: string | null
           length?: string | null
+          linkedin_published_at?: string | null
           linkedin_url?: string | null
           published_at?: string | null
           source_newsletter_id?: string | null
@@ -811,6 +814,56 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      scheduled_publications: {
+        Row: {
+          attempts: number
+          created_at: string
+          error: string | null
+          id: string
+          linkedin_url: string | null
+          post_id: string
+          scheduled_at: string
+          status: string
+          target: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          linkedin_url?: string | null
+          post_id: string
+          scheduled_at: string
+          status?: string
+          target: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          error?: string | null
+          id?: string
+          linkedin_url?: string | null
+          post_id?: string
+          scheduled_at?: string
+          status?: string
+          target?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_publications_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "generated_posts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       suppressed_emails: {
         Row: {
