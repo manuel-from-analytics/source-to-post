@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Plus, Search, Star, FileText,
-  Youtube, File,
+  Youtube, File, AlertTriangle,
   Upload, Globe, Type, Trash2, Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
