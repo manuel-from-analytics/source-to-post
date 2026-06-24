@@ -17,7 +17,7 @@ import {
   ExternalLink, Trash2, Building2, User as UserIcon, Link2, Link as LinkIcon,
   ArrowUpDown, ArrowUp, ArrowDown, Clock, X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useLinkedinMetrics, useDeleteLinkedinMetric, type LinkedinMetric } from "@/hooks/useLinkedinMetrics";
 import { usePosts } from "@/hooks/usePosts";
 import type { LinkedInSource } from "@/lib/linkedin-csv";
