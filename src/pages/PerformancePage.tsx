@@ -334,28 +334,38 @@ export default function PerformancePage() {
                         className={!m.matchedPostId ? "bg-amber-50/60 dark:bg-amber-500/10 border-l-2 border-l-amber-400" : undefined}
                       >
                         <TableCell className="max-w-[320px]">
-                          {m.matchedPostId ? (
-                            <button
-                              type="button"
-                              onClick={() => navigate("/history", { state: { openPostId: m.matchedPostId } })}
-                              className="text-left w-full group/title"
-                              title="Ver detalle del post en la app"
-                            >
-                              <div className="font-medium truncate text-sm group-hover/title:text-primary group-hover/title:underline flex items-center gap-1">
-                                <Link2 className="h-3 w-3 shrink-0 opacity-60" />
-                                <span className="truncate">
-                                  {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
-                                </span>
+                          {(() => {
+                            const matchedPost = m.matchedPostId ? postById.get(m.matchedPostId) : null;
+                            const excerptFromPost = matchedPost?.content
+                              ? matchedPost.content.replace(/\s+/g, " ").slice(0, 80)
+                              : null;
+                            const displayText =
+                              excerptFromPost ||
+                              m.post_title ||
+                              m.post_excerpt?.slice(0, 80) ||
+                              (m.matchedPostId ? "(sin contenido)" : m.linkedin_url) ||
+                              "(sin título)";
+                            return m.matchedPostId ? (
+                              <button
+                                type="button"
+                                onClick={() => navigate("/history", { state: { openPostId: m.matchedPostId } })}
+                                className="text-left w-full group/title"
+                                title="Ver detalle del post en la app"
+                              >
+                                <div className="font-medium truncate text-sm group-hover/title:text-primary group-hover/title:underline flex items-center gap-1">
+                                  <Link2 className="h-3 w-3 shrink-0 opacity-60" />
+                                  <span className="truncate">{displayText}</span>
+                                </div>
+                              </button>
+                            ) : (
+                              <div
+                                className="font-medium truncate text-sm text-amber-700 dark:text-amber-400"
+                                title="Este post no está vinculado a ningún post de la app"
+                              >
+                                ⚠ {displayText}
                               </div>
-                            </button>
-                          ) : (
-                            <div
-                              className="font-medium truncate text-sm text-amber-700 dark:text-amber-400"
-                              title="Este post no está vinculado a ningún post de la app"
-                            >
-                              ⚠ {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
-                            </div>
-                          )}
+                            );
+                          })()}
                         </TableCell>
                         <TableCell><SourceBadge source={m.source} /></TableCell>
                         <TableCell className="text-xs text-muted-foreground">
