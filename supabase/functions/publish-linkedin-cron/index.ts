@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { publishTextToLinkedIn } from "../publish-linkedin/index.ts";
+import { publishTextToLinkedIn } from "../_shared/linkedin-publish.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
