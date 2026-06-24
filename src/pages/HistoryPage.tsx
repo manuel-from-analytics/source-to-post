@@ -413,6 +413,10 @@ export default function HistoryPage() {
                   <Button size="sm" variant="outline" onClick={() => { setPublishPost(selectedPost); }} className="gap-1">
                     <Linkedin className="h-3 w-3 text-[#0a66c2]" /> LinkedIn
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => navigate("/performance", { state: { openPostId: selectedPost.id } })} className="gap-1">
+                    <BarChart3 className="h-3 w-3" /> {t("history.viewPerformance")}
+                  </Button>
+
                   <Button size="sm" variant="outline" onClick={() => { setSelectedPost(null); handleDuplicate(selectedPost); }} className="gap-1">
                     <Files className="h-3 w-3" /> {t("history.duplicate")}
                   </Button>
