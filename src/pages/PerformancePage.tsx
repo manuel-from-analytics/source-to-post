@@ -88,6 +88,12 @@ export default function PerformancePage() {
     [posts, personalPublications, metrics],
   );
 
+  const postById = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const p of (posts ?? []) as any[]) m.set(p.id, p);
+    return m;
+  }, [posts]);
+
   const rows = useMemo<Row[]>(() => {
     const base = sourceFilter === "all" ? metrics : metrics.filter((m) => m.source === sourceFilter);
     const mapped = base.map((m) => ({
@@ -100,34 +106,52 @@ export default function PerformancePage() {
 
   const focusedPostTitle = useMemo(() => {
     if (!focusedPostId) return null;
-    const p = (posts ?? []).find((x: any) => x.id === focusedPostId);
+    const p = postById.get(focusedPostId);
     return p?.title || (p?.content ? p.content.slice(0, 60) : null);
-  }, [focusedPostId, posts]);
+  }, [focusedPostId, postById]);
 
 
   // Persist on-the-fly: any metric without post_id in DB but resolvable via the
   // client matcher gets written back so MCP / future imports see the link.
+  // Also push the metric's linkedin_url to the matched post when missing.
   const backfilledRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!metrics.length || !posts.length) return;
-    const pending: { id: string; postId: string }[] = [];
+    const pending: { id: string; postId: string; url: string | null }[] = [];
     for (const m of metrics) {
       if (m.post_id) continue;
+      if (m.manually_unmatched) continue;
       if (backfilledRef.current.has(m.id)) continue;
       const pid = matcher(m);
       if (pid) {
-        pending.push({ id: m.id, postId: pid });
+        pending.push({ id: m.id, postId: pid, url: m.linkedin_url ?? null });
         backfilledRef.current.add(m.id);
       }
     }
     if (!pending.length) return;
     (async () => {
+      // Update metrics with post_id.
       await Promise.all(
         pending.map(({ id, postId }) =>
           supabase.from("linkedin_post_metrics").update({ post_id: postId }).eq("id", id),
         ),
       );
+      // Push linkedin_url back to the post when the post has none yet.
+      const postIds = Array.from(new Set(pending.map((p) => p.postId)));
+      const { data: postRows } = await supabase
+        .from("generated_posts")
+        .select("id, linkedin_url")
+        .in("id", postIds);
+      const havingUrl = new Set((postRows ?? []).filter((p: any) => p.linkedin_url).map((p: any) => p.id));
+      await Promise.all(
+        pending
+          .filter((p) => p.url && !havingUrl.has(p.postId))
+          .map((p) =>
+            supabase.from("generated_posts").update({ linkedin_url: p.url }).eq("id", p.postId),
+          ),
+      );
       qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
+      qc.invalidateQueries({ queryKey: ["posts"] });
     })();
   }, [metrics, posts, matcher, qc]);
 
