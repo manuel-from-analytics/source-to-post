@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import {
   Upload, BarChart3, TrendingUp, Eye, Heart,
   ExternalLink, Trash2, Building2, User as UserIcon, Link2, Link as LinkIcon,
-  ArrowUpDown, ArrowUp, ArrowDown, Clock, X,
+  ArrowUpDown, ArrowUp, ArrowDown, Clock, X, Search,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useLinkedinMetrics, useDeleteLinkedinMetric, type LinkedinMetric } from "@/hooks/useLinkedinMetrics";
@@ -46,6 +46,7 @@ export default function PerformancePage() {
   const qc = useQueryClient();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [search, setSearch] = useState("");
   const [importOpen, setImportOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("engagement_rate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -101,8 +102,21 @@ export default function PerformancePage() {
       matchedPostId: m.post_id ?? matcher(m),
       engagements: Math.round(m.impressions * m.engagement_rate),
     }));
-    return focusedPostId ? mapped.filter((r) => r.matchedPostId === focusedPostId) : mapped;
-  }, [metrics, sourceFilter, matcher, focusedPostId]);
+    const withPostFilter = focusedPostId ? mapped.filter((r) => r.matchedPostId === focusedPostId) : mapped;
+    if (!search.trim()) return withPostFilter;
+    const q = search.toLowerCase();
+    return withPostFilter.filter((r) => {
+      const post = r.matchedPostId ? postById.get(r.matchedPostId) : null;
+      const text = (
+        (post?.content ?? "") +
+        (post?.title ?? "") +
+        (r.post_title ?? "") +
+        (r.post_excerpt ?? "") +
+        (r.linkedin_url ?? "")
+      ).toLowerCase();
+      return text.includes(q);
+    });
+  }, [metrics, sourceFilter, matcher, focusedPostId, search, postById]);
 
   const focusedPostTitle = useMemo(() => {
     if (!focusedPostId) return null;
@@ -259,7 +273,7 @@ export default function PerformancePage() {
         <ImportCsvWizard open={importOpen} onOpenChange={setImportOpen} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
         <span className="text-sm text-muted-foreground">Origen:</span>
         <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
           <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
@@ -269,6 +283,15 @@ export default function PerformancePage() {
             <SelectItem value="company">Empresa</SelectItem>
           </SelectContent>
         </Select>
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por título o contenido"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         {focusedPostId && (
           <button
             type="button"
