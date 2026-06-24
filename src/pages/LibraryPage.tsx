@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import {
   Plus, Search, Star, FileText,
-  Youtube, File,
+  Youtube, File, AlertTriangle,
   Upload, Globe, Type, Trash2, Loader2
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -308,6 +308,22 @@ export default function LibraryPage() {
                         {input.category_id && categoriesMap.get(input.category_id) && (
                           <CategoryBadge category={categoriesMap.get(input.category_id)!} />
                         )}
+                        {(() => {
+                          const needsExtraction =
+                            (input.type === "pdf" || input.type === "url" || input.type === "youtube") &&
+                            !input.extracted_content?.trim();
+                          if (!needsExtraction) return null;
+                          return (
+                            <Badge
+                              variant="outline"
+                              className="gap-1 border-amber-400 text-amber-700 dark:text-amber-400 text-[10px] px-1.5 py-0"
+                              title={t("library.noExtractedContentHint")}
+                            >
+                              <AlertTriangle className="h-2.5 w-2.5" />
+                              {t("library.noExtractedContent")}
+                            </Badge>
+                          );
+                        })()}
                         <span className="text-[10px] text-muted-foreground">
                           {new Date(input.created_at).toLocaleDateString()}
                         </span>

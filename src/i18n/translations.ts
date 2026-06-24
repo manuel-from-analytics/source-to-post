@@ -61,6 +61,11 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "library.noResultsHint": "Intenta con otra búsqueda",
     "library.empty": "Tu biblioteca está vacía",
     "library.emptyHint": "Añade tu primera fuente para empezar a generar contenido",
+    "library.noExtractedContent": "Sin contenido extraído",
+    "library.noExtractedContentHint": "Esta fuente aún no tiene contenido extraído. Ábrela para extraerlo.",
+    "performance.unlinkPost": "No vincular (no proviene de la app)",
+    "performance.unlink": "Quitar vínculo",
+    "performance.noMatchedMetrics": "No hay métricas vinculadas a este post.",
 
     // Generator
     "generator.title": "Generador de Posts",
@@ -638,6 +643,11 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "library.noResultsHint": "Try a different search",
     "library.empty": "Your library is empty",
     "library.emptyHint": "Add your first source to start generating content",
+    "library.noExtractedContent": "No extracted content",
+    "library.noExtractedContentHint": "This source has no extracted content yet. Open it to extract.",
+    "performance.unlinkPost": "Don't link (not from the app)",
+    "performance.unlink": "Remove link",
+    "performance.noMatchedMetrics": "No metrics linked to this post.",
 
     // Generator
     "generator.title": "Post Generator",
@@ -1216,6 +1226,11 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "library.noResultsHint": "Tente uma busca diferente",
     "library.empty": "Sua biblioteca está vazia",
     "library.emptyHint": "Adicione sua primeira fonte para começar a gerar conteúdo",
+    "library.noExtractedContent": "Sem conteúdo extraído",
+    "library.noExtractedContentHint": "Esta fonte ainda não tem conteúdo extraído. Abra-a para extrair.",
+    "performance.unlinkPost": "Não vincular (não vem do app)",
+    "performance.unlink": "Remover vínculo",
+    "performance.noMatchedMetrics": "Sem métricas vinculadas a este post.",
 
     // Generator
     "generator.title": "Gerador de Posts",

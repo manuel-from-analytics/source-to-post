@@ -22,6 +22,7 @@ export interface LinkedinMetric {
   shares: number;
   engagement_rate: number;
   imported_at: string;
+  manually_unmatched?: boolean | null;
 }
 
 export function useLinkedinMetrics() {
@@ -88,16 +89,17 @@ export function useImportLinkedinCsv() {
         { personalMetrics: rows.filter((r) => r.source === "personal") },
       );
 
-      // Existing metrics for the same source — used to apply the "overwrite only if impressions >= current" rule.
+      // Existing metrics for the same source — used to apply the "overwrite only if impressions >= current" rule
+      // AND to preserve the manually_unmatched flag set by the user in the UI.
       const { data: existing } = await supabase
         .from("linkedin_post_metrics")
-        .select("id, linkedin_urn, linkedin_url, impressions")
+        .select("id, linkedin_urn, linkedin_url, impressions, manually_unmatched, post_id")
         .eq("source", source);
 
-      const existingByUrn = new Map<string, { id: string; impressions: number }>();
-      const existingByUrl = new Map<string, { id: string; impressions: number }>();
+      const existingByUrn = new Map<string, { id: string; impressions: number; manually_unmatched: boolean; post_id: string | null }>();
+      const existingByUrl = new Map<string, { id: string; impressions: number; manually_unmatched: boolean; post_id: string | null }>();
       (existing ?? []).forEach((e: any) => {
-        const entry = { id: e.id, impressions: e.impressions ?? 0 };
+        const entry = { id: e.id, impressions: e.impressions ?? 0, manually_unmatched: !!e.manually_unmatched, post_id: e.post_id ?? null };
         if (e.linkedin_urn) existingByUrn.set(e.linkedin_urn, entry);
         else if (e.linkedin_url) existingByUrl.set(e.linkedin_url, entry);
       });
@@ -109,15 +111,36 @@ export function useImportLinkedinCsv() {
       const toInsert: any[] = [];
       const toUpdate: { id: string; row: any }[] = [];
 
+      const urlsToBackfillByPost = new Map<string, string>(); // post_id -> linkedin_url
+
       for (const r of rows as ParsedMetricRow[]) {
-        const post_id = matcher({
-          source: r.source,
-          linkedin_url: r.linkedin_url,
-          post_title: r.post_title,
-          post_excerpt: r.post_excerpt,
-          posted_at: r.posted_at,
-        });
-        if (post_id) matched++;
+        const prev =
+          (r.linkedin_urn ? existingByUrn.get(r.linkedin_urn) : null) ||
+          (r.linkedin_url ? existingByUrl.get(r.linkedin_url) : null);
+
+        // If the user previously unlinked this metric, preserve that decision.
+        const preserveUnmatched = !!prev?.manually_unmatched;
+
+        let post_id: string | null = null;
+        if (preserveUnmatched) {
+          post_id = null;
+        } else if (prev?.post_id) {
+          // Trust prior manual link.
+          post_id = prev.post_id;
+        } else {
+          post_id = matcher({
+            source: r.source,
+            linkedin_url: r.linkedin_url,
+            post_title: r.post_title,
+            post_excerpt: r.post_excerpt,
+            posted_at: r.posted_at,
+          });
+        }
+        if (post_id) {
+          matched++;
+          // Remember to write linkedin_url back onto the post so the URL becomes the shared key.
+          if (r.linkedin_url) urlsToBackfillByPost.set(post_id, r.linkedin_url);
+        }
 
         const newRow = {
           user_id: user.id,
@@ -135,11 +158,8 @@ export function useImportLinkedinCsv() {
           shares: Math.round(r.shares),
           engagement_rate: r.engagement_rate,
           raw: r.raw,
+          manually_unmatched: preserveUnmatched,
         };
-
-        const prev =
-          (r.linkedin_urn ? existingByUrn.get(r.linkedin_urn) : null) ||
-          (r.linkedin_url ? existingByUrl.get(r.linkedin_url) : null);
 
         if (!prev) {
           toInsert.push(newRow);
@@ -162,6 +182,25 @@ export function useImportLinkedinCsv() {
       for (const u of toUpdate) {
         const { error } = await supabase.from("linkedin_post_metrics").update(u.row as any).eq("id", u.id);
         if (error) throw error;
+      }
+
+      // Backfill linkedin_url onto matched posts (only when the post has no URL yet),
+      // so the URL becomes the durable common key across future imports / publications.
+      if (urlsToBackfillByPost.size > 0) {
+        const postIds = Array.from(urlsToBackfillByPost.keys());
+        const { data: postRows } = await supabase
+          .from("generated_posts")
+          .select("id, linkedin_url")
+          .in("id", postIds);
+        const updates = (postRows ?? [])
+          .filter((p: any) => !p.linkedin_url)
+          .map((p: any) => ({ id: p.id, url: urlsToBackfillByPost.get(p.id)! }))
+          .filter((u) => u.url);
+        await Promise.all(
+          updates.map((u) =>
+            supabase.from("generated_posts").update({ linkedin_url: u.url }).eq("id", u.id),
+          ),
+        );
       }
 
       return { total: rows.length, matched, inserted, overwritten, kept };

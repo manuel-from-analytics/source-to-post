@@ -88,6 +88,12 @@ export default function PerformancePage() {
     [posts, personalPublications, metrics],
   );
 
+  const postById = useMemo(() => {
+    const m = new Map<string, any>();
+    for (const p of (posts ?? []) as any[]) m.set(p.id, p);
+    return m;
+  }, [posts]);
+
   const rows = useMemo<Row[]>(() => {
     const base = sourceFilter === "all" ? metrics : metrics.filter((m) => m.source === sourceFilter);
     const mapped = base.map((m) => ({
@@ -100,34 +106,52 @@ export default function PerformancePage() {
 
   const focusedPostTitle = useMemo(() => {
     if (!focusedPostId) return null;
-    const p = (posts ?? []).find((x: any) => x.id === focusedPostId);
+    const p = postById.get(focusedPostId);
     return p?.title || (p?.content ? p.content.slice(0, 60) : null);
-  }, [focusedPostId, posts]);
+  }, [focusedPostId, postById]);
 
 
   // Persist on-the-fly: any metric without post_id in DB but resolvable via the
   // client matcher gets written back so MCP / future imports see the link.
+  // Also push the metric's linkedin_url to the matched post when missing.
   const backfilledRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (!metrics.length || !posts.length) return;
-    const pending: { id: string; postId: string }[] = [];
+    const pending: { id: string; postId: string; url: string | null }[] = [];
     for (const m of metrics) {
       if (m.post_id) continue;
+      if (m.manually_unmatched) continue;
       if (backfilledRef.current.has(m.id)) continue;
       const pid = matcher(m);
       if (pid) {
-        pending.push({ id: m.id, postId: pid });
+        pending.push({ id: m.id, postId: pid, url: m.linkedin_url ?? null });
         backfilledRef.current.add(m.id);
       }
     }
     if (!pending.length) return;
     (async () => {
+      // Update metrics with post_id.
       await Promise.all(
         pending.map(({ id, postId }) =>
           supabase.from("linkedin_post_metrics").update({ post_id: postId }).eq("id", id),
         ),
       );
+      // Push linkedin_url back to the post when the post has none yet.
+      const postIds = Array.from(new Set(pending.map((p) => p.postId)));
+      const { data: postRows } = await supabase
+        .from("generated_posts")
+        .select("id, linkedin_url")
+        .in("id", postIds);
+      const havingUrl = new Set((postRows ?? []).filter((p: any) => p.linkedin_url).map((p: any) => p.id));
+      await Promise.all(
+        pending
+          .filter((p) => p.url && !havingUrl.has(p.postId))
+          .map((p) =>
+            supabase.from("generated_posts").update({ linkedin_url: p.url }).eq("id", p.postId),
+          ),
+      );
       qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
+      qc.invalidateQueries({ queryKey: ["posts"] });
     })();
   }, [metrics, posts, matcher, qc]);
 
@@ -175,7 +199,9 @@ export default function PerformancePage() {
   const linkMut = useMutation({
     mutationFn: async ({ metricId, postId, linkedinUrl }: { metricId: string; postId: string; linkedinUrl: string | null }) => {
       const { error } = await supabase
-        .from("linkedin_post_metrics").update({ post_id: postId }).eq("id", metricId);
+        .from("linkedin_post_metrics")
+        .update({ post_id: postId, manually_unmatched: false } as any)
+        .eq("id", metricId);
       if (error) throw error;
       // Persist the LinkedIn URL on the post so future imports auto-match by URL/URN.
       if (linkedinUrl) {
@@ -195,6 +221,24 @@ export default function PerformancePage() {
       setLinkingMetric(null);
     },
     onError: (e: any) => toast.error(e?.message ?? "No se pudo vincular"),
+  });
+
+  const unlinkMut = useMutation({
+    mutationFn: async (metricId: string) => {
+      // Reset backfill cache so the matcher won't immediately re-link.
+      backfilledRef.current.add(metricId);
+      const { error } = await supabase
+        .from("linkedin_post_metrics")
+        .update({ post_id: null, manually_unmatched: true } as any)
+        .eq("id", metricId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Métrica desvinculada");
+      qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
+      setLinkingMetric(null);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo desvincular"),
   });
 
   return (
@@ -290,28 +334,38 @@ export default function PerformancePage() {
                         className={!m.matchedPostId ? "bg-amber-50/60 dark:bg-amber-500/10 border-l-2 border-l-amber-400" : undefined}
                       >
                         <TableCell className="max-w-[320px]">
-                          {m.matchedPostId ? (
-                            <button
-                              type="button"
-                              onClick={() => navigate("/history", { state: { openPostId: m.matchedPostId } })}
-                              className="text-left w-full group/title"
-                              title="Ver detalle del post en la app"
-                            >
-                              <div className="font-medium truncate text-sm group-hover/title:text-primary group-hover/title:underline flex items-center gap-1">
-                                <Link2 className="h-3 w-3 shrink-0 opacity-60" />
-                                <span className="truncate">
-                                  {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
-                                </span>
+                          {(() => {
+                            const matchedPost = m.matchedPostId ? postById.get(m.matchedPostId) : null;
+                            const excerptFromPost = matchedPost?.content
+                              ? matchedPost.content.replace(/\s+/g, " ").slice(0, 80)
+                              : null;
+                            const displayText =
+                              excerptFromPost ||
+                              m.post_title ||
+                              m.post_excerpt?.slice(0, 80) ||
+                              (m.matchedPostId ? "(sin contenido)" : m.linkedin_url) ||
+                              "(sin título)";
+                            return m.matchedPostId ? (
+                              <button
+                                type="button"
+                                onClick={() => navigate("/history", { state: { openPostId: m.matchedPostId } })}
+                                className="text-left w-full group/title"
+                                title="Ver detalle del post en la app"
+                              >
+                                <div className="font-medium truncate text-sm group-hover/title:text-primary group-hover/title:underline flex items-center gap-1">
+                                  <Link2 className="h-3 w-3 shrink-0 opacity-60" />
+                                  <span className="truncate">{displayText}</span>
+                                </div>
+                              </button>
+                            ) : (
+                              <div
+                                className="font-medium truncate text-sm text-amber-700 dark:text-amber-400"
+                                title="Este post no está vinculado a ningún post de la app"
+                              >
+                                ⚠ {displayText}
                               </div>
-                            </button>
-                          ) : (
-                            <div
-                              className="font-medium truncate text-sm text-amber-700 dark:text-amber-400"
-                              title="Este post no está vinculado a ningún post de la app"
-                            >
-                              ⚠ {m.post_title || m.post_excerpt?.slice(0, 60) || m.linkedin_url || "(sin título)"}
-                            </div>
-                          )}
+                            );
+                          })()}
                         </TableCell>
                         <TableCell><SourceBadge source={m.source} /></TableCell>
                         <TableCell className="text-xs text-muted-foreground">
@@ -354,6 +408,11 @@ export default function PerformancePage() {
                     ))}
                   </TableBody>
                 </Table>
+                {focusedPostId && sorted.length === 0 && (
+                  <div className="p-6 text-center text-sm text-muted-foreground">
+                    No hay métricas vinculadas a este post.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -372,18 +431,20 @@ export default function PerformancePage() {
           linkingMetric &&
           linkMut.mutate({ metricId: linkingMetric.id, postId, linkedinUrl: linkingMetric.linkedin_url })
         }
+        onUnlink={() => linkingMetric && unlinkMut.mutate(linkingMetric.id)}
       />
     </div>
   );
 }
 
 function LinkPostDialog({
-  metric, posts, onClose, onSelect,
+  metric, posts, onClose, onSelect, onUnlink,
 }: {
   metric: LinkedinMetric | null;
   posts: any[];
   onClose: () => void;
   onSelect: (postId: string) => void;
+  onUnlink?: () => void;
 }) {
   const [q, setQ] = useState("");
   const filtered = useMemo(() => {
@@ -434,6 +495,16 @@ function LinkPostDialog({
             </button>
           ))}
         </div>
+        {onUnlink && (
+          <div className="flex justify-between items-center pt-2 border-t">
+            <span className="text-xs text-muted-foreground">
+              ¿Esta métrica no proviene de la app?
+            </span>
+            <Button variant="ghost" size="sm" onClick={onUnlink}>
+              No vincular
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -500,6 +500,7 @@ export type Database = {
           impressions: number
           linkedin_url: string | null
           linkedin_urn: string | null
+          manually_unmatched: boolean
           post_excerpt: string | null
           post_id: string | null
           post_title: string | null
@@ -521,6 +522,7 @@ export type Database = {
           impressions?: number
           linkedin_url?: string | null
           linkedin_urn?: string | null
+          manually_unmatched?: boolean
           post_excerpt?: string | null
           post_id?: string | null
           post_title?: string | null
@@ -542,6 +544,7 @@ export type Database = {
           impressions?: number
           linkedin_url?: string | null
           linkedin_urn?: string | null
+          manually_unmatched?: boolean
           post_excerpt?: string | null
           post_id?: string | null
           post_title?: string | null
