@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Files, Library, Linkedin } from "lucide-react";
+import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Files, Library, Linkedin, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
