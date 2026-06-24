@@ -199,7 +199,9 @@ export default function PerformancePage() {
   const linkMut = useMutation({
     mutationFn: async ({ metricId, postId, linkedinUrl }: { metricId: string; postId: string; linkedinUrl: string | null }) => {
       const { error } = await supabase
-        .from("linkedin_post_metrics").update({ post_id: postId }).eq("id", metricId);
+        .from("linkedin_post_metrics")
+        .update({ post_id: postId, manually_unmatched: false } as any)
+        .eq("id", metricId);
       if (error) throw error;
       // Persist the LinkedIn URL on the post so future imports auto-match by URL/URN.
       if (linkedinUrl) {
@@ -219,6 +221,24 @@ export default function PerformancePage() {
       setLinkingMetric(null);
     },
     onError: (e: any) => toast.error(e?.message ?? "No se pudo vincular"),
+  });
+
+  const unlinkMut = useMutation({
+    mutationFn: async (metricId: string) => {
+      // Reset backfill cache so the matcher won't immediately re-link.
+      backfilledRef.current.add(metricId);
+      const { error } = await supabase
+        .from("linkedin_post_metrics")
+        .update({ post_id: null, manually_unmatched: true } as any)
+        .eq("id", metricId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Métrica desvinculada");
+      qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
+      setLinkingMetric(null);
+    },
+    onError: (e: any) => toast.error(e?.message ?? "No se pudo desvincular"),
   });
 
   return (
