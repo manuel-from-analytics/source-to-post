@@ -1069,6 +1069,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
 
     // Generator extraction validation
     "generator.viewInLibrary": "View in library",
+    "generator.viewInHistory": "View post in history",
+    "generator.editingPostCard": "Editing an existing post",
+    "history.viewPerformance": "View performance",
     "generator.extractionReady": "✓ {count} chars",
     "generator.extractionThin": "⚠ Short extraction ({count})",
     "generator.extractionMissing": "⚠ No extracted content",
