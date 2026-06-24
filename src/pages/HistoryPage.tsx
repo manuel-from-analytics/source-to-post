@@ -405,7 +405,10 @@ export default function HistoryPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 flex-wrap">
+                  <Button size="sm" variant="outline" onClick={() => { setPublishPost(selectedPost); }} className="gap-1">
+                    <Linkedin className="h-3 w-3 text-[#0a66c2]" /> LinkedIn
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => { setSelectedPost(null); handleDuplicate(selectedPost); }} className="gap-1">
                     <Files className="h-3 w-3" /> {t("history.duplicate")}
                   </Button>
