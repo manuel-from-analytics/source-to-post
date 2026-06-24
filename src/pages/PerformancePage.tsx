@@ -46,6 +46,7 @@ export default function PerformancePage() {
   const qc = useQueryClient();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
+  const [search, setSearch] = useState("");
   const [importOpen, setImportOpen] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("engagement_rate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
