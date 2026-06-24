@@ -408,6 +408,11 @@ export default function PerformancePage() {
                     ))}
                   </TableBody>
                 </Table>
+                {focusedPostId && sorted.length === 0 && (
+                  <div className="p-6 text-center text-sm text-muted-foreground">
+                    No hay métricas vinculadas a este post.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -426,6 +431,7 @@ export default function PerformancePage() {
           linkingMetric &&
           linkMut.mutate({ metricId: linkingMetric.id, postId, linkedinUrl: linkingMetric.linkedin_url })
         }
+        onUnlink={() => linkingMetric && unlinkMut.mutate(linkingMetric.id)}
       />
     </div>
   );
