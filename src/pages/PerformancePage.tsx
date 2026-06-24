@@ -102,8 +102,21 @@ export default function PerformancePage() {
       matchedPostId: m.post_id ?? matcher(m),
       engagements: Math.round(m.impressions * m.engagement_rate),
     }));
-    return focusedPostId ? mapped.filter((r) => r.matchedPostId === focusedPostId) : mapped;
-  }, [metrics, sourceFilter, matcher, focusedPostId]);
+    const withPostFilter = focusedPostId ? mapped.filter((r) => r.matchedPostId === focusedPostId) : mapped;
+    if (!search.trim()) return withPostFilter;
+    const q = search.toLowerCase();
+    return withPostFilter.filter((r) => {
+      const post = r.matchedPostId ? postById.get(r.matchedPostId) : null;
+      const text = (
+        (post?.content ?? "") +
+        (post?.title ?? "") +
+        (r.post_title ?? "") +
+        (r.post_excerpt ?? "") +
+        (r.linkedin_url ?? "")
+      ).toLowerCase();
+      return text.includes(q);
+    });
+  }, [metrics, sourceFilter, matcher, focusedPostId, search, postById]);
 
   const focusedPostTitle = useMemo(() => {
     if (!focusedPostId) return null;
