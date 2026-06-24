@@ -438,12 +438,13 @@ export default function PerformancePage() {
 }
 
 function LinkPostDialog({
-  metric, posts, onClose, onSelect,
+  metric, posts, onClose, onSelect, onUnlink,
 }: {
   metric: LinkedinMetric | null;
   posts: any[];
   onClose: () => void;
   onSelect: (postId: string) => void;
+  onUnlink?: () => void;
 }) {
   const [q, setQ] = useState("");
   const filtered = useMemo(() => {
