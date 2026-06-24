@@ -495,6 +495,16 @@ function LinkPostDialog({
             </button>
           ))}
         </div>
+        {onUnlink && (
+          <div className="flex justify-between items-center pt-2 border-t">
+            <span className="text-xs text-muted-foreground">
+              ¿Esta métrica no proviene de la app?
+            </span>
+            <Button variant="ghost" size="sm" onClick={onUnlink}>
+              No vincular
+            </Button>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
