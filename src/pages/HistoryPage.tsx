@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Files, Library, Linkedin } from "lucide-react";
+import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Files, Library, Linkedin, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -223,9 +223,13 @@ export default function HistoryPage() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPublishPost(post)} title="Publicar en LinkedIn">
                       <Linkedin className="h-3.5 w-3.5 text-[#0a66c2]" />
                     </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/performance", { state: { openPostId: post.id } })} title={t("history.viewPerformance")}>
+                      <BarChart3 className="h-3.5 w-3.5" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)} title={t("history.view")}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
+
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(post)} title={t("history.edit")}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
@@ -409,6 +413,10 @@ export default function HistoryPage() {
                   <Button size="sm" variant="outline" onClick={() => { setPublishPost(selectedPost); }} className="gap-1">
                     <Linkedin className="h-3 w-3 text-[#0a66c2]" /> LinkedIn
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => navigate("/performance", { state: { openPostId: selectedPost.id } })} className="gap-1">
+                    <BarChart3 className="h-3 w-3" /> {t("history.viewPerformance")}
+                  </Button>
+
                   <Button size="sm" variant="outline" onClick={() => { setSelectedPost(null); handleDuplicate(selectedPost); }} className="gap-1">
                     <Files className="h-3 w-3" /> {t("history.duplicate")}
                   </Button>

@@ -639,7 +639,25 @@ export default function GeneratorPage() {
 
         {/* Right: Result */}
         <div className="space-y-4">
+          {editingPost && (
+            <Link
+              to="/history"
+              state={{ openPostId: editingPost.id }}
+              className="flex items-center gap-2 rounded-lg border bg-secondary/40 px-3 py-2 text-xs hover:bg-secondary transition-colors"
+              title={t("generator.viewInHistory")}
+            >
+              <FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium truncate">
+                  {editingPost.title || t("generator.editingPostCard")}
+                </p>
+                <p className="text-[10px] text-muted-foreground">{t("generator.viewInHistory")}</p>
+              </div>
+              <ExternalLink className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            </Link>
+          )}
           <Card className="min-h-[400px]">
+
             <CardHeader className="px-3 py-2.5 sm:px-6 sm:py-4 pb-2 sm:pb-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2">

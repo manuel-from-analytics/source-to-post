@@ -17,7 +17,7 @@ import {
   ExternalLink, Trash2, Building2, User as UserIcon, Link2, Link as LinkIcon,
   ArrowUpDown, ArrowUp, ArrowDown, Clock, X,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useLinkedinMetrics, useDeleteLinkedinMetric, type LinkedinMetric } from "@/hooks/useLinkedinMetrics";
 import { usePosts } from "@/hooks/usePosts";
 import type { LinkedInSource } from "@/lib/linkedin-csv";
@@ -42,6 +42,7 @@ export default function PerformancePage() {
   const { data: posts = [] } = usePosts();
   const deleteMut = useDeleteLinkedinMetric();
   const navigate = useNavigate();
+  const location = useLocation();
   const qc = useQueryClient();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
@@ -49,6 +50,16 @@ export default function PerformancePage() {
   const [sortKey, setSortKey] = useState<SortKey>("engagement_rate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [linkingMetric, setLinkingMetric] = useState<LinkedinMetric | null>(null);
+  const [focusedPostId, setFocusedPostId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = (location.state as any)?.openPostId as string | undefined;
+    if (id) {
+      setFocusedPostId(id);
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
+
 
   // Per-label publication dates for the "Personal" label — used to match
   // personal LinkedIn metrics by date even when a post is also tagged Empresa.
@@ -79,12 +90,20 @@ export default function PerformancePage() {
 
   const rows = useMemo<Row[]>(() => {
     const base = sourceFilter === "all" ? metrics : metrics.filter((m) => m.source === sourceFilter);
-    return base.map((m) => ({
+    const mapped = base.map((m) => ({
       ...m,
       matchedPostId: m.post_id ?? matcher(m),
       engagements: Math.round(m.impressions * m.engagement_rate),
     }));
-  }, [metrics, sourceFilter, matcher]);
+    return focusedPostId ? mapped.filter((r) => r.matchedPostId === focusedPostId) : mapped;
+  }, [metrics, sourceFilter, matcher, focusedPostId]);
+
+  const focusedPostTitle = useMemo(() => {
+    if (!focusedPostId) return null;
+    const p = (posts ?? []).find((x: any) => x.id === focusedPostId);
+    return p?.title || (p?.content ? p.content.slice(0, 60) : null);
+  }, [focusedPostId, posts]);
+
 
   // Persist on-the-fly: any metric without post_id in DB but resolvable via the
   // client matcher gets written back so MCP / future imports see the link.
@@ -206,7 +225,21 @@ export default function PerformancePage() {
             <SelectItem value="company">Empresa</SelectItem>
           </SelectContent>
         </Select>
+        {focusedPostId && (
+          <button
+            type="button"
+            onClick={() => setFocusedPostId(null)}
+            className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-primary hover:bg-primary/15"
+            title="Quitar filtro de post"
+          >
+            <span className="max-w-[220px] truncate">
+              Post: {focusedPostTitle || focusedPostId.slice(0, 8)}
+            </span>
+            <X className="h-3 w-3" />
+          </button>
+        )}
       </div>
+
 
       {isLoading ? (
         <Card><CardContent className="py-12 text-center text-muted-foreground">Cargando…</CardContent></Card>

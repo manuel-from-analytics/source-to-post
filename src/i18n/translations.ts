@@ -491,6 +491,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
 
     // Generator extraction validation
     "generator.viewInLibrary": "Ver en la biblioteca",
+    "generator.viewInHistory": "Ver post en el historial",
+    "generator.editingPostCard": "Editando un post existente",
+    "history.viewPerformance": "Ver rendimiento",
     "generator.extractionReady": "✓ {count} chars",
     "generator.extractionThin": "⚠ Extracción corta ({count})",
     "generator.extractionMissing": "⚠ Sin contenido extraído",
@@ -1066,6 +1069,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
 
     // Generator extraction validation
     "generator.viewInLibrary": "View in library",
+    "generator.viewInHistory": "View post in history",
+    "generator.editingPostCard": "Editing an existing post",
+    "history.viewPerformance": "View performance",
     "generator.extractionReady": "✓ {count} chars",
     "generator.extractionThin": "⚠ Short extraction ({count})",
     "generator.extractionMissing": "⚠ No extracted content",
@@ -1640,6 +1646,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
 
     // Generator extraction validation
     "generator.viewInLibrary": "Ver na biblioteca",
+    "generator.viewInHistory": "Ver post no histórico",
+    "generator.editingPostCard": "Editando um post existente",
+    "history.viewPerformance": "Ver desempenho",
     "generator.extractionReady": "✓ {count} chars",
     "generator.extractionThin": "⚠ Extração curta ({count})",
     "generator.extractionMissing": "⚠ Sem conteúdo extraído",
