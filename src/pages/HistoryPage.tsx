@@ -223,9 +223,13 @@ export default function HistoryPage() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPublishPost(post)} title="Publicar en LinkedIn">
                       <Linkedin className="h-3.5 w-3.5 text-[#0a66c2]" />
                     </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/performance", { state: { openPostId: post.id } })} title={t("history.viewPerformance")}>
+                      <BarChart3 className="h-3.5 w-3.5" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)} title={t("history.view")}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
+
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(post)} title={t("history.edit")}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
