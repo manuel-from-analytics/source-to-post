@@ -42,6 +42,7 @@ export default function PerformancePage() {
   const { data: posts = [] } = usePosts();
   const deleteMut = useDeleteLinkedinMetric();
   const navigate = useNavigate();
+  const location = useLocation();
   const qc = useQueryClient();
 
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>("all");
@@ -49,6 +50,16 @@ export default function PerformancePage() {
   const [sortKey, setSortKey] = useState<SortKey>("engagement_rate");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [linkingMetric, setLinkingMetric] = useState<LinkedinMetric | null>(null);
+  const [focusedPostId, setFocusedPostId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const id = (location.state as any)?.openPostId as string | undefined;
+    if (id) {
+      setFocusedPostId(id);
+      window.history.replaceState({}, "");
+    }
+  }, [location.state]);
+
 
   // Per-label publication dates for the "Personal" label — used to match
   // personal LinkedIn metrics by date even when a post is also tagged Empresa.
