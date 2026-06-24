@@ -18,6 +18,7 @@ interface MetricLike {
   post_excerpt?: string | null;
   post_title?: string | null;
   posted_at?: string | null;
+  manually_unmatched?: boolean | null;
 }
 
 function extractUrn(url: string | null | undefined): string | null {
