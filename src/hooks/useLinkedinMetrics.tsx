@@ -89,16 +89,17 @@ export function useImportLinkedinCsv() {
         { personalMetrics: rows.filter((r) => r.source === "personal") },
       );
 
-      // Existing metrics for the same source — used to apply the "overwrite only if impressions >= current" rule.
+      // Existing metrics for the same source — used to apply the "overwrite only if impressions >= current" rule
+      // AND to preserve the manually_unmatched flag set by the user in the UI.
       const { data: existing } = await supabase
         .from("linkedin_post_metrics")
-        .select("id, linkedin_urn, linkedin_url, impressions")
+        .select("id, linkedin_urn, linkedin_url, impressions, manually_unmatched, post_id")
         .eq("source", source);
 
-      const existingByUrn = new Map<string, { id: string; impressions: number }>();
-      const existingByUrl = new Map<string, { id: string; impressions: number }>();
+      const existingByUrn = new Map<string, { id: string; impressions: number; manually_unmatched: boolean; post_id: string | null }>();
+      const existingByUrl = new Map<string, { id: string; impressions: number; manually_unmatched: boolean; post_id: string | null }>();
       (existing ?? []).forEach((e: any) => {
-        const entry = { id: e.id, impressions: e.impressions ?? 0 };
+        const entry = { id: e.id, impressions: e.impressions ?? 0, manually_unmatched: !!e.manually_unmatched, post_id: e.post_id ?? null };
         if (e.linkedin_urn) existingByUrn.set(e.linkedin_urn, entry);
         else if (e.linkedin_url) existingByUrl.set(e.linkedin_url, entry);
       });
