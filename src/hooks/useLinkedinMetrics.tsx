@@ -111,15 +111,36 @@ export function useImportLinkedinCsv() {
       const toInsert: any[] = [];
       const toUpdate: { id: string; row: any }[] = [];
 
+      const urlsToBackfillByPost = new Map<string, string>(); // post_id -> linkedin_url
+
       for (const r of rows as ParsedMetricRow[]) {
-        const post_id = matcher({
-          source: r.source,
-          linkedin_url: r.linkedin_url,
-          post_title: r.post_title,
-          post_excerpt: r.post_excerpt,
-          posted_at: r.posted_at,
-        });
-        if (post_id) matched++;
+        const prev =
+          (r.linkedin_urn ? existingByUrn.get(r.linkedin_urn) : null) ||
+          (r.linkedin_url ? existingByUrl.get(r.linkedin_url) : null);
+
+        // If the user previously unlinked this metric, preserve that decision.
+        const preserveUnmatched = !!prev?.manually_unmatched;
+
+        let post_id: string | null = null;
+        if (preserveUnmatched) {
+          post_id = null;
+        } else if (prev?.post_id) {
+          // Trust prior manual link.
+          post_id = prev.post_id;
+        } else {
+          post_id = matcher({
+            source: r.source,
+            linkedin_url: r.linkedin_url,
+            post_title: r.post_title,
+            post_excerpt: r.post_excerpt,
+            posted_at: r.posted_at,
+          });
+        }
+        if (post_id) {
+          matched++;
+          // Remember to write linkedin_url back onto the post so the URL becomes the shared key.
+          if (r.linkedin_url) urlsToBackfillByPost.set(post_id, r.linkedin_url);
+        }
 
         const newRow = {
           user_id: user.id,
@@ -137,11 +158,8 @@ export function useImportLinkedinCsv() {
           shares: Math.round(r.shares),
           engagement_rate: r.engagement_rate,
           raw: r.raw,
+          manually_unmatched: preserveUnmatched,
         };
-
-        const prev =
-          (r.linkedin_urn ? existingByUrn.get(r.linkedin_urn) : null) ||
-          (r.linkedin_url ? existingByUrl.get(r.linkedin_url) : null);
 
         if (!prev) {
           toInsert.push(newRow);
