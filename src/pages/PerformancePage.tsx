@@ -90,12 +90,20 @@ export default function PerformancePage() {
 
   const rows = useMemo<Row[]>(() => {
     const base = sourceFilter === "all" ? metrics : metrics.filter((m) => m.source === sourceFilter);
-    return base.map((m) => ({
+    const mapped = base.map((m) => ({
       ...m,
       matchedPostId: m.post_id ?? matcher(m),
       engagements: Math.round(m.impressions * m.engagement_rate),
     }));
-  }, [metrics, sourceFilter, matcher]);
+    return focusedPostId ? mapped.filter((r) => r.matchedPostId === focusedPostId) : mapped;
+  }, [metrics, sourceFilter, matcher, focusedPostId]);
+
+  const focusedPostTitle = useMemo(() => {
+    if (!focusedPostId) return null;
+    const p = (posts ?? []).find((x: any) => x.id === focusedPostId);
+    return p?.title || (p?.content ? p.content.slice(0, 60) : null);
+  }, [focusedPostId, posts]);
+
 
   // Persist on-the-fly: any metric without post_id in DB but resolvable via the
   // client matcher gets written back so MCP / future imports see the link.
