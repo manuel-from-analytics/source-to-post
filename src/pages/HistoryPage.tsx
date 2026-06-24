@@ -499,6 +499,15 @@ export default function HistoryPage() {
           </p>
         </div>
       )}
+
+      {publishPost && (
+        <PublishToLinkedinDialog
+          open={!!publishPost}
+          onOpenChange={(o) => { if (!o) setPublishPost(null); }}
+          postId={publishPost.id}
+          content={publishPost.content}
+        />
+      )}
     </div>
   );
 }
