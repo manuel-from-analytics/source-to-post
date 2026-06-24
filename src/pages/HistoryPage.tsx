@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
-import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Files, Library } from "lucide-react";
+import { Search, Copy, Check, FileText, Calendar, Eye, Trash2, Pencil, Files, Library, Linkedin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,6 +26,7 @@ import {
   useAllPostLabelPublications, usePublishToLabel, useUnpublishFromLabel,
   useTogglePostLabel,
 } from "@/hooks/usePostLabels";
+import { PublishToLinkedinDialog } from "@/components/PublishToLinkedinDialog";
 
 type PostStatus = Database["public"]["Enums"]["post_status"];
 type Post = Database["public"]["Tables"]["generated_posts"]["Row"];
@@ -44,6 +45,7 @@ export default function HistoryPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [labelPickerOpen, setLabelPickerOpen] = useState(false);
+  const [publishPost, setPublishPost] = useState<Post | null>(null);
   const { data: allLabels } = usePostLabels();
   const { data: assignmentsMap } = useAllPostLabelAssignments();
   const { data: publicationsMap } = useAllPostLabelPublications();
@@ -218,6 +220,9 @@ export default function HistoryPage() {
                   </div>
                   <div className="flex gap-1 flex-shrink-0">
                     <PostLabelPicker postId={post.id} />
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPublishPost(post)} title="Publicar en LinkedIn">
+                      <Linkedin className="h-3.5 w-3.5 text-[#0a66c2]" />
+                    </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)} title={t("history.view")}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
