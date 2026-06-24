@@ -273,7 +273,7 @@ export default function PerformancePage() {
         <ImportCsvWizard open={importOpen} onOpenChange={setImportOpen} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
         <span className="text-sm text-muted-foreground">Origen:</span>
         <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
           <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
@@ -283,6 +283,15 @@ export default function PerformancePage() {
             <SelectItem value="company">Empresa</SelectItem>
           </SelectContent>
         </Select>
+        <div className="relative flex-1 min-w-[200px] max-w-md">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por título o contenido"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         {focusedPostId && (
           <button
             type="button"
