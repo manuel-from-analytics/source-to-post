@@ -60,6 +60,7 @@ serve(async (req) => {
 
       const r = await publishTextToLinkedIn(post.content);
       if (r.ok) {
+        const nowIso = new Date().toISOString();
         await admin
           .from("scheduled_publications")
           .update({
@@ -72,11 +73,13 @@ serve(async (req) => {
           .from("generated_posts")
           .update({
             linkedin_url: r.linkedin_url,
-            linkedin_published_at: new Date().toISOString(),
+            linkedin_published_at: nowIso,
             status: "published",
-            published_at: new Date().toISOString(),
+            published_at: nowIso,
           } as any)
           .eq("id", row.post_id);
+        const kind: LabelKind = row.target === "company" ? "company" : "personal";
+        await recordLabelPublication(admin, row.user_id, row.post_id, kind, nowIso);
         results.push({ id: row.id, ok: true });
       } else {
         const finalStatus =
