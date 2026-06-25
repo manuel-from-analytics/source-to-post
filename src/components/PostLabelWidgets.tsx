@@ -1,22 +1,17 @@
-import { useState } from "react";
-import { Plus, X, Tag, Check, User as UserIcon, Building2, MoreHorizontal } from "lucide-react";
+import { Check, User as UserIcon, Building2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-  Popover, PopoverContent, PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  usePostLabels, useCreatePostLabel, useTogglePostLabel,
-  usePostLabelAssignments, useUpdatePostLabelKind,
+  usePostLabels, useTogglePostLabel, useEnsureCanonicalLabel,
+  usePostLabelAssignments,
   type PostLabel, type PostLabelKind,
 } from "@/hooks/usePostLabels";
-import { useLanguage } from "@/i18n/LanguageContext";
 
-const PRESET_COLORS = [
-  "#3b82f6", "#ef4444", "#22c55e", "#f59e0b", "#8b5cf6",
-  "#ec4899", "#14b8a6", "#f97316",
-];
+const KIND_META: Record<"personal" | "company", { label: string; color: string; Icon: typeof UserIcon }> = {
+  personal: { label: "Personal", color: "#3b82f6", Icon: UserIcon },
+  company:  { label: "Empresa",  color: "#8b5cf6", Icon: Building2 },
+};
+
+const KINDS: ("personal" | "company")[] = ["personal", "company"];
 
 /** Mini-badge that shows a label's name + a date with the label color. Read-only. */
 export function LabelPublishedDate({
@@ -36,7 +31,7 @@ export function LabelPublishedDate({
       style={{ borderColor: label.color ?? undefined, color: label.color ?? undefined }}
     >
       <Check className="h-2.5 w-2.5 shrink-0" />
-      <span className="shrink-0">Publish</span>
+      <span className="shrink-0">Publicado</span>
       <span className="shrink-0 opacity-70">·</span>
       <span className="min-w-0 flex-1 truncate">{label.name}</span>
       <span className="shrink-0 opacity-70">·</span>
@@ -54,142 +49,76 @@ export function PostLabelBadge({
   onRemove?: () => void;
   className?: string;
 }) {
+  const meta = label.kind && label.kind !== "other" ? KIND_META[label.kind] : null;
+  const Icon = meta?.Icon;
   return (
     <Badge
       variant="outline"
       className={`inline-flex max-w-full items-center gap-1 overflow-hidden text-xs ${className}`}
       style={{ borderColor: label.color ?? undefined, color: label.color ?? undefined }}
     >
-      <span
-        className="inline-block h-2 w-2 rounded-full"
-        style={{ backgroundColor: label.color ?? "#3b82f6" }}
-      />
+      {Icon ? <Icon className="h-3 w-3 shrink-0" /> : (
+        <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: label.color ?? "#3b82f6" }} />
+      )}
       <span className="max-w-[8rem] truncate sm:max-w-[12rem]">{label.name}</span>
       {onRemove && (
         <button onClick={(e) => { e.stopPropagation(); onRemove(); }} className="ml-0.5 hover:opacity-70">
-          <X className="h-3 w-3" />
+          ×
         </button>
       )}
     </Badge>
   );
 }
 
+/**
+ * Two-pill toggle: Personal / Empresa. Auto-creates the canonical label on first click.
+ * Replaces the old free-text label picker.
+ */
 export function PostLabelPicker({ postId }: { postId: string }) {
-  const { t } = useLanguage();
   const { data: labels } = usePostLabels();
   const { data: assignedIds } = usePostLabelAssignments(postId);
-  const createLabel = useCreatePostLabel();
   const toggleLabel = useTogglePostLabel();
-  const updateKind = useUpdatePostLabelKind();
-  const [newName, setNewName] = useState("");
-  const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
-  const [newKind, setNewKind] = useState<PostLabelKind>("other");
-  const [open, setOpen] = useState(false);
+  const ensure = useEnsureCanonicalLabel();
 
-  const handleToggle = (labelId: string) => {
-    const assigned = (assignedIds ?? []).includes(labelId);
-    toggleLabel.mutate({ postId, labelId, assigned });
+  const handleClick = async (kind: "personal" | "company") => {
+    let label = (labels ?? []).find((l) => l.kind === kind);
+    if (!label) label = await ensure.mutateAsync(kind);
+    const assigned = (assignedIds ?? []).includes(label.id);
+    toggleLabel.mutate({ postId, labelId: label.id, assigned });
   };
-
-  const handleCreate = async () => {
-    if (!newName.trim()) return;
-    const result = await createLabel.mutateAsync({ name: newName.trim(), color: selectedColor, kind: newKind });
-    toggleLabel.mutate({ postId, labelId: result.id, assigned: false });
-    setNewName("");
-    setNewKind("other");
-  };
-
-  const cycleKind = (lbl: PostLabel) => {
-    const order: PostLabelKind[] = ["other", "personal", "company"];
-    const next = order[(order.indexOf(lbl.kind ?? "other") + 1) % order.length];
-    updateKind.mutate({ labelId: lbl.id, kind: next });
-  };
-
-  const kindIcon = (k: PostLabelKind) =>
-    k === "personal" ? <UserIcon className="h-3 w-3" /> :
-    k === "company" ? <Building2 className="h-3 w-3" /> : null;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button className="p-1.5 rounded-md hover:bg-secondary transition-colors text-muted-foreground">
-          <Tag className="h-3.5 w-3.5" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-64 p-2" align="end" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium text-muted-foreground mb-2 px-1">{t("labels.title")}</p>
-        <div className="space-y-1 max-h-40 overflow-y-auto">
-          {(labels ?? []).map((lbl) => {
-            const isAssigned = (assignedIds ?? []).includes(lbl.id);
-            const k = (lbl.kind ?? "other") as PostLabelKind;
-            return (
-              <div
-                key={lbl.id}
-                className={`w-full flex items-center gap-2 text-left text-sm px-2 py-1.5 rounded hover:bg-secondary transition-colors ${
-                  isAssigned ? "bg-secondary font-medium" : ""
-                }`}
-              >
-                <button onClick={() => handleToggle(lbl.id)} className="flex flex-1 min-w-0 items-center gap-2">
-                  <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: lbl.color ?? "#3b82f6" }} />
-                  <span className="truncate">{lbl.name}</span>
-                </button>
-                <button
-                  onClick={() => cycleKind(lbl)}
-                  title={`Tipo: ${k}`}
-                  className="flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-background"
-                >
-                  {kindIcon(k)}
-                  <span>{k === "personal" ? "Pers." : k === "company" ? "Emp." : "—"}</span>
-                </button>
-              </div>
-            );
-          })}
-        </div>
-        <div className="border-t mt-2 pt-2 space-y-2">
-          <Input
-            placeholder={t("labels.newPlaceholder")}
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            className="h-8 text-xs"
-          />
-          <div className="flex gap-1 flex-wrap px-1">
-            {PRESET_COLORS.map((c) => (
-              <button
-                key={c}
-                onClick={() => setSelectedColor(c)}
-                className={`h-5 w-5 rounded-full border-2 transition-all ${
-                  selectedColor === c ? "border-foreground scale-110" : "border-transparent"
-                }`}
-                style={{ backgroundColor: c }}
-              />
-            ))}
-          </div>
-          <div className="flex gap-1 px-1">
-            {(["other", "personal", "company"] as PostLabelKind[]).map((k) => (
-              <button
-                key={k}
-                onClick={() => setNewKind(k)}
-                className={`flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] ${
-                  newKind === k ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                {kindIcon(k)}
-                {k === "personal" ? "Personal" : k === "company" ? "Empresa" : "Otra"}
-              </button>
-            ))}
-          </div>
-          {newName.trim() && (
-            <Button size="sm" className="w-full h-7 text-xs" onClick={handleCreate} disabled={createLabel.isPending}>
-              {t("labels.create")} "{newName.trim()}"
-            </Button>
-          )}
-        </div>
-      </PopoverContent>
-    </Popover>
+    <div className="inline-flex items-center gap-1">
+      {KINDS.map((kind) => {
+        const lbl = (labels ?? []).find((l) => l.kind === kind);
+        const isAssigned = !!lbl && (assignedIds ?? []).includes(lbl.id);
+        const meta = KIND_META[kind];
+        const Icon = meta.Icon;
+        return (
+          <button
+            key={kind}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); handleClick(kind); }}
+            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] transition-colors ${
+              isAssigned ? "text-white" : "text-muted-foreground hover:bg-secondary"
+            }`}
+            style={
+              isAssigned
+                ? { backgroundColor: meta.color, borderColor: meta.color }
+                : { borderColor: undefined }
+            }
+            title={isAssigned ? `Quitar ${meta.label}` : `Marcar como ${meta.label}`}
+          >
+            <Icon className="h-3 w-3" />
+            <span>{meta.label}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
+/** Filter pills for listings: Personal / Empresa. */
 export function PostLabelFilter({
   selectedLabelId,
   onSelect,
@@ -198,23 +127,35 @@ export function PostLabelFilter({
   onSelect: (id: string | null) => void;
 }) {
   const { data: labels } = usePostLabels();
+  const available = KINDS
+    .map((kind) => ({ kind, label: (labels ?? []).find((l) => l.kind === kind) }))
+    .filter((x) => !!x.label) as { kind: "personal" | "company"; label: PostLabel }[];
 
-  if (!labels?.length) return null;
+  if (available.length === 0) return null;
 
   return (
     <div className="flex min-w-0 flex-wrap gap-1.5">
-      {labels.map((lbl) => (
-        <button
-          key={lbl.id}
-          onClick={() => onSelect(lbl.id === selectedLabelId ? null : lbl.id)}
-          className={`flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
-            lbl.id === selectedLabelId ? "bg-primary text-primary-foreground border-primary" : "border-border hover:bg-secondary"
-          }`}
-        >
-          <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: lbl.id === selectedLabelId ? "currentColor" : (lbl.color ?? "#3b82f6") }} />
-          <span className="max-w-[8rem] truncate sm:max-w-[12rem]">{lbl.name}</span>
-        </button>
-      ))}
+      {available.map(({ kind, label }) => {
+        const meta = KIND_META[kind];
+        const Icon = meta.Icon;
+        const active = label.id === selectedLabelId;
+        return (
+          <button
+            key={label.id}
+            onClick={() => onSelect(active ? null : label.id)}
+            className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+              active ? "text-white" : "hover:bg-secondary"
+            }`}
+            style={active ? { backgroundColor: meta.color, borderColor: meta.color } : {}}
+          >
+            <Icon className="h-3 w-3" />
+            <span>{meta.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }
+
+// Re-export for backwards compatibility (kept so other files don't need updates)
+export type { PostLabelKind };
