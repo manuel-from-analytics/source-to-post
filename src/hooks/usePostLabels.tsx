@@ -48,14 +48,28 @@ export function useCreatePostLabel() {
   const { user } = useAuth();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ name, color }: { name: string; color: string }) => {
+    mutationFn: async ({ name, color, kind }: { name: string; color: string; kind?: PostLabelKind }) => {
       const { data, error } = await supabase
         .from("post_labels")
-        .insert({ name, color, user_id: user!.id } as any)
+        .insert({ name, color, user_id: user!.id, kind: kind ?? "other" } as any)
         .select()
         .single();
       if (error) throw error;
       return data as PostLabel;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["post-labels"] }),
+  });
+}
+
+export function useUpdatePostLabelKind() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ labelId, kind }: { labelId: string; kind: PostLabelKind }) => {
+      const { error } = await supabase
+        .from("post_labels")
+        .update({ kind } as any)
+        .eq("id", labelId);
+      if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["post-labels"] }),
   });
