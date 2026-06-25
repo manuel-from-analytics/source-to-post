@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X, Tag, Check } from "lucide-react";
+import { Plus, X, Tag, Check, User as UserIcon, Building2, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/popover";
 import {
   usePostLabels, useCreatePostLabel, useTogglePostLabel,
-  usePostLabelAssignments, type PostLabel,
+  usePostLabelAssignments, useUpdatePostLabelKind,
+  type PostLabel, type PostLabelKind,
 } from "@/hooks/usePostLabels";
 import { useLanguage } from "@/i18n/LanguageContext";
 
