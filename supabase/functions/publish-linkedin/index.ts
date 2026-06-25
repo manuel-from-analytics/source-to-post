@@ -37,6 +37,8 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const post_id = typeof body?.post_id === "string" ? body.post_id : null;
+    const target: LabelKind =
+      body?.target === "company" ? "company" : "personal";
     if (!post_id) {
       return new Response(JSON.stringify({ error: "post_id required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
