@@ -37,9 +37,13 @@ export function useScheduledPublications() {
 export function usePublishLinkedinNow() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (post_id: string) => {
+    mutationFn: async (args: { post_id: string; target?: "personal" | "company" } | string) => {
+      const payload =
+        typeof args === "string"
+          ? { post_id: args, target: "personal" as const }
+          : { post_id: args.post_id, target: args.target ?? "personal" };
       const { data, error } = await supabase.functions.invoke("publish-linkedin", {
-        body: { post_id },
+        body: payload,
       });
       if (error) throw new Error(error.message ?? "Error publicando");
       if ((data as any)?.error) throw new Error((data as any).error);
@@ -47,6 +51,9 @@ export function usePublishLinkedinNow() {
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["posts"] });
+      qc.invalidateQueries({ queryKey: ["all-post-label-publications"] });
+      qc.invalidateQueries({ queryKey: ["post-label-publications"] });
+      qc.invalidateQueries({ queryKey: ["all-post-label-assignments"] });
       toast.success("Publicado en LinkedIn", {
         action: data?.linkedin_url
           ? { label: "Ver", onClick: () => window.open(data.linkedin_url, "_blank") }
