@@ -80,8 +80,10 @@ export function PostLabelPicker({ postId }: { postId: string }) {
   const { data: assignedIds } = usePostLabelAssignments(postId);
   const createLabel = useCreatePostLabel();
   const toggleLabel = useTogglePostLabel();
+  const updateKind = useUpdatePostLabelKind();
   const [newName, setNewName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+  const [newKind, setNewKind] = useState<PostLabelKind>("other");
   const [open, setOpen] = useState(false);
 
   const handleToggle = (labelId: string) => {
@@ -91,10 +93,21 @@ export function PostLabelPicker({ postId }: { postId: string }) {
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
-    const result = await createLabel.mutateAsync({ name: newName.trim(), color: selectedColor });
+    const result = await createLabel.mutateAsync({ name: newName.trim(), color: selectedColor, kind: newKind });
     toggleLabel.mutate({ postId, labelId: result.id, assigned: false });
     setNewName("");
+    setNewKind("other");
   };
+
+  const cycleKind = (lbl: PostLabel) => {
+    const order: PostLabelKind[] = ["other", "personal", "company"];
+    const next = order[(order.indexOf(lbl.kind ?? "other") + 1) % order.length];
+    updateKind.mutate({ labelId: lbl.id, kind: next });
+  };
+
+  const kindIcon = (k: PostLabelKind) =>
+    k === "personal" ? <UserIcon className="h-3 w-3" /> :
+    k === "company" ? <Building2 className="h-3 w-3" /> : null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -103,22 +116,32 @@ export function PostLabelPicker({ postId }: { postId: string }) {
           <Tag className="h-3.5 w-3.5" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-56 p-2" align="end" onClick={(e) => e.stopPropagation()}>
+      <PopoverContent className="w-64 p-2" align="end" onClick={(e) => e.stopPropagation()}>
         <p className="text-xs font-medium text-muted-foreground mb-2 px-1">{t("labels.title")}</p>
         <div className="space-y-1 max-h-40 overflow-y-auto">
           {(labels ?? []).map((lbl) => {
             const isAssigned = (assignedIds ?? []).includes(lbl.id);
+            const k = (lbl.kind ?? "other") as PostLabelKind;
             return (
-              <button
+              <div
                 key={lbl.id}
-                onClick={() => handleToggle(lbl.id)}
                 className={`w-full flex items-center gap-2 text-left text-sm px-2 py-1.5 rounded hover:bg-secondary transition-colors ${
                   isAssigned ? "bg-secondary font-medium" : ""
                 }`}
               >
-                <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: lbl.color ?? "#3b82f6" }} />
-                {lbl.name}
-              </button>
+                <button onClick={() => handleToggle(lbl.id)} className="flex flex-1 min-w-0 items-center gap-2">
+                  <span className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: lbl.color ?? "#3b82f6" }} />
+                  <span className="truncate">{lbl.name}</span>
+                </button>
+                <button
+                  onClick={() => cycleKind(lbl)}
+                  title={`Tipo: ${k}`}
+                  className="flex items-center gap-1 rounded border px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-background"
+                >
+                  {kindIcon(k)}
+                  <span>{k === "personal" ? "Pers." : k === "company" ? "Emp." : "—"}</span>
+                </button>
+              </div>
             );
           })}
         </div>
@@ -140,6 +163,20 @@ export function PostLabelPicker({ postId }: { postId: string }) {
                 }`}
                 style={{ backgroundColor: c }}
               />
+            ))}
+          </div>
+          <div className="flex gap-1 px-1">
+            {(["other", "personal", "company"] as PostLabelKind[]).map((k) => (
+              <button
+                key={k}
+                onClick={() => setNewKind(k)}
+                className={`flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] ${
+                  newKind === k ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                {kindIcon(k)}
+                {k === "personal" ? "Personal" : k === "company" ? "Empresa" : "Otra"}
+              </button>
             ))}
           </div>
           {newName.trim() && (
