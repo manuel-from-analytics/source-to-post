@@ -44,16 +44,29 @@ export async function recordLabelPublication(
     label = created;
   }
 
-  // 3) Assign label to post (ignore conflict)
-  await admin
+  // 3) Assign label to post if not already assigned
+  const { data: existingAssign } = await admin
     .from("post_label_assignments")
-    .upsert({ post_id: postId, label_id: label.id }, { onConflict: "post_id,label_id" });
+    .select("post_id")
+    .eq("post_id", postId)
+    .eq("label_id", label.id)
+    .maybeSingle();
+  if (!existingAssign) {
+    await admin
+      .from("post_label_assignments")
+      .insert({ post_id: postId, label_id: label.id });
+  }
 
-  // 4) Insert publication (ignore conflict if already published)
-  await admin
+  // 4) Insert publication if not already recorded
+  const { data: existingPub } = await admin
     .from("post_label_publications")
-    .upsert(
-      { post_id: postId, label_id: label.id, published_at: publishedAt },
-      { onConflict: "post_id,label_id" },
-    );
+    .select("post_id")
+    .eq("post_id", postId)
+    .eq("label_id", label.id)
+    .maybeSingle();
+  if (!existingPub) {
+    await admin
+      .from("post_label_publications")
+      .insert({ post_id: postId, label_id: label.id, published_at: publishedAt });
+  }
 }
