@@ -81,15 +81,19 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    const nowIso = new Date().toISOString();
     await admin
       .from("generated_posts")
       .update({
         linkedin_url: result.linkedin_url,
-        linkedin_published_at: new Date().toISOString(),
+        linkedin_published_at: nowIso,
         status: "published",
-        published_at: new Date().toISOString(),
+        published_at: nowIso,
       } as any)
       .eq("id", post_id);
+
+    // Record the per-label publication (auto-creates the personal/company label).
+    await recordLabelPublication(admin, userId, post_id, target, nowIso);
 
     return new Response(
       JSON.stringify({ ok: true, linkedin_url: result.linkedin_url, urn: result.urn }),
