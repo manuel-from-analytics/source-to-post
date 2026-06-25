@@ -751,6 +751,7 @@ export type Database = {
           color: string | null
           created_at: string
           id: string
+          kind: Database["public"]["Enums"]["post_label_kind"]
           name: string
           user_id: string
         }
@@ -758,6 +759,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["post_label_kind"]
           name: string
           user_id: string
         }
@@ -765,6 +767,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["post_label_kind"]
           name?: string
           user_id?: string
         }
@@ -1009,6 +1012,7 @@ export type Database = {
     Enums: {
       input_type: "pdf" | "url" | "youtube" | "text" | "audio"
       linkedin_post_source: "personal" | "company"
+      post_label_kind: "personal" | "company" | "other"
       post_status: "draft" | "final" | "published"
     }
     CompositeTypes: {
@@ -1139,6 +1143,7 @@ export const Constants = {
     Enums: {
       input_type: ["pdf", "url", "youtube", "text", "audio"],
       linkedin_post_source: ["personal", "company"],
+      post_label_kind: ["personal", "company", "other"],
       post_status: ["draft", "final", "published"],
     },
   },
