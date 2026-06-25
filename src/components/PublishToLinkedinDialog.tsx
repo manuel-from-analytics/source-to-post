@@ -35,7 +35,7 @@ export function PublishToLinkedinDialog({ open, onOpenChange, postId, content }:
 
   const handleSubmit = async () => {
     if (mode === "now") {
-      await publishNow.mutateAsync(postId);
+      await publishNow.mutateAsync({ post_id: postId, target });
       onOpenChange(false);
     } else {
       const iso = new Date(when).toISOString();

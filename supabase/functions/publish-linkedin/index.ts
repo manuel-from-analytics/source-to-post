@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { publishTextToLinkedIn } from "../_shared/linkedin-publish.ts";
+import { recordLabelPublication, type LabelKind } from "../_shared/label-publication.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -36,6 +37,8 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const post_id = typeof body?.post_id === "string" ? body.post_id : null;
+    const target: LabelKind =
+      body?.target === "company" ? "company" : "personal";
     if (!post_id) {
       return new Response(JSON.stringify({ error: "post_id required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -78,15 +81,19 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    const nowIso = new Date().toISOString();
     await admin
       .from("generated_posts")
       .update({
         linkedin_url: result.linkedin_url,
-        linkedin_published_at: new Date().toISOString(),
+        linkedin_published_at: nowIso,
         status: "published",
-        published_at: new Date().toISOString(),
+        published_at: nowIso,
       } as any)
       .eq("id", post_id);
+
+    // Record the per-label publication (auto-creates the personal/company label).
+    await recordLabelPublication(admin, userId, post_id, target, nowIso);
 
     return new Response(
       JSON.stringify({ ok: true, linkedin_url: result.linkedin_url, urn: result.urn }),
