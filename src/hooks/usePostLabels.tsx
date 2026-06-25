@@ -2,10 +2,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./useAuth";
 
+export type PostLabelKind = "personal" | "company" | "other";
+
 export interface PostLabel {
   id: string;
   name: string;
   color: string | null;
+  kind: PostLabelKind;
   user_id: string;
   created_at: string;
 }
