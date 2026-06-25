@@ -68,7 +68,7 @@ export default function PerformancePage() {
     queryKey: ["personal-publications"],
     queryFn: async () => {
       const { data: lbl } = await supabase
-        .from("post_labels").select("id").eq("name", "Personal").maybeSingle();
+        .from("post_labels").select("id").eq("kind", "personal").maybeSingle();
       if (!lbl?.id) return [] as PersonalPublication[];
       const { data: pubs } = await supabase
         .from("post_label_publications")

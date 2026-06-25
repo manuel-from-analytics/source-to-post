@@ -67,7 +67,7 @@ export function useImportLinkedinCsv() {
       // are matched against the date the post was actually published as Personal.
       const [{ data: posts }, { data: personalLabel }] = await Promise.all([
         supabase.from("generated_posts").select("id, content, linkedin_url"),
-        supabase.from("post_labels").select("id").eq("name", "Personal").maybeSingle(),
+        supabase.from("post_labels").select("id").eq("kind", "personal").maybeSingle(),
       ]);
 
       let personalPubs: { post_id: string; published_at: string }[] = [];
