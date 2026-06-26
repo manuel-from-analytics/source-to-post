@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useScheduledPublications, useCancelScheduledPublication } from "@/hooks/usePublishLinkedin";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 type SourceFilter = "all" | LinkedInSource;
 type SortKey = "post" | "source" | "posted_at" | "impressions" | "engagements" | "engagement_rate";
