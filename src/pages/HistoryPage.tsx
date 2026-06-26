@@ -223,7 +223,7 @@ export default function HistoryPage() {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <PostLabelPicker postId={post.id} />
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPublishPost(post)} title="Publicar en LinkedIn">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPublishPost(post)} title={t("history.publishLinkedin")}>
                       <Linkedin className="h-3.5 w-3.5 text-[#0a66c2]" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate("/performance", { state: { openPostId: post.id } })} title={t("history.viewPerformance")}>
