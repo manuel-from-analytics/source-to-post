@@ -33,6 +33,10 @@ export default function SettingsPage() {
   const [appLanguage, setAppLanguage] = useState<AppLanguage>(currentAppLang);
   const [savingAppLang, setSavingAppLang] = useState(false);
 
+  // Timezone
+  const [timezone, setTimezone] = useState<string>("Europe/Madrid");
+  const [savingTz, setSavingTz] = useState(false);
+
   // Post generation preferences
   const [preferredLanguage, setPreferredLanguage] = useState("es");
   const [defaultVoiceId, setDefaultVoiceId] = useState("none");
@@ -45,7 +49,7 @@ export default function SettingsPage() {
     (async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, preferred_language, default_writing_style, default_voice_id, default_length, default_cta, app_language")
+        .select("full_name, preferred_language, default_writing_style, default_voice_id, default_length, default_cta, app_language, timezone")
         .eq("id", user.id)
         .single();
       if (!error && data) {
@@ -56,10 +60,23 @@ export default function SettingsPage() {
         setDefaultVoiceId((data as any).default_voice_id || "none");
         setDefaultLength((data as any).default_length || "none");
         setDefaultCta((data as any).default_cta || "none");
+        setTimezone((data as any).timezone || "Europe/Madrid");
       }
       setLoading(false);
     })();
   }, [user]);
+
+  const handleSaveTimezone = async () => {
+    if (!user) return;
+    setSavingTz(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ timezone, updated_at: new Date().toISOString() } as any)
+      .eq("id", user.id);
+    setSavingTz(false);
+    if (error) toast.error(t("common.error"));
+    else toast.success(t("common.success"));
+  };
 
   const handleSaveProfile = async () => {
     if (!user) return;
@@ -222,7 +239,44 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Post generation preferences */}
+      {/* Timezone */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Zona horaria
+          </CardTitle>
+          <CardDescription>
+            Se aplica a los horarios de los agentes (agente diario y auto-publicación en LinkedIn).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Zona horaria</Label>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Europe/Madrid">Europe/Madrid (España)</SelectItem>
+                <SelectItem value="Europe/Lisbon">Europe/Lisbon (Portugal)</SelectItem>
+                <SelectItem value="Europe/London">Europe/London</SelectItem>
+                <SelectItem value="Atlantic/Canary">Atlantic/Canary (Canarias)</SelectItem>
+                <SelectItem value="America/Mexico_City">America/Mexico_City</SelectItem>
+                <SelectItem value="America/Bogota">America/Bogota</SelectItem>
+                <SelectItem value="America/Buenos_Aires">America/Buenos_Aires</SelectItem>
+                <SelectItem value="America/New_York">America/New_York</SelectItem>
+                <SelectItem value="America/Los_Angeles">America/Los_Angeles</SelectItem>
+                <SelectItem value="UTC">UTC</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button size="sm" onClick={handleSaveTimezone} disabled={savingTz}>
+            {savingTz ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t("settings.saving")}</> : t("settings.saveChanges")}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Post generation preferences moved below */}
+      <div className="hidden" />
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">

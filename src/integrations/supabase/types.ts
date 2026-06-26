@@ -835,6 +835,7 @@ export type Database = {
           newsletter_preferences: string | null
           newsletter_preferences_enabled: boolean | null
           preferred_language: string | null
+          timezone: string
           updated_at: string
         }
         Insert: {
@@ -850,6 +851,7 @@ export type Database = {
           newsletter_preferences?: string | null
           newsletter_preferences_enabled?: boolean | null
           preferred_language?: string | null
+          timezone?: string
           updated_at?: string
         }
         Update: {
@@ -865,6 +867,7 @@ export type Database = {
           newsletter_preferences?: string | null
           newsletter_preferences_enabled?: boolean | null
           preferred_language?: string | null
+          timezone?: string
           updated_at?: string
         }
         Relationships: []

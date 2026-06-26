@@ -54,6 +54,7 @@ export default function AgentSettingsCard() {
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
   const [runs, setRuns] = useState<RunRow[]>([]);
+  const [tz, setTz] = useState<string>("Europe/Madrid");
 
   const load = async () => {
     if (!session?.user) return;
@@ -61,6 +62,8 @@ export default function AgentSettingsCard() {
     const { data } = await supabase.from("agent_schedules").select("*").eq("user_id", session.user.id).maybeSingle();
     if (data) setSchedule({ ...DEFAULT, ...data, topic: data.topic || "" });
     else setSchedule({ ...DEFAULT, notification_email: session.user.email ?? null });
+    const { data: prof } = await supabase.from("profiles").select("timezone").eq("id", session.user.id).maybeSingle();
+    setTz(((prof as any)?.timezone as string) || "Europe/Madrid");
     const { data: r } = await supabase.from("agent_runs").select("id, started_at, status, posts_created, error, notified_at, newsletter_id").order("started_at", { ascending: false }).limit(10);
     setRuns((r as RunRow[]) || []);
     setLoading(false);
@@ -135,7 +138,7 @@ export default function AgentSettingsCard() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label className="text-xs">{t("agent.hourUTC")}</Label>
+            <Label className="text-xs">Hora ({tz})</Label>
             <Select value={String(schedule.run_hour)} onValueChange={(v) => setSchedule({ ...schedule, run_hour: parseInt(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -144,6 +147,7 @@ export default function AgentSettingsCard() {
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">Zona horaria configurable en Settings.</p>
           </div>
           <div className="space-y-1">
             <Label className="text-xs">{t("agent.notificationEmail")}</Label>
