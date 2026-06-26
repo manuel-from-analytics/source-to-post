@@ -5,10 +5,11 @@ import {
   usePostLabelAssignments,
   type PostLabel, type PostLabelKind,
 } from "@/hooks/usePostLabels";
+import { useLanguage } from "@/i18n/LanguageContext";
 
-const KIND_META: Record<"personal" | "company", { label: string; color: string; Icon: typeof UserIcon }> = {
-  personal: { label: "Personal", color: "#3b82f6", Icon: UserIcon },
-  company:  { label: "Empresa",  color: "#8b5cf6", Icon: Building2 },
+const KIND_META: Record<"personal" | "company", { labelKey: string; color: string; Icon: typeof UserIcon }> = {
+  personal: { labelKey: "performance.personal", color: "#3b82f6", Icon: UserIcon },
+  company:  { labelKey: "performance.company",  color: "#8b5cf6", Icon: Building2 },
 };
 
 const KINDS: ("personal" | "company")[] = ["personal", "company"];
