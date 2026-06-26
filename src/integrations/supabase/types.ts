@@ -164,6 +164,54 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_publish_schedules: {
+        Row: {
+          created_at: string
+          days_of_week: number[]
+          enabled: boolean
+          hour: number
+          id: string
+          last_run_at: string | null
+          last_run_message: string | null
+          last_run_status: string | null
+          notification_email: string | null
+          target: string
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          days_of_week?: number[]
+          enabled?: boolean
+          hour?: number
+          id?: string
+          last_run_at?: string | null
+          last_run_message?: string | null
+          last_run_status?: string | null
+          notification_email?: string | null
+          target?: string
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          days_of_week?: number[]
+          enabled?: boolean
+          hour?: number
+          id?: string
+          last_run_at?: string | null
+          last_run_message?: string | null
+          last_run_status?: string | null
+          notification_email?: string | null
+          target?: string
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       categories: {
         Row: {
           color: string | null

@@ -1,4 +1,5 @@
 import AgentSettingsCard from "@/components/AgentSettingsCard";
+import AutoPublishCard from "@/components/AutoPublishCard";
 import { Bot } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 
@@ -14,6 +15,8 @@ export default function AgentPage() {
         </div>
       </div>
       <AgentSettingsCard />
+      <AutoPublishCard />
     </div>
   );
 }
+

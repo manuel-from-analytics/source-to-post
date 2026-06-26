@@ -11,6 +11,9 @@ verify_jwt = false
 [functions.daily-agent]
 verify_jwt = false
 
+[functions.auto-publish-linkedin]
+verify_jwt = false
+
 [functions.extract-url]
 verify_jwt = false
 
