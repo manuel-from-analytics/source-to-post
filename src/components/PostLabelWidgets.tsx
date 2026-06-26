@@ -130,6 +130,7 @@ export function PostLabelFilter({
   selectedLabelId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const { t } = useLanguage();
   const { data: labels } = usePostLabels();
   const available = KINDS
     .map((kind) => ({ kind, label: (labels ?? []).find((l) => l.kind === kind) }))
@@ -153,7 +154,7 @@ export function PostLabelFilter({
             style={active ? { backgroundColor: meta.color, borderColor: meta.color } : {}}
           >
             <Icon className="h-3 w-3" />
-            <span>{meta.label}</span>
+            <span>{t(meta.labelKey)}</span>
           </button>
         );
       })}
