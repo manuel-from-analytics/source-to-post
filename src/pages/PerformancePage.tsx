@@ -472,6 +472,7 @@ function LinkPostDialog({
   onSelect: (postId: string) => void;
   onUnlink?: () => void;
 }) {
+  const { t } = useLanguage();
   const [q, setQ] = useState("");
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -492,19 +493,15 @@ function LinkPostDialog({
     <Dialog open={!!metric} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Vincular con un post de la biblioteca</DialogTitle>
+          <DialogTitle>{t("performance.linkPost")}</DialogTitle>
           <DialogDescription>
-            {metric?.linkedin_url ? (
-              <>Se guardará la URL de LinkedIn en el post seleccionado para que las próximas importaciones lo emparejen automáticamente.</>
-            ) : (
-              <>Se vinculará la métrica al post elegido.</>
-            )}
+            {metric?.linkedin_url ? t("performance.linkDialogDescUrl") : t("performance.linkDialogDesc")}
           </DialogDescription>
         </DialogHeader>
-        <Input placeholder="Buscar por título o contenido…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+        <Input placeholder={t("performance.linkSearchPlaceholder")} value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
         <div className="max-h-[50vh] overflow-y-auto divide-y rounded border">
           {filtered.length === 0 ? (
-            <div className="p-4 text-sm text-muted-foreground text-center">Sin resultados</div>
+            <div className="p-4 text-sm text-muted-foreground text-center">{t("performance.noResults")}</div>
           ) : filtered.map((p: any) => (
             <button
               key={p.id}
@@ -512,9 +509,9 @@ function LinkPostDialog({
               onClick={() => onSelect(p.id)}
               className="w-full text-left p-3 hover:bg-muted/50 transition-colors"
             >
-              <div className="font-medium text-sm truncate">{p.title || "(sin título)"}</div>
+              <div className="font-medium text-sm truncate">{p.title || t("performance.noTitle")}</div>
               <div className="text-xs text-muted-foreground truncate">
-                {p.published_at ? new Date(p.published_at).toLocaleDateString() : "Sin publicar"}
+                {p.published_at ? new Date(p.published_at).toLocaleDateString() : t("performance.notPublished")}
                 {" · "}
                 {(p.content || "").slice(0, 100)}
               </div>
@@ -524,10 +521,10 @@ function LinkPostDialog({
         {onUnlink && (
           <div className="flex justify-between items-center pt-2 border-t">
             <span className="text-xs text-muted-foreground">
-              ¿Esta métrica no proviene de la app?
+              {t("performance.notFromAppQ")}
             </span>
             <Button variant="ghost" size="sm" onClick={onUnlink}>
-              No vincular
+              {t("performance.dontLink")}
             </Button>
           </div>
         )}
@@ -571,15 +568,16 @@ function KPI({ icon, label, value }: { icon: React.ReactNode; label: string; val
   );
 }
 
-function SourceBadge({ source }: { source: LinkedInSource }) {
+function SourceBadge({ source, t }: { source: LinkedInSource; t: (k: string) => string }) {
   return source === "company" ? (
-    <Badge variant="secondary" className="gap-1"><Building2 className="h-3 w-3" />Empresa</Badge>
+    <Badge variant="secondary" className="gap-1"><Building2 className="h-3 w-3" />{t("performance.company")}</Badge>
   ) : (
-    <Badge variant="outline" className="gap-1"><UserIcon className="h-3 w-3" />Personal</Badge>
+    <Badge variant="outline" className="gap-1"><UserIcon className="h-3 w-3" />{t("performance.personal")}</Badge>
   );
 }
 
 function ScheduledPublicationsSection() {
+  const { t } = useLanguage();
   const { data: scheduled = [] } = useScheduledPublications();
   const { data: posts = [] } = usePosts();
   const cancel = useCancelScheduledPublication();
@@ -591,10 +589,10 @@ function ScheduledPublicationsSection() {
   const postById = new Map(posts.map((p) => [p.id, p]));
 
   const statusBadge = (s: string) => {
-    if (s === "pending") return <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Programado</Badge>;
-    if (s === "publishing") return <Badge variant="secondary">Publicando…</Badge>;
-    if (s === "done") return <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-0">Publicado</Badge>;
-    if (s === "failed") return <Badge variant="destructive">Falló</Badge>;
+    if (s === "pending") return <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />{t("performance.statusScheduled")}</Badge>;
+    if (s === "publishing") return <Badge variant="secondary">{t("performance.statusPublishing")}</Badge>;
+    if (s === "done") return <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-0">{t("performance.statusDone")}</Badge>;
+    if (s === "failed") return <Badge variant="destructive">{t("performance.statusFailed")}</Badge>;
     return <Badge variant="outline">{s}</Badge>;
   };
 
@@ -602,7 +600,7 @@ function ScheduledPublicationsSection() {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <Clock className="h-4 w-4" /> Publicaciones programadas
+          <Clock className="h-4 w-4" /> {t("performance.scheduledTitle")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -617,11 +615,11 @@ function ScheduledPublicationsSection() {
                     {new Date(s.scheduled_at).toLocaleString()}
                   </span>
                   {s.attempts > 0 && (
-                    <span className="text-muted-foreground">· {s.attempts} intento{s.attempts > 1 ? "s" : ""}</span>
+                    <span className="text-muted-foreground">· {s.attempts} {s.attempts > 1 ? t("performance.attempts") : t("performance.attempt")}</span>
                   )}
                 </div>
                 <p className="text-sm mt-1.5 line-clamp-2 text-muted-foreground">
-                  {post?.title || post?.content?.slice(0, 120) || "(post eliminado)"}
+                  {post?.title || post?.content?.slice(0, 120) || t("performance.postDeleted")}
                 </p>
                 {s.error && (
                   <p className="text-xs text-destructive mt-1 break-all">{s.error}</p>
@@ -629,7 +627,7 @@ function ScheduledPublicationsSection() {
                 {s.linkedin_url && (
                   <a href={s.linkedin_url} target="_blank" rel="noreferrer"
                      className="inline-flex items-center gap-1 text-xs text-primary mt-1">
-                    <ExternalLink className="h-3 w-3" /> Ver en LinkedIn
+                    <ExternalLink className="h-3 w-3" /> {t("performance.viewOnLinkedin")}
                   </a>
                 )}
               </div>
@@ -637,7 +635,7 @@ function ScheduledPublicationsSection() {
                 <Button
                   variant="ghost" size="icon" className="h-8 w-8 shrink-0"
                   onClick={() => cancel.mutate(s.id)}
-                  title="Cancelar"
+                  title={t("performance.cancel")}
                 >
                   <X className="h-4 w-4" />
                 </Button>
