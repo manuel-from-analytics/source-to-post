@@ -77,6 +77,7 @@ export function PostLabelBadge({
  * Replaces the old free-text label picker.
  */
 export function PostLabelPicker({ postId }: { postId: string }) {
+  const { t } = useLanguage();
   const { data: labels } = usePostLabels();
   const { data: assignedIds } = usePostLabelAssignments(postId);
   const toggleLabel = useTogglePostLabel();
@@ -96,6 +97,7 @@ export function PostLabelPicker({ postId }: { postId: string }) {
         const isAssigned = !!lbl && (assignedIds ?? []).includes(lbl.id);
         const meta = KIND_META[kind];
         const Icon = meta.Icon;
+        const labelText = t(meta.labelKey);
         return (
           <button
             key={kind}
@@ -109,10 +111,10 @@ export function PostLabelPicker({ postId }: { postId: string }) {
                 ? { backgroundColor: meta.color, borderColor: meta.color }
                 : { borderColor: undefined }
             }
-            title={isAssigned ? `Quitar ${meta.label}` : `Marcar como ${meta.label}`}
+            title={isAssigned ? `${t("common.removeLabel")} ${labelText}` : `${t("common.markAsLabel")} ${labelText}`}
           >
             <Icon className="h-3 w-3" />
-            <span>{meta.label}</span>
+            <span>{labelText}</span>
           </button>
         );
       })}
