@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Send, Play, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/i18n/LanguageContext";
 import { toast } from "sonner";
 
 type Sched = {
@@ -35,22 +36,23 @@ const DEFAULT: Sched = {
   last_run_message: null,
 };
 
-const DAYS = [
-  { v: 1, label: "L" },
-  { v: 2, label: "M" },
-  { v: 3, label: "X" },
-  { v: 4, label: "J" },
-  { v: 5, label: "V" },
-  { v: 6, label: "S" },
-  { v: 0, label: "D" },
-];
-
 export default function AutoPublishCard() {
   const { session } = useAuth();
+  const { t } = useLanguage();
   const [sched, setSched] = useState<Sched>(DEFAULT);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+
+  const DAYS = [
+    { v: 1, label: t("autoPublish.dayMon") },
+    { v: 2, label: t("autoPublish.dayTue") },
+    { v: 3, label: t("autoPublish.dayWed") },
+    { v: 4, label: t("autoPublish.dayThu") },
+    { v: 5, label: t("autoPublish.dayFri") },
+    { v: 6, label: t("autoPublish.daySat") },
+    { v: 0, label: t("autoPublish.daySun") },
+  ];
 
   const load = async () => {
     if (!session?.user) return;
@@ -91,7 +93,7 @@ export default function AutoPublishCard() {
       .upsert(payload as any, { onConflict: "user_id" });
     setSaving(false);
     if (error) { toast.error(error.message); return; }
-    toast.success("Guardado");
+    toast.success(t("autoPublish.savedOk"));
   };
 
   const runNow = async () => {
@@ -103,8 +105,8 @@ export default function AutoPublishCard() {
       });
       if (error) throw error;
       const r = (data as any)?.results?.[0];
-      if (r?.ok) toast.success("Post publicado en LinkedIn");
-      else toast.message(r?.reason === "no_posts" ? "No hay posts ready con esa etiqueta" : `Sin publicar: ${r?.reason ?? "error"}`);
+      if (r?.ok) toast.success(t("autoPublish.published"));
+      else toast.message(r?.reason === "no_posts" ? t("autoPublish.noPosts") : `${t("autoPublish.unpublished")}: ${r?.reason ?? "error"}`);
       load();
     } catch (e: any) {
       toast.error(e?.message || "Error");
@@ -120,27 +122,25 @@ export default function AutoPublishCard() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-lg">
           <Send className="h-5 w-5 text-primary" />
-          Auto-publicación en LinkedIn
+          {t("autoPublish.title")}
         </CardTitle>
-        <CardDescription>
-          Publica automáticamente el post <strong>más antiguo (FIFO)</strong> en estado <strong>Ready</strong> con la etiqueta seleccionada, en los días y hora configurados.
-        </CardDescription>
+        <CardDescription>{t("autoPublish.desc")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-2 p-3 rounded-lg border bg-muted/30">
           <div className="min-w-0">
-            <p className="text-sm font-medium">Activo</p>
+            <p className="text-sm font-medium">{t("autoPublish.active")}</p>
             <p className="text-xs text-muted-foreground break-all">
               {sched.last_run_at
-                ? `Última ejecución: ${new Date(sched.last_run_at).toLocaleString()} · ${sched.last_run_status ?? ""}`
-                : "Sin ejecuciones aún"}
+                ? `${t("autoPublish.lastRun")}: ${new Date(sched.last_run_at).toLocaleString()} · ${sched.last_run_status ?? ""}`
+                : t("autoPublish.noRuns")}
             </p>
           </div>
           <Switch checked={sched.enabled} onCheckedChange={(v) => setSched({ ...sched, enabled: v })} />
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs">Días</Label>
+          <Label className="text-xs">{t("autoPublish.days")}</Label>
           <div className="flex flex-wrap gap-1.5">
             {DAYS.map((d) => {
               const active = sched.days_of_week.includes(d.v);
@@ -162,7 +162,7 @@ export default function AutoPublishCard() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label className="text-xs">Hora ({sched.timezone || "Europe/Madrid"})</Label>
+            <Label className="text-xs">{t("autoPublish.hour")} ({sched.timezone || "Europe/Madrid"})</Label>
             <Select value={String(sched.hour)} onValueChange={(v) => setSched({ ...sched, hour: parseInt(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -171,23 +171,23 @@ export default function AutoPublishCard() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">Zona horaria configurable en Settings.</p>
+            <p className="text-xs text-muted-foreground">{t("autoPublish.hourHint")}</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Etiqueta de destino</Label>
+            <Label className="text-xs">{t("autoPublish.target")}</Label>
             <Select value={sched.target} onValueChange={(v: any) => setSched({ ...sched, target: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="personal">Personal</SelectItem>
-                <SelectItem value="company">Empresa</SelectItem>
+                <SelectItem value="personal">{t("autoPublish.targetPersonal")}</SelectItem>
+                <SelectItem value="company">{t("autoPublish.targetCompany")}</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">Busca posts en estado Ready con esta etiqueta.</p>
+            <p className="text-xs text-muted-foreground">{t("autoPublish.targetHint")}</p>
           </div>
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs">Email de notificación</Label>
+          <Label className="text-xs">{t("autoPublish.email")}</Label>
           <Input
             value={sched.notification_email || ""}
             onChange={(e) => setSched({ ...sched, notification_email: e.target.value })}
@@ -196,10 +196,10 @@ export default function AutoPublishCard() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button onClick={save} disabled={saving}>{saving ? "Guardando..." : "Guardar"}</Button>
+          <Button onClick={save} disabled={saving}>{saving ? t("autoPublish.saving") : t("autoPublish.save")}</Button>
           <Button variant="outline" onClick={runNow} disabled={running}>
             {running ? <RefreshCw className="h-4 w-4 mr-1 animate-spin" /> : <Play className="h-4 w-4 mr-1" />}
-            Ejecutar ahora
+            {t("autoPublish.runNow")}
           </Button>
         </div>
       </CardContent>
