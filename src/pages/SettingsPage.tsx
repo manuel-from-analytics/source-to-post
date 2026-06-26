@@ -33,6 +33,10 @@ export default function SettingsPage() {
   const [appLanguage, setAppLanguage] = useState<AppLanguage>(currentAppLang);
   const [savingAppLang, setSavingAppLang] = useState(false);
 
+  // Timezone
+  const [timezone, setTimezone] = useState<string>("Europe/Madrid");
+  const [savingTz, setSavingTz] = useState(false);
+
   // Post generation preferences
   const [preferredLanguage, setPreferredLanguage] = useState("es");
   const [defaultVoiceId, setDefaultVoiceId] = useState("none");
@@ -45,7 +49,7 @@ export default function SettingsPage() {
     (async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("full_name, preferred_language, default_writing_style, default_voice_id, default_length, default_cta, app_language")
+        .select("full_name, preferred_language, default_writing_style, default_voice_id, default_length, default_cta, app_language, timezone")
         .eq("id", user.id)
         .single();
       if (!error && data) {
@@ -56,10 +60,23 @@ export default function SettingsPage() {
         setDefaultVoiceId((data as any).default_voice_id || "none");
         setDefaultLength((data as any).default_length || "none");
         setDefaultCta((data as any).default_cta || "none");
+        setTimezone((data as any).timezone || "Europe/Madrid");
       }
       setLoading(false);
     })();
   }, [user]);
+
+  const handleSaveTimezone = async () => {
+    if (!user) return;
+    setSavingTz(true);
+    const { error } = await supabase
+      .from("profiles")
+      .update({ timezone, updated_at: new Date().toISOString() } as any)
+      .eq("id", user.id);
+    setSavingTz(false);
+    if (error) toast.error(t("common.error"));
+    else toast.success(t("common.success"));
+  };
 
   const handleSaveProfile = async () => {
     if (!user) return;
