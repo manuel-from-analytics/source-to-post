@@ -239,7 +239,44 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Post generation preferences */}
+      {/* Timezone */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Globe className="h-4 w-4" />
+            Zona horaria
+          </CardTitle>
+          <CardDescription>
+            Se aplica a los horarios de los agentes (agente diario y auto-publicación en LinkedIn).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Zona horaria</Label>
+            <Select value={timezone} onValueChange={setTimezone}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Europe/Madrid">Europe/Madrid (España)</SelectItem>
+                <SelectItem value="Europe/Lisbon">Europe/Lisbon (Portugal)</SelectItem>
+                <SelectItem value="Europe/London">Europe/London</SelectItem>
+                <SelectItem value="Atlantic/Canary">Atlantic/Canary (Canarias)</SelectItem>
+                <SelectItem value="America/Mexico_City">America/Mexico_City</SelectItem>
+                <SelectItem value="America/Bogota">America/Bogota</SelectItem>
+                <SelectItem value="America/Buenos_Aires">America/Buenos_Aires</SelectItem>
+                <SelectItem value="America/New_York">America/New_York</SelectItem>
+                <SelectItem value="America/Los_Angeles">America/Los_Angeles</SelectItem>
+                <SelectItem value="UTC">UTC</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button size="sm" onClick={handleSaveTimezone} disabled={savingTz}>
+            {savingTz ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />{t("settings.saving")}</> : t("settings.saveChanges")}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* Post generation preferences moved below */}
+      <div className="hidden" />
       <Card>
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
