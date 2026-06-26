@@ -60,8 +60,10 @@ export default function AutoPublishCard() {
       .select("*")
       .eq("user_id", session.user.id)
       .maybeSingle();
-    if (data) setSched({ ...DEFAULT, ...(data as any) });
-    else setSched({ ...DEFAULT, notification_email: session.user.email ?? null });
+    const { data: prof } = await supabase.from("profiles").select("timezone").eq("id", session.user.id).maybeSingle();
+    const userTz = ((prof as any)?.timezone as string) || "Europe/Madrid";
+    if (data) setSched({ ...DEFAULT, ...(data as any), timezone: userTz });
+    else setSched({ ...DEFAULT, timezone: userTz, notification_email: session.user.email ?? null });
     setLoading(false);
   };
   useEffect(() => { load(); }, [session]);
@@ -121,7 +123,7 @@ export default function AutoPublishCard() {
           Auto-publicación en LinkedIn
         </CardTitle>
         <CardDescription>
-          Publica automáticamente el post más antiguo en estado Ready con la etiqueta elegida, en los días y hora configurados.
+          Publica automáticamente el post <strong>más antiguo (FIFO)</strong> en estado <strong>Ready</strong> con la etiqueta seleccionada, en los días y hora configurados.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -160,7 +162,7 @@ export default function AutoPublishCard() {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1">
-            <Label className="text-xs">Hora (Europe/Madrid)</Label>
+            <Label className="text-xs">Hora ({sched.timezone || "Europe/Madrid"})</Label>
             <Select value={String(sched.hour)} onValueChange={(v) => setSched({ ...sched, hour: parseInt(v) })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -169,9 +171,10 @@ export default function AutoPublishCard() {
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">Zona horaria configurable en Settings.</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-xs">Etiqueta</Label>
+            <Label className="text-xs">Etiqueta de destino</Label>
             <Select value={sched.target} onValueChange={(v: any) => setSched({ ...sched, target: v })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -179,6 +182,7 @@ export default function AutoPublishCard() {
                 <SelectItem value="company">Empresa</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">Busca posts en estado Ready con esta etiqueta.</p>
           </div>
         </div>
 
