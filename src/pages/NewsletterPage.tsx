@@ -399,7 +399,7 @@ function NewsletterItemCard({ item, onImport, onOpen, importing, t }: {
         onClick={onOpen}
         className="w-full text-left min-w-0"
         disabled={importing}
-        title={item.imported_to_library ? "Abrir en la biblioteca" : "Importar a la biblioteca y abrir"}
+        title={item.imported_to_library ? t("newsletter.openInLibrary") : t("newsletter.importToLibrary")}
       >
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between min-w-0">
           <h4 className="min-w-0 flex-1 text-[13px] font-medium leading-snug break-words [overflow-wrap:anywhere] hover:text-primary">{item.title}</h4>
@@ -809,7 +809,7 @@ export default function NewsletterPage() {
             <CardContent className="space-y-2 px-3 sm:px-6 sm:space-y-3">
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
-                  placeholder="Ej: AI agents in enterprise analytics..."
+                  placeholder={t("newsletter.searchExample")}
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleGenerate()}

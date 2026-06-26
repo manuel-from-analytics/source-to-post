@@ -5,10 +5,11 @@ import {
   usePostLabelAssignments,
   type PostLabel, type PostLabelKind,
 } from "@/hooks/usePostLabels";
+import { useLanguage } from "@/i18n/LanguageContext";
 
-const KIND_META: Record<"personal" | "company", { label: string; color: string; Icon: typeof UserIcon }> = {
-  personal: { label: "Personal", color: "#3b82f6", Icon: UserIcon },
-  company:  { label: "Empresa",  color: "#8b5cf6", Icon: Building2 },
+const KIND_META: Record<"personal" | "company", { labelKey: string; color: string; Icon: typeof UserIcon }> = {
+  personal: { labelKey: "performance.personal", color: "#3b82f6", Icon: UserIcon },
+  company:  { labelKey: "performance.company",  color: "#8b5cf6", Icon: Building2 },
 };
 
 const KINDS: ("personal" | "company")[] = ["personal", "company"];
@@ -21,6 +22,7 @@ export function LabelPublishedDate({
   label: PostLabel;
   date: string;
 }) {
+  const { t } = useLanguage();
   const formatted = new Date(date).toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
@@ -31,7 +33,7 @@ export function LabelPublishedDate({
       style={{ borderColor: label.color ?? undefined, color: label.color ?? undefined }}
     >
       <Check className="h-2.5 w-2.5 shrink-0" />
-      <span className="shrink-0">Publicado</span>
+      <span className="shrink-0">{t("common.published")}</span>
       <span className="shrink-0 opacity-70">·</span>
       <span className="min-w-0 flex-1 truncate">{label.name}</span>
       <span className="shrink-0 opacity-70">·</span>
@@ -75,6 +77,7 @@ export function PostLabelBadge({
  * Replaces the old free-text label picker.
  */
 export function PostLabelPicker({ postId }: { postId: string }) {
+  const { t } = useLanguage();
   const { data: labels } = usePostLabels();
   const { data: assignedIds } = usePostLabelAssignments(postId);
   const toggleLabel = useTogglePostLabel();
@@ -94,6 +97,7 @@ export function PostLabelPicker({ postId }: { postId: string }) {
         const isAssigned = !!lbl && (assignedIds ?? []).includes(lbl.id);
         const meta = KIND_META[kind];
         const Icon = meta.Icon;
+        const labelText = t(meta.labelKey);
         return (
           <button
             key={kind}
@@ -107,10 +111,10 @@ export function PostLabelPicker({ postId }: { postId: string }) {
                 ? { backgroundColor: meta.color, borderColor: meta.color }
                 : { borderColor: undefined }
             }
-            title={isAssigned ? `Quitar ${meta.label}` : `Marcar como ${meta.label}`}
+            title={isAssigned ? `${t("common.removeLabel")} ${labelText}` : `${t("common.markAsLabel")} ${labelText}`}
           >
             <Icon className="h-3 w-3" />
-            <span>{meta.label}</span>
+            <span>{labelText}</span>
           </button>
         );
       })}
@@ -126,6 +130,7 @@ export function PostLabelFilter({
   selectedLabelId: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const { t } = useLanguage();
   const { data: labels } = usePostLabels();
   const available = KINDS
     .map((kind) => ({ kind, label: (labels ?? []).find((l) => l.kind === kind) }))
@@ -149,7 +154,7 @@ export function PostLabelFilter({
             style={active ? { backgroundColor: meta.color, borderColor: meta.color } : {}}
           >
             <Icon className="h-3 w-3" />
-            <span>{meta.label}</span>
+            <span>{t(meta.labelKey)}</span>
           </button>
         );
       })}

@@ -147,7 +147,7 @@ export default function AgentSettingsCard() {
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">Zona horaria configurable en Settings.</p>
+            <p className="text-xs text-muted-foreground">{t("agent.tzHintSettings")}</p>
           </div>
           <div className="space-y-1">
             <Label className="text-xs">{t("agent.notificationEmail")}</Label>

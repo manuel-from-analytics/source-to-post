@@ -16,6 +16,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useImportLinkedinCsv } from "@/hooks/useLinkedinMetrics";
 import { analyzeLinkedInFile, CsvValidationError, type CsvAnalysis, type LinkedInSource } from "@/lib/linkedin-csv";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -25,6 +26,7 @@ interface Props {
 }
 
 export function ImportCsvWizard({ open, onOpenChange }: Props) {
+  const { t } = useLanguage();
   const importMut = useImportLinkedinCsv();
   const [step, setStep] = useState<Step>(1);
   const [source, setSource] = useState<LinkedInSource>("personal");
@@ -65,7 +67,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
         setValidationError({ message: e.message, analysis: e.analysis });
         if (e.analysis?.sheetName) setSelectedSheet(e.analysis.sheetName);
       } else {
-        setValidationError({ message: e instanceof Error ? e.message : "Error al leer el archivo" });
+        setValidationError({ message: e instanceof Error ? e.message : t("import.readError") });
       }
     } finally {
       setAnalyzing(false);
@@ -100,65 +102,62 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
     ? "https://www.linkedin.com/company/"
     : "https://www.linkedin.com/analytics/creator/content/";
 
+  const sourceLabel = source === "personal" ? t("import.personal") : t("import.company");
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Importar fichero de LinkedIn</DialogTitle>
-          <DialogDescription>Paso {step} de 4</DialogDescription>
+          <DialogTitle>{t("import.title")}</DialogTitle>
+          <DialogDescription>{t("import.stepOf").replace("{n}", String(step))}</DialogDescription>
         </DialogHeader>
 
-        <Stepper step={step} />
+        <Stepper step={step} t={t} />
 
         <div className="py-2 flex-1 overflow-y-auto -mx-1 px-1">
 
           {step === 1 && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                ¿Estas métricas son de tu cuenta personal o de una página de empresa? Esto se usa para etiquetar los posts importados.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("import.step1.q")}</p>
               <RadioGroup value={source} onValueChange={(v) => setSource(v as LinkedInSource)} className="gap-2">
                 <SourceCard value="personal" current={source} icon={<UserIcon className="h-5 w-5" />}
-                  title="Cuenta personal" desc="Posts publicados desde tu perfil." />
+                  title={t("import.step1.personal")} desc={t("import.step1.personalDesc")} />
                 <SourceCard value="company" current={source} icon={<Building2 className="h-5 w-5" />}
-                  title="Página de empresa" desc="Posts publicados desde una company page." />
+                  title={t("import.step1.company")} desc={t("import.step1.companyDesc")} />
               </RadioGroup>
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-3 text-sm">
-              <p className="font-medium">Cómo descargar el fichero en LinkedIn:</p>
+              <p className="font-medium">{t("import.step2.how")}</p>
               {source === "personal" ? (
                 <ol className="list-decimal pl-5 space-y-1.5 text-muted-foreground">
-                  <li>Abre LinkedIn y ve a <strong>Yo → Ver perfil</strong>.</li>
-                  <li>En el panel de analítica, pulsa <strong>Mostrar todos los análisis</strong>.</li>
-                  <li>Entra en <strong>Publicaciones</strong> y elige el rango de fechas.</li>
-                  <li>Pulsa <strong>Exportar</strong> y descarga el archivo XLSX/CSV.</li>
+                  <li dangerouslySetInnerHTML={{ __html: t("import.step2.personal1") }} />
+                  <li dangerouslySetInnerHTML={{ __html: t("import.step2.personal2") }} />
+                  <li dangerouslySetInnerHTML={{ __html: t("import.step2.personal3") }} />
+                  <li dangerouslySetInnerHTML={{ __html: t("import.step2.personal4") }} />
                 </ol>
               ) : (
                 <ol className="list-decimal pl-5 space-y-1.5 text-muted-foreground">
-                  <li>Abre tu <strong>página de empresa</strong> como administrador.</li>
-                  <li>Ve a <strong>Analítica → Contenido</strong>.</li>
-                  <li>Selecciona el rango de fechas que quieras analizar.</li>
-                  <li>Pulsa <strong>Exportar</strong> y descarga el archivo (.xls / .xlsx / .csv).</li>
+                  <li dangerouslySetInnerHTML={{ __html: t("import.step2.company1") }} />
+                  <li dangerouslySetInnerHTML={{ __html: t("import.step2.company2") }} />
+                  <li dangerouslySetInnerHTML={{ __html: t("import.step2.company3") }} />
+                  <li dangerouslySetInnerHTML={{ __html: t("import.step2.company4") }} />
                 </ol>
               )}
               <a href={exportUrl} target="_blank" rel="noreferrer"
                 className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline">
-                Abrir LinkedIn Analytics <ExternalLink className="h-3.5 w-3.5" />
+                {t("import.step2.open")} <ExternalLink className="h-3.5 w-3.5" />
               </a>
-              <p className="text-xs text-muted-foreground pt-2">
-                Aceptamos <strong>.csv</strong>, <strong>.xls</strong> y <strong>.xlsx</strong> directamente — no hace falta convertir.
-              </p>
+              <p className="text-xs text-muted-foreground pt-2"
+                 dangerouslySetInnerHTML={{ __html: t("import.step2.formats") }} />
             </div>
           )}
 
           {step === 3 && (
             <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                Sube el fichero exportado (.csv, .xls o .xlsx). Detectaremos automáticamente el formato y validaremos las columnas.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("import.step3.intro")}</p>
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
@@ -178,7 +177,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
                 ) : (
                   <div className="space-y-2">
                     <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
-                    <p className="text-sm font-medium">Haz clic para seleccionar un fichero</p>
+                    <p className="text-sm font-medium">{t("import.step3.dropzone")}</p>
                     <p className="text-xs text-muted-foreground">.csv, .xls o .xlsx</p>
                   </div>
                 )}
@@ -197,16 +196,16 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
 
               {analyzing && (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Analizando archivo…
+                  <Loader2 className="h-4 w-4 animate-spin" /> {t("import.step3.analyzing")}
                 </div>
               )}
 
               {file && !analyzing && (analysis?.availableSheets?.length ?? validationError?.analysis?.availableSheets?.length ?? 0) > 1 && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Hoja a importar</Label>
+                  <Label className="text-xs text-muted-foreground">{t("import.step3.sheet")}</Label>
                   <Select value={selectedSheet} onValueChange={handleSheetChange}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Selecciona una hoja" />
+                      <SelectValue placeholder={t("import.step3.sheetPlaceholder")} />
                     </SelectTrigger>
                     <SelectContent>
                       {(analysis?.availableSheets ?? validationError?.analysis?.availableSheets ?? []).map((s) => (
@@ -214,7 +213,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
                           <span className="flex items-center gap-2">
                             <span className="font-medium">{s.name}</span>
                             <span className="text-xs text-muted-foreground">
-                              {s.recordCount} filas{s.isAutoSelected ? " · sugerida" : ""}
+                              {s.recordCount} {t("import.step3.rows")}{s.isAutoSelected ? ` · ${t("import.step3.suggested")}` : ""}
                             </span>
                           </span>
                         </SelectItem>
@@ -227,12 +226,12 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
               {validationError && (
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>No podemos importar este archivo</AlertTitle>
+                  <AlertTitle>{t("import.step3.cantImport")}</AlertTitle>
                   <AlertDescription className="space-y-2">
                     <p className="text-sm">{validationError.message}</p>
                     {validationError.analysis && validationError.analysis.headers.length > 0 && (
                       <details className="text-xs">
-                        <summary className="cursor-pointer">Ver columnas detectadas</summary>
+                        <summary className="cursor-pointer">{t("import.step3.viewColumns")}</summary>
                         <p className="mt-1 font-mono break-all">
                           {validationError.analysis.headers.join(" · ")}
                         </p>
@@ -247,17 +246,17 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
                   <div className="flex items-center gap-2 text-sm">
                     <Sparkles className="h-4 w-4 text-primary" />
                     <span className="font-medium">{analysis.formatLabel}</span>
-                    <span className="text-muted-foreground">· {analysis.rowCount} filas</span>
+                    <span className="text-muted-foreground">· {analysis.rowCount} {t("import.step3.rows")}</span>
                   </div>
                   <div className="grid grid-cols-2 gap-1 text-xs">
-                    <DetectedField label="Impresiones" value={analysis.detected.impressions} required />
-                    <DetectedField label="Reacciones" value={analysis.detected.reactions} />
-                    <DetectedField label="Comentarios" value={analysis.detected.comments} />
-                    <DetectedField label="Compartidos" value={analysis.detected.shares} />
-                    <DetectedField label="Clics" value={analysis.detected.clicks} />
-                    <DetectedField label="Fecha" value={analysis.detected.date} />
-                    <DetectedField label="URL" value={analysis.detected.url} />
-                    <DetectedField label="Texto" value={analysis.detected.excerpt} />
+                    <DetectedField label={t("import.step3.fImpressions")} value={analysis.detected.impressions} required />
+                    <DetectedField label={t("import.step3.fReactions")} value={analysis.detected.reactions} />
+                    <DetectedField label={t("import.step3.fComments")} value={analysis.detected.comments} />
+                    <DetectedField label={t("import.step3.fShares")} value={analysis.detected.shares} />
+                    <DetectedField label={t("import.step3.fClicks")} value={analysis.detected.clicks} />
+                    <DetectedField label={t("import.step3.fDate")} value={analysis.detected.date} />
+                    <DetectedField label={t("import.step3.fUrl")} value={analysis.detected.url} />
+                    <DetectedField label={t("import.step3.fText")} value={analysis.detected.excerpt} />
                   </div>
                   {analysis.warnings.length > 0 && (
                     <div className="space-y-1 pt-1 border-t">
@@ -271,7 +270,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
                   )}
                   {analysis.sourceHint && analysis.sourceHint !== source && (
                     <p className="text-xs text-muted-foreground">
-                      Sugerimos cambiar el origen a <strong>{analysis.sourceHint === "personal" ? "Personal" : "Empresa"}</strong> según el nombre del archivo.
+                      {t("import.step3.suggestChange")} <strong>{analysis.sourceHint === "personal" ? t("import.personal") : t("import.company")}</strong>.
                     </p>
                   )}
                 </div>
@@ -279,7 +278,7 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {source === "personal" ? <UserIcon className="h-3.5 w-3.5" /> : <Building2 className="h-3.5 w-3.5" />}
-                <span>Se etiquetará como <strong>{source === "personal" ? "Personal" : "Empresa"}</strong>.</span>
+                <span>{t("import.step3.willTag")} <strong>{sourceLabel}</strong>.</span>
               </div>
             </div>
           )}
@@ -288,12 +287,14 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
           {step === 4 && result && (
             <div className="text-center space-y-3 py-6">
               <CheckCircle2 className="h-12 w-12 mx-auto text-primary" />
-              <p className="font-medium">¡Importación completa!</p>
-              <p className="text-sm text-muted-foreground">
-                <strong>{result.total}</strong> filas importadas como{" "}
-                <strong>{source === "personal" ? "Personal" : "Empresa"}</strong>.<br />
-                <strong>{result.matched}</strong> cruzadas con tus posts generados.
-              </p>
+              <p className="font-medium">{t("import.step4.done")}</p>
+              <p className="text-sm text-muted-foreground"
+                 dangerouslySetInnerHTML={{
+                   __html: t("import.step4.summary")
+                     .replace("{total}", String(result.total))
+                     .replace("{label}", sourceLabel)
+                     .replace("{matched}", String(result.matched)),
+                 }} />
             </div>
           )}
         </div>
@@ -301,25 +302,25 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
         <DialogFooter className="gap-2 sm:gap-2">
           {step > 1 && step < 4 && (
             <Button variant="outline" onClick={() => setStep((s) => (s - 1) as Step)} disabled={importMut.isPending}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Atrás
+              <ArrowLeft className="h-4 w-4 mr-1" /> {t("import.back")}
             </Button>
           )}
           {step < 3 && (
             <Button onClick={() => setStep((s) => (s + 1) as Step)}>
-              Siguiente <ArrowRight className="h-4 w-4 ml-1" />
+              {t("import.next")} <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           )}
           {step === 3 && (
             <Button onClick={runImport} disabled={!file || !analysis || analyzing || importMut.isPending}>
               {importMut.isPending ? (
-                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Importando…</>
+                <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> {t("import.importing")}</>
               ) : (
-                <><Upload className="h-4 w-4 mr-1" /> Importar</>
+                <><Upload className="h-4 w-4 mr-1" /> {t("import.do")}</>
               )}
             </Button>
           )}
           {step === 4 && (
-            <Button onClick={() => handleClose(false)}>Hecho</Button>
+            <Button onClick={() => handleClose(false)}>{t("import.finish")}</Button>
           )}
         </DialogFooter>
       </DialogContent>
@@ -327,8 +328,8 @@ export function ImportCsvWizard({ open, onOpenChange }: Props) {
   );
 }
 
-function Stepper({ step }: { step: Step }) {
-  const labels = ["Origen", "Descarga", "Subida", "Listo"];
+function Stepper({ step, t }: { step: Step; t: (k: string) => string }) {
+  const labels = [t("import.stepper.source"), t("import.stepper.download"), t("import.stepper.upload"), t("import.stepper.ready")];
   return (
     <div className="flex items-center gap-1.5 px-1">
       {labels.map((label, i) => {

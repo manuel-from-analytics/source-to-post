@@ -244,15 +244,15 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Globe className="h-4 w-4" />
-            Zona horaria
+            {t("settings.timezoneTitle")}
           </CardTitle>
           <CardDescription>
-            Se aplica a los horarios de los agentes (agente diario y auto-publicación en LinkedIn).
+            {t("settings.timezoneDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label>Zona horaria</Label>
+            <Label>{t("settings.timezoneLabel")}</Label>
             <Select value={timezone} onValueChange={setTimezone}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
