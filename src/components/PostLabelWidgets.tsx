@@ -22,6 +22,7 @@ export function LabelPublishedDate({
   label: PostLabel;
   date: string;
 }) {
+  const { t } = useLanguage();
   const formatted = new Date(date).toLocaleDateString(undefined, {
     day: "numeric",
     month: "short",
@@ -32,7 +33,7 @@ export function LabelPublishedDate({
       style={{ borderColor: label.color ?? undefined, color: label.color ?? undefined }}
     >
       <Check className="h-2.5 w-2.5 shrink-0" />
-      <span className="shrink-0">Publicado</span>
+      <span className="shrink-0">{t("common.published")}</span>
       <span className="shrink-0 opacity-70">·</span>
       <span className="min-w-0 flex-1 truncate">{label.name}</span>
       <span className="shrink-0 opacity-70">·</span>
