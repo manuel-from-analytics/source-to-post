@@ -809,7 +809,7 @@ export default function NewsletterPage() {
             <CardContent className="space-y-2 px-3 sm:px-6 sm:space-y-3">
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input
-                  placeholder="Ej: AI agents in enterprise analytics..."
+                  placeholder={t("newsletter.searchExample")}
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleGenerate()}
