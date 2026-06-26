@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useScheduledPublications, useCancelScheduledPublication } from "@/hooks/usePublishLinkedin";
+import { useLanguage } from "@/i18n/LanguageContext";
 
 type SourceFilter = "all" | LinkedInSource;
 type SortKey = "post" | "source" | "posted_at" | "impressions" | "engagements" | "engagement_rate";
@@ -38,6 +39,7 @@ interface Row extends LinkedinMetric {
 }
 
 export default function PerformancePage() {
+  const { t } = useLanguage();
   const { data: metrics = [], isLoading } = useLinkedinMetrics();
   const { data: posts = [] } = usePosts();
   const deleteMut = useDeleteLinkedinMetric();
@@ -229,12 +231,12 @@ export default function PerformancePage() {
       }
     },
     onSuccess: () => {
-      toast.success("Post vinculado");
+      toast.success(t("performance.linked"));
       qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
       qc.invalidateQueries({ queryKey: ["posts"] });
       setLinkingMetric(null);
     },
-    onError: (e: any) => toast.error(e?.message ?? "No se pudo vincular"),
+    onError: (e: any) => toast.error(e?.message ?? t("performance.linkFailed")),
   });
 
   const unlinkMut = useMutation({
@@ -248,11 +250,11 @@ export default function PerformancePage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Métrica desvinculada");
+      toast.success(t("performance.unlinked"));
       qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
       setLinkingMetric(null);
     },
-    onError: (e: any) => toast.error(e?.message ?? "No se pudo desvincular"),
+    onError: (e: any) => toast.error(e?.message ?? t("performance.unlinkFailed")),
   });
 
   return (
@@ -261,34 +263,34 @@ export default function PerformancePage() {
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-2">
             <BarChart3 className="h-6 w-6 sm:h-7 sm:w-7 text-primary shrink-0" />
-            <span className="min-w-0 break-words">Rendimiento</span>
+            <span className="min-w-0 break-words">{t("performance.title")}</span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-words">
-            Métricas de tus posts publicados en LinkedIn (personal y empresa). Sube el fichero exportado desde LinkedIn (.csv, .xls o .xlsx) y se cruza con tus posts generados.
+            {t("performance.subtitle")}
           </p>
         </div>
         <Button onClick={() => setImportOpen(true)} className="w-full sm:w-auto shrink-0">
-          <Upload className="h-4 w-4 mr-2" />Importar fichero
+          <Upload className="h-4 w-4 mr-2" />{t("performance.import")}
         </Button>
         <ImportCsvWizard open={importOpen} onOpenChange={setImportOpen} />
       </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground shrink-0">Origen:</span>
+          <span className="text-sm text-muted-foreground shrink-0">{t("performance.origin")}</span>
           <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
             <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="personal">Personal</SelectItem>
-              <SelectItem value="company">Empresa</SelectItem>
+              <SelectItem value="all">{t("performance.all")}</SelectItem>
+              <SelectItem value="personal">{t("performance.personal")}</SelectItem>
+              <SelectItem value="company">{t("performance.company")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="relative flex-1 min-w-0 sm:min-w-[200px] sm:max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por título o contenido"
+            placeholder={t("performance.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -299,10 +301,10 @@ export default function PerformancePage() {
             type="button"
             onClick={() => setFocusedPostId(null)}
             className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-primary hover:bg-primary/15"
-            title="Quitar filtro de post"
+            title={t("performance.removePostFilter")}
           >
             <span className="min-w-0 truncate">
-              Post: {focusedPostTitle || focusedPostId.slice(0, 8)}
+              {t("performance.postFilter")} {focusedPostTitle || focusedPostId.slice(0, 8)}
             </span>
             <X className="h-3 w-3 shrink-0" />
           </button>
@@ -311,31 +313,31 @@ export default function PerformancePage() {
 
 
       {isLoading ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">Cargando…</CardContent></Card>
+        <Card><CardContent className="py-12 text-center text-muted-foreground">{t("performance.loading")}</CardContent></Card>
       ) : metrics.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center space-y-3">
             <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/50" />
-            <p className="font-medium">Aún no has importado métricas</p>
+            <p className="font-medium">{t("performance.emptyTitle")}</p>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              LinkedIn no expone una API pública de analytics, así que la fuente de verdad es el fichero exportado desde LinkedIn (perfil personal o página de empresa).
+              {t("performance.emptyDesc")}
             </p>
-            <Button onClick={() => setImportOpen(true)}><Upload className="h-4 w-4 mr-2" />Importar mi primer fichero</Button>
+            <Button onClick={() => setImportOpen(true)}><Upload className="h-4 w-4 mr-2" />{t("performance.emptyImport")}</Button>
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <KPI icon={<Eye className="h-4 w-4" />} label="Impresiones" value={summary.impressions.toLocaleString()} />
-            <KPI icon={<Heart className="h-4 w-4" />} label="Engagements" value={summary.engagements.toLocaleString()} />
-            <KPI icon={<TrendingUp className="h-4 w-4" />} label="Engagement rate medio" value={`${(summary.er * 100).toFixed(2)}%`} />
-            <KPI icon={<BarChart3 className="h-4 w-4" />} label="Posts" value={summary.total.toLocaleString()} />
+            <KPI icon={<Eye className="h-4 w-4" />} label={t("performance.kpiImpressions")} value={summary.impressions.toLocaleString()} />
+            <KPI icon={<Heart className="h-4 w-4" />} label={t("performance.kpiEngagements")} value={summary.engagements.toLocaleString()} />
+            <KPI icon={<TrendingUp className="h-4 w-4" />} label={t("performance.kpiEr")} value={`${(summary.er * 100).toFixed(2)}%`} />
+            <KPI icon={<BarChart3 className="h-4 w-4" />} label={t("performance.kpiPosts")} value={summary.total.toLocaleString()} />
           </div>
 
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                Posts ({sorted.length})
+                {t("performance.postsTitle")} ({sorted.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -343,12 +345,12 @@ export default function PerformancePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <SortableHead label="Post" k="post" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-                      <SortableHead label="Origen" k="source" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-                      <SortableHead label="Fecha" k="posted_at" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-                      <SortableHead label="Impresiones" k="impressions" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
-                      <SortableHead label="Engagements" k="engagements" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
-                      <SortableHead label="ER" k="engagement_rate" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                      <SortableHead label={t("performance.colPost")} k="post" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                      <SortableHead label={t("performance.colSource")} k="source" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                      <SortableHead label={t("performance.colDate")} k="posted_at" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                      <SortableHead label={t("performance.colImpressions")} k="impressions" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                      <SortableHead label={t("performance.colEngagements")} k="engagements" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                      <SortableHead label={t("performance.colEr")} k="engagement_rate" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -368,14 +370,13 @@ export default function PerformancePage() {
                               excerptFromPost ||
                               m.post_title ||
                               m.post_excerpt?.slice(0, 80) ||
-                              (m.matchedPostId ? "(sin contenido)" : m.linkedin_url) ||
-                              "(sin título)";
+                              (m.matchedPostId ? t("performance.noContent") : m.linkedin_url) ||
+                              t("performance.noTitle");
                             return m.matchedPostId ? (
                               <button
                                 type="button"
                                 onClick={() => navigate("/history", { state: { openPostId: m.matchedPostId } })}
                                 className="text-left w-full group/title"
-                                title="Ver detalle del post en la app"
                               >
                                 <div className="font-medium truncate text-sm group-hover/title:text-primary group-hover/title:underline flex items-center gap-1">
                                   <Link2 className="h-3 w-3 shrink-0 opacity-60" />
@@ -385,14 +386,14 @@ export default function PerformancePage() {
                             ) : (
                               <div
                                 className="font-medium truncate text-sm text-amber-700 dark:text-amber-400"
-                                title="Este post no está vinculado a ningún post de la app"
+                                title={t("performance.notLinkedHint")}
                               >
                                 ⚠ {displayText}
                               </div>
                             );
                           })()}
                         </TableCell>
-                        <TableCell><SourceBadge source={m.source} /></TableCell>
+                        <TableCell><SourceBadge source={m.source} t={t} /></TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {m.posted_at ? new Date(m.posted_at).toLocaleDateString() : "—"}
                         </TableCell>
@@ -410,20 +411,20 @@ export default function PerformancePage() {
                                   ? "text-muted-foreground hover:text-foreground"
                                   : "text-amber-600 hover:text-amber-700 dark:text-amber-400"
                               }
-                              title={m.matchedPostId ? "Cambiar el post vinculado" : "Vincular con un post de la biblioteca"}
-                              aria-label={m.matchedPostId ? "Cambiar post vinculado" : "Vincular post"}
+                              title={m.matchedPostId ? t("performance.changeLinked") : t("performance.linkPost")}
+                              aria-label={m.matchedPostId ? t("performance.changeLinkedAria") : t("performance.linkPostAria")}
                             >
                               <LinkIcon className="h-4 w-4" />
                             </button>
                             {m.linkedin_url && (
-                              <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground" title="Abrir en LinkedIn">
+                              <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground" title={t("performance.openLinkedin")}>
                                 <ExternalLink className="h-4 w-4" />
                               </a>
                             )}
                             <button
                               onClick={() => deleteMut.mutate(m.id)}
                               className="text-muted-foreground hover:text-destructive"
-                              aria-label="Eliminar"
+                              aria-label={t("performance.delete")}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -435,7 +436,7 @@ export default function PerformancePage() {
                 </Table>
                 {focusedPostId && sorted.length === 0 && (
                   <div className="p-6 text-center text-sm text-muted-foreground">
-                    No hay métricas vinculadas a este post.
+                    {t("performance.noMatchedMetrics")}
                   </div>
                 )}
               </div>
@@ -471,6 +472,7 @@ function LinkPostDialog({
   onSelect: (postId: string) => void;
   onUnlink?: () => void;
 }) {
+  const { t } = useLanguage();
   const [q, setQ] = useState("");
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -491,19 +493,15 @@ function LinkPostDialog({
     <Dialog open={!!metric} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Vincular con un post de la biblioteca</DialogTitle>
+          <DialogTitle>{t("performance.linkPost")}</DialogTitle>
           <DialogDescription>
-            {metric?.linkedin_url ? (
-              <>Se guardará la URL de LinkedIn en el post seleccionado para que las próximas importaciones lo emparejen automáticamente.</>
-            ) : (
-              <>Se vinculará la métrica al post elegido.</>
-            )}
+            {metric?.linkedin_url ? t("performance.linkDialogDescUrl") : t("performance.linkDialogDesc")}
           </DialogDescription>
         </DialogHeader>
-        <Input placeholder="Buscar por título o contenido…" value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
+        <Input placeholder={t("performance.linkSearchPlaceholder")} value={q} onChange={(e) => setQ(e.target.value)} autoFocus />
         <div className="max-h-[50vh] overflow-y-auto divide-y rounded border">
           {filtered.length === 0 ? (
-            <div className="p-4 text-sm text-muted-foreground text-center">Sin resultados</div>
+            <div className="p-4 text-sm text-muted-foreground text-center">{t("performance.noResults")}</div>
           ) : filtered.map((p: any) => (
             <button
               key={p.id}
@@ -511,9 +509,9 @@ function LinkPostDialog({
               onClick={() => onSelect(p.id)}
               className="w-full text-left p-3 hover:bg-muted/50 transition-colors"
             >
-              <div className="font-medium text-sm truncate">{p.title || "(sin título)"}</div>
+              <div className="font-medium text-sm truncate">{p.title || t("performance.noTitle")}</div>
               <div className="text-xs text-muted-foreground truncate">
-                {p.published_at ? new Date(p.published_at).toLocaleDateString() : "Sin publicar"}
+                {p.published_at ? new Date(p.published_at).toLocaleDateString() : t("performance.notPublished")}
                 {" · "}
                 {(p.content || "").slice(0, 100)}
               </div>
@@ -523,10 +521,10 @@ function LinkPostDialog({
         {onUnlink && (
           <div className="flex justify-between items-center pt-2 border-t">
             <span className="text-xs text-muted-foreground">
-              ¿Esta métrica no proviene de la app?
+              {t("performance.notFromAppQ")}
             </span>
             <Button variant="ghost" size="sm" onClick={onUnlink}>
-              No vincular
+              {t("performance.dontLink")}
             </Button>
           </div>
         )}
@@ -570,15 +568,16 @@ function KPI({ icon, label, value }: { icon: React.ReactNode; label: string; val
   );
 }
 
-function SourceBadge({ source }: { source: LinkedInSource }) {
+function SourceBadge({ source, t }: { source: LinkedInSource; t: (k: string) => string }) {
   return source === "company" ? (
-    <Badge variant="secondary" className="gap-1"><Building2 className="h-3 w-3" />Empresa</Badge>
+    <Badge variant="secondary" className="gap-1"><Building2 className="h-3 w-3" />{t("performance.company")}</Badge>
   ) : (
-    <Badge variant="outline" className="gap-1"><UserIcon className="h-3 w-3" />Personal</Badge>
+    <Badge variant="outline" className="gap-1"><UserIcon className="h-3 w-3" />{t("performance.personal")}</Badge>
   );
 }
 
 function ScheduledPublicationsSection() {
+  const { t } = useLanguage();
   const { data: scheduled = [] } = useScheduledPublications();
   const { data: posts = [] } = usePosts();
   const cancel = useCancelScheduledPublication();
@@ -590,10 +589,10 @@ function ScheduledPublicationsSection() {
   const postById = new Map(posts.map((p) => [p.id, p]));
 
   const statusBadge = (s: string) => {
-    if (s === "pending") return <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />Programado</Badge>;
-    if (s === "publishing") return <Badge variant="secondary">Publicando…</Badge>;
-    if (s === "done") return <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-0">Publicado</Badge>;
-    if (s === "failed") return <Badge variant="destructive">Falló</Badge>;
+    if (s === "pending") return <Badge variant="outline" className="gap-1"><Clock className="h-3 w-3" />{t("performance.statusScheduled")}</Badge>;
+    if (s === "publishing") return <Badge variant="secondary">{t("performance.statusPublishing")}</Badge>;
+    if (s === "done") return <Badge className="bg-green-500/15 text-green-700 dark:text-green-400 border-0">{t("performance.statusDone")}</Badge>;
+    if (s === "failed") return <Badge variant="destructive">{t("performance.statusFailed")}</Badge>;
     return <Badge variant="outline">{s}</Badge>;
   };
 
@@ -601,7 +600,7 @@ function ScheduledPublicationsSection() {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
-          <Clock className="h-4 w-4" /> Publicaciones programadas
+          <Clock className="h-4 w-4" /> {t("performance.scheduledTitle")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -616,11 +615,11 @@ function ScheduledPublicationsSection() {
                     {new Date(s.scheduled_at).toLocaleString()}
                   </span>
                   {s.attempts > 0 && (
-                    <span className="text-muted-foreground">· {s.attempts} intento{s.attempts > 1 ? "s" : ""}</span>
+                    <span className="text-muted-foreground">· {s.attempts} {s.attempts > 1 ? t("performance.attempts") : t("performance.attempt")}</span>
                   )}
                 </div>
                 <p className="text-sm mt-1.5 line-clamp-2 text-muted-foreground">
-                  {post?.title || post?.content?.slice(0, 120) || "(post eliminado)"}
+                  {post?.title || post?.content?.slice(0, 120) || t("performance.postDeleted")}
                 </p>
                 {s.error && (
                   <p className="text-xs text-destructive mt-1 break-all">{s.error}</p>
@@ -628,7 +627,7 @@ function ScheduledPublicationsSection() {
                 {s.linkedin_url && (
                   <a href={s.linkedin_url} target="_blank" rel="noreferrer"
                      className="inline-flex items-center gap-1 text-xs text-primary mt-1">
-                    <ExternalLink className="h-3 w-3" /> Ver en LinkedIn
+                    <ExternalLink className="h-3 w-3" /> {t("performance.viewOnLinkedin")}
                   </a>
                 )}
               </div>
@@ -636,7 +635,7 @@ function ScheduledPublicationsSection() {
                 <Button
                   variant="ghost" size="icon" className="h-8 w-8 shrink-0"
                   onClick={() => cancel.mutate(s.id)}
-                  title="Cancelar"
+                  title={t("performance.cancel")}
                 >
                   <X className="h-4 w-4" />
                 </Button>
