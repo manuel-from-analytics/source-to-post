@@ -263,34 +263,34 @@ export default function PerformancePage() {
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-2">
             <BarChart3 className="h-6 w-6 sm:h-7 sm:w-7 text-primary shrink-0" />
-            <span className="min-w-0 break-words">Rendimiento</span>
+            <span className="min-w-0 break-words">{t("performance.title")}</span>
           </h1>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-words">
-            Métricas de tus posts publicados en LinkedIn (personal y empresa). Sube el fichero exportado desde LinkedIn (.csv, .xls o .xlsx) y se cruza con tus posts generados.
+            {t("performance.subtitle")}
           </p>
         </div>
         <Button onClick={() => setImportOpen(true)} className="w-full sm:w-auto shrink-0">
-          <Upload className="h-4 w-4 mr-2" />Importar fichero
+          <Upload className="h-4 w-4 mr-2" />{t("performance.import")}
         </Button>
         <ImportCsvWizard open={importOpen} onOpenChange={setImportOpen} />
       </div>
 
       <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground shrink-0">Origen:</span>
+          <span className="text-sm text-muted-foreground shrink-0">{t("performance.origin")}</span>
           <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
             <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="personal">Personal</SelectItem>
-              <SelectItem value="company">Empresa</SelectItem>
+              <SelectItem value="all">{t("performance.all")}</SelectItem>
+              <SelectItem value="personal">{t("performance.personal")}</SelectItem>
+              <SelectItem value="company">{t("performance.company")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="relative flex-1 min-w-0 sm:min-w-[200px] sm:max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Buscar por título o contenido"
+            placeholder={t("performance.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -301,10 +301,10 @@ export default function PerformancePage() {
             type="button"
             onClick={() => setFocusedPostId(null)}
             className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-primary hover:bg-primary/15"
-            title="Quitar filtro de post"
+            title={t("performance.removePostFilter")}
           >
             <span className="min-w-0 truncate">
-              Post: {focusedPostTitle || focusedPostId.slice(0, 8)}
+              {t("performance.postFilter")} {focusedPostTitle || focusedPostId.slice(0, 8)}
             </span>
             <X className="h-3 w-3 shrink-0" />
           </button>
@@ -313,31 +313,31 @@ export default function PerformancePage() {
 
 
       {isLoading ? (
-        <Card><CardContent className="py-12 text-center text-muted-foreground">Cargando…</CardContent></Card>
+        <Card><CardContent className="py-12 text-center text-muted-foreground">{t("performance.loading")}</CardContent></Card>
       ) : metrics.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center space-y-3">
             <BarChart3 className="h-12 w-12 mx-auto text-muted-foreground/50" />
-            <p className="font-medium">Aún no has importado métricas</p>
+            <p className="font-medium">{t("performance.emptyTitle")}</p>
             <p className="text-sm text-muted-foreground max-w-md mx-auto">
-              LinkedIn no expone una API pública de analytics, así que la fuente de verdad es el fichero exportado desde LinkedIn (perfil personal o página de empresa).
+              {t("performance.emptyDesc")}
             </p>
-            <Button onClick={() => setImportOpen(true)}><Upload className="h-4 w-4 mr-2" />Importar mi primer fichero</Button>
+            <Button onClick={() => setImportOpen(true)}><Upload className="h-4 w-4 mr-2" />{t("performance.emptyImport")}</Button>
           </CardContent>
         </Card>
       ) : (
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <KPI icon={<Eye className="h-4 w-4" />} label="Impresiones" value={summary.impressions.toLocaleString()} />
-            <KPI icon={<Heart className="h-4 w-4" />} label="Engagements" value={summary.engagements.toLocaleString()} />
-            <KPI icon={<TrendingUp className="h-4 w-4" />} label="Engagement rate medio" value={`${(summary.er * 100).toFixed(2)}%`} />
-            <KPI icon={<BarChart3 className="h-4 w-4" />} label="Posts" value={summary.total.toLocaleString()} />
+            <KPI icon={<Eye className="h-4 w-4" />} label={t("performance.kpiImpressions")} value={summary.impressions.toLocaleString()} />
+            <KPI icon={<Heart className="h-4 w-4" />} label={t("performance.kpiEngagements")} value={summary.engagements.toLocaleString()} />
+            <KPI icon={<TrendingUp className="h-4 w-4" />} label={t("performance.kpiEr")} value={`${(summary.er * 100).toFixed(2)}%`} />
+            <KPI icon={<BarChart3 className="h-4 w-4" />} label={t("performance.kpiPosts")} value={summary.total.toLocaleString()} />
           </div>
 
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                Posts ({sorted.length})
+                {t("performance.postsTitle")} ({sorted.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -345,12 +345,12 @@ export default function PerformancePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <SortableHead label="Post" k="post" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-                      <SortableHead label="Origen" k="source" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-                      <SortableHead label="Fecha" k="posted_at" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
-                      <SortableHead label="Impresiones" k="impressions" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
-                      <SortableHead label="Engagements" k="engagements" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
-                      <SortableHead label="ER" k="engagement_rate" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                      <SortableHead label={t("performance.colPost")} k="post" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                      <SortableHead label={t("performance.colSource")} k="source" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                      <SortableHead label={t("performance.colDate")} k="posted_at" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
+                      <SortableHead label={t("performance.colImpressions")} k="impressions" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                      <SortableHead label={t("performance.colEngagements")} k="engagements" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
+                      <SortableHead label={t("performance.colEr")} k="engagement_rate" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
                       <TableHead></TableHead>
                     </TableRow>
                   </TableHeader>
@@ -370,14 +370,13 @@ export default function PerformancePage() {
                               excerptFromPost ||
                               m.post_title ||
                               m.post_excerpt?.slice(0, 80) ||
-                              (m.matchedPostId ? "(sin contenido)" : m.linkedin_url) ||
-                              "(sin título)";
+                              (m.matchedPostId ? t("performance.noContent") : m.linkedin_url) ||
+                              t("performance.noTitle");
                             return m.matchedPostId ? (
                               <button
                                 type="button"
                                 onClick={() => navigate("/history", { state: { openPostId: m.matchedPostId } })}
                                 className="text-left w-full group/title"
-                                title="Ver detalle del post en la app"
                               >
                                 <div className="font-medium truncate text-sm group-hover/title:text-primary group-hover/title:underline flex items-center gap-1">
                                   <Link2 className="h-3 w-3 shrink-0 opacity-60" />
@@ -387,14 +386,14 @@ export default function PerformancePage() {
                             ) : (
                               <div
                                 className="font-medium truncate text-sm text-amber-700 dark:text-amber-400"
-                                title="Este post no está vinculado a ningún post de la app"
+                                title={t("performance.notLinkedHint")}
                               >
                                 ⚠ {displayText}
                               </div>
                             );
                           })()}
                         </TableCell>
-                        <TableCell><SourceBadge source={m.source} /></TableCell>
+                        <TableCell><SourceBadge source={m.source} t={t} /></TableCell>
                         <TableCell className="text-xs text-muted-foreground">
                           {m.posted_at ? new Date(m.posted_at).toLocaleDateString() : "—"}
                         </TableCell>
@@ -412,20 +411,20 @@ export default function PerformancePage() {
                                   ? "text-muted-foreground hover:text-foreground"
                                   : "text-amber-600 hover:text-amber-700 dark:text-amber-400"
                               }
-                              title={m.matchedPostId ? "Cambiar el post vinculado" : "Vincular con un post de la biblioteca"}
-                              aria-label={m.matchedPostId ? "Cambiar post vinculado" : "Vincular post"}
+                              title={m.matchedPostId ? t("performance.changeLinked") : t("performance.linkPost")}
+                              aria-label={m.matchedPostId ? t("performance.changeLinkedAria") : t("performance.linkPostAria")}
                             >
                               <LinkIcon className="h-4 w-4" />
                             </button>
                             {m.linkedin_url && (
-                              <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground" title="Abrir en LinkedIn">
+                              <a href={m.linkedin_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-foreground" title={t("performance.openLinkedin")}>
                                 <ExternalLink className="h-4 w-4" />
                               </a>
                             )}
                             <button
                               onClick={() => deleteMut.mutate(m.id)}
                               className="text-muted-foreground hover:text-destructive"
-                              aria-label="Eliminar"
+                              aria-label={t("performance.delete")}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -437,7 +436,7 @@ export default function PerformancePage() {
                 </Table>
                 {focusedPostId && sorted.length === 0 && (
                   <div className="p-6 text-center text-sm text-muted-foreground">
-                    No hay métricas vinculadas a este post.
+                    {t("performance.noMatchedMetrics")}
                   </div>
                 )}
               </div>
