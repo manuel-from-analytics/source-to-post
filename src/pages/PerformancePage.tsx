@@ -39,6 +39,7 @@ interface Row extends LinkedinMetric {
 }
 
 export default function PerformancePage() {
+  const { t } = useLanguage();
   const { data: metrics = [], isLoading } = useLinkedinMetrics();
   const { data: posts = [] } = usePosts();
   const deleteMut = useDeleteLinkedinMetric();
