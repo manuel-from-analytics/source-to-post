@@ -231,12 +231,12 @@ export default function PerformancePage() {
       }
     },
     onSuccess: () => {
-      toast.success("Post vinculado");
+      toast.success(t("performance.linked"));
       qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
       qc.invalidateQueries({ queryKey: ["posts"] });
       setLinkingMetric(null);
     },
-    onError: (e: any) => toast.error(e?.message ?? "No se pudo vincular"),
+    onError: (e: any) => toast.error(e?.message ?? t("performance.linkFailed")),
   });
 
   const unlinkMut = useMutation({
@@ -250,11 +250,11 @@ export default function PerformancePage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Métrica desvinculada");
+      toast.success(t("performance.unlinked"));
       qc.invalidateQueries({ queryKey: ["linkedin-metrics"] });
       setLinkingMetric(null);
     },
-    onError: (e: any) => toast.error(e?.message ?? "No se pudo desvincular"),
+    onError: (e: any) => toast.error(e?.message ?? t("performance.unlinkFailed")),
   });
 
   return (
