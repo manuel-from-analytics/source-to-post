@@ -256,34 +256,36 @@ export default function PerformancePage() {
   });
 
   return (
-    <div className="container mx-auto p-4 lg:p-8 space-y-6 max-w-7xl">
+    <div className="container mx-auto p-3 sm:p-4 lg:p-8 space-y-5 max-w-7xl min-w-0 overflow-x-hidden">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl lg:text-3xl font-bold flex items-center gap-2">
-            <BarChart3 className="h-7 w-7 text-primary" />
-            Rendimiento
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold flex items-center gap-2">
+            <BarChart3 className="h-6 w-6 sm:h-7 sm:w-7 text-primary shrink-0" />
+            <span className="min-w-0 break-words">Rendimiento</span>
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1 break-words">
             Métricas de tus posts publicados en LinkedIn (personal y empresa). Sube el fichero exportado desde LinkedIn (.csv, .xls o .xlsx) y se cruza con tus posts generados.
           </p>
         </div>
-        <Button onClick={() => setImportOpen(true)}>
+        <Button onClick={() => setImportOpen(true)} className="w-full sm:w-auto shrink-0">
           <Upload className="h-4 w-4 mr-2" />Importar fichero
         </Button>
         <ImportCsvWizard open={importOpen} onOpenChange={setImportOpen} />
       </div>
 
-      <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2">
-        <span className="text-sm text-muted-foreground">Origen:</span>
-        <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
-          <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="personal">Personal</SelectItem>
-            <SelectItem value="company">Empresa</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="relative flex-1 min-w-[200px] max-w-md">
+      <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground shrink-0">Origen:</span>
+          <Select value={sourceFilter} onValueChange={(v) => setSourceFilter(v as SourceFilter)}>
+            <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="personal">Personal</SelectItem>
+              <SelectItem value="company">Empresa</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="relative flex-1 min-w-0 sm:min-w-[200px] sm:max-w-md">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por título o contenido"
@@ -296,13 +298,13 @@ export default function PerformancePage() {
           <button
             type="button"
             onClick={() => setFocusedPostId(null)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-primary hover:bg-primary/15"
+            className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs text-primary hover:bg-primary/15"
             title="Quitar filtro de post"
           >
-            <span className="max-w-[220px] truncate">
+            <span className="min-w-0 truncate">
               Post: {focusedPostTitle || focusedPostId.slice(0, 8)}
             </span>
-            <X className="h-3 w-3" />
+            <X className="h-3 w-3 shrink-0" />
           </button>
         )}
       </div>

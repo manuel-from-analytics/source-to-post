@@ -177,16 +177,16 @@ export default function HistoryPage() {
         <div className="space-y-3">
           {filtered.map((post) => (
             <Card key={post.id} className="group">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between gap-3">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setSelectedPost(post)}>
                     {post.title && (
-                      <p className="text-sm font-medium mb-1">{post.title}</p>
+                      <p className="text-sm font-medium mb-1 break-words">{post.title}</p>
                     )}
-                    <p className="text-sm line-clamp-3 leading-relaxed text-muted-foreground">
+                    <p className="text-sm line-clamp-3 leading-relaxed text-muted-foreground break-words">
                       {post.content}
                     </p>
-                     <div className="flex items-center gap-2 mt-3 flex-wrap">
+                     <div className="flex items-center gap-1.5 mt-3 flex-wrap">
                        <Badge className={`text-xs ${statusColors[post.status ?? "draft"]} border-0`}>
                          {statusLabels[post.status ?? "draft"]}
                        </Badge>
@@ -195,12 +195,12 @@ export default function HistoryPage() {
                          if (!lbl) return null;
                          return <PostLabelBadge key={lid} label={lbl} />;
                        })}
-                       <span className="text-xs text-muted-foreground flex items-center gap-1">
+                       <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                          <Calendar className="h-3 w-3" />
                          {new Date(post.created_at).toLocaleDateString()}
                        </span>
                        {(post as any).published_at && (assignmentsMap?.[post.id]?.length ?? 0) === 0 && (
-                         <span className="text-xs text-primary flex items-center gap-1">
+                         <span className="text-[11px] text-primary flex items-center gap-1">
                            <Check className="h-3 w-3" />
                            {t("history.publishedOn")} {new Date((post as any).published_at).toLocaleDateString()}
                          </span>
@@ -218,7 +218,10 @@ export default function HistoryPage() {
                        </div>
                      )}
                   </div>
-                  <div className="flex gap-1 flex-shrink-0">
+                  <div
+                    className="flex flex-wrap items-center gap-1 justify-start sm:justify-end sm:flex-shrink-0 -mx-0.5 border-t pt-2 sm:border-t-0 sm:pt-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <PostLabelPicker postId={post.id} />
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPublishPost(post)} title="Publicar en LinkedIn">
                       <Linkedin className="h-3.5 w-3.5 text-[#0a66c2]" />
@@ -229,7 +232,6 @@ export default function HistoryPage() {
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setSelectedPost(post)} title={t("history.view")}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
-
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(post)} title={t("history.edit")}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
