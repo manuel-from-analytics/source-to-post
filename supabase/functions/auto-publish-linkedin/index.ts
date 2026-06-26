@@ -184,11 +184,23 @@ serve(async (req) => {
       : await query;
     if (error) throw error;
 
+    // Preload timezone per user from profiles, so the schedule's own timezone is ignored
+    // and the unified profile timezone (configured in Settings) is used everywhere.
+    const tzMap = new Map<string, string>();
+    const uids = Array.from(new Set((schedules || []).map((s: any) => s.user_id)));
+    if (uids.length > 0) {
+      const { data: profs } = await admin.from("profiles").select("id, timezone").in("id", uids);
+      for (const p of (profs || []) as any[]) tzMap.set(p.id, p.timezone || "Europe/Madrid");
+    }
+
     const results: any[] = [];
     for (const sched of schedules || []) {
+      const userTz = tzMap.get(sched.user_id) || sched.timezone || "Europe/Madrid";
+      // Override schedule timezone with the unified profile timezone.
+      sched.timezone = userTz;
       // Match current time to schedule (skip when not manual)
       if (!manualUserId) {
-        const { dow, hour } = nowInTz(sched.timezone || "Europe/Madrid");
+        const { dow, hour } = nowInTz(userTz);
         const days: number[] = Array.isArray(sched.days_of_week) ? sched.days_of_week : [];
         if (!days.includes(dow) || hour !== sched.hour) {
           continue;

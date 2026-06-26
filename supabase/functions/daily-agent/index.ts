@@ -408,14 +408,26 @@ serve(async (req) => {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      const currentHour = new Date().getUTCHours();
-      const { data: schedules } = await admin.from("agent_schedules")
-        .select("user_id").eq("enabled", true).eq("run_hour", currentHour);
-
-      // Run each user in the background so the cron HTTP call returns immediately
-      // and isn't killed by the 150s idle timeout. Each runForUser updates its own
-      // agent_runs row with success/error on completion.
-      const userIds = (schedules || []).map((s: any) => s.user_id);
+      // Fetch all enabled schedules and filter by current hour in each user's timezone.
+      const { data: schedules } = await admin
+        .from("agent_schedules")
+        .select("user_id, run_hour")
+        .eq("enabled", true);
+      const userIds: string[] = [];
+      const allSchedules = (schedules || []) as Array<{ user_id: string; run_hour: number }>;
+      if (allSchedules.length > 0) {
+        const ids = allSchedules.map((s) => s.user_id);
+        const { data: profs } = await admin.from("profiles").select("id, timezone").in("id", ids);
+        const tzMap = new Map<string, string>();
+        for (const p of (profs || []) as any[]) tzMap.set(p.id, p.timezone || "Europe/Madrid");
+        for (const s of allSchedules) {
+          const tz = tzMap.get(s.user_id) || "Europe/Madrid";
+          const hourInTz = parseInt(new Intl.DateTimeFormat("en-US", {
+            timeZone: tz, hour: "2-digit", hour12: false,
+          }).format(new Date()), 10);
+          if (hourInTz === s.run_hour) userIds.push(s.user_id);
+        }
+      }
       const backgroundWork = (async () => {
         for (const uid of userIds) {
           try {
