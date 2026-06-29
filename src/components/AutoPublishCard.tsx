@@ -24,6 +24,15 @@ type Sched = {
   last_run_message: string | null;
 };
 
+type RunRow = {
+  id: string;
+  started_at: string;
+  status: string;
+  message: string | null;
+  linkedin_url: string | null;
+  target: string | null;
+};
+
 const DEFAULT: Sched = {
   enabled: false,
   days_of_week: [1, 3, 5],
