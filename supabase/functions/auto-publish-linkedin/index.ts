@@ -117,22 +117,32 @@ async function runForSchedule(admin: any, sched: any): Promise<{ ok: boolean; re
         scheduledAt: iso,
       });
     }
+    const nowIso = new Date().toISOString();
     await admin.from("auto_publish_schedules").update({
-      last_run_at: new Date().toISOString(),
+      last_run_at: nowIso,
       last_run_status: "no_posts",
       last_run_message: "No posts ready",
     }).eq("id", sched.id);
+    await admin.from("auto_publish_runs").insert({
+      user_id: userId, schedule_id: sched.id, status: "no_posts",
+      message: "No posts ready", target,
+    });
     return { ok: false, reason: "no_posts" };
   }
 
   // 3) Publish
   const result = await publishTextToLinkedIn(post.content || "");
   if (!result.ok) {
+    const nowIso = new Date().toISOString();
     await admin.from("auto_publish_schedules").update({
-      last_run_at: new Date().toISOString(),
+      last_run_at: nowIso,
       last_run_status: "failed",
       last_run_message: result.error ?? "publish failed",
     }).eq("id", sched.id);
+    await admin.from("auto_publish_runs").insert({
+      user_id: userId, schedule_id: sched.id, status: "failed",
+      message: result.error ?? "publish failed", post_id: postId, target,
+    });
     return { ok: false, reason: result.error ?? "publish failed" };
   }
 
@@ -161,6 +171,12 @@ async function runForSchedule(admin: any, sched: any): Promise<{ ok: boolean; re
     last_run_status: "published",
     last_run_message: result.linkedin_url ?? null,
   }).eq("id", sched.id);
+
+  await admin.from("auto_publish_runs").insert({
+    user_id: userId, schedule_id: sched.id, status: "published",
+    message: post.title || null, post_id: postId,
+    linkedin_url: result.linkedin_url ?? null, target,
+  });
 
   return { ok: true, reason: "published" };
 }

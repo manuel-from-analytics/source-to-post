@@ -66,7 +66,8 @@ export async function publishTextToLinkedIn(content: string): Promise<PublishRes
     : urn.startsWith("urn:li:ugcPost:")
     ? `urn:li:activity:${activityId}`
     : urn;
-  const linkedin_url = `https://www.linkedin.com/feed/update/${feedUrn}/`;
+  // URL-encode the URN so colons survive HTML/email link parsing.
+  const linkedin_url = `https://www.linkedin.com/feed/update/${encodeURIComponent(feedUrn)}/`;
 
   return { ok: true, urn, linkedin_url };
 }

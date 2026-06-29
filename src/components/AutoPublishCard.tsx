@@ -24,6 +24,15 @@ type Sched = {
   last_run_message: string | null;
 };
 
+type RunRow = {
+  id: string;
+  started_at: string;
+  status: string;
+  message: string | null;
+  linkedin_url: string | null;
+  target: string | null;
+};
+
 const DEFAULT: Sched = {
   enabled: false,
   days_of_week: [1, 3, 5],
@@ -43,6 +52,7 @@ export default function AutoPublishCard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [runs, setRuns] = useState<RunRow[]>([]);
 
   const DAYS = [
     { v: 1, label: t("autoPublish.dayMon") },
@@ -66,6 +76,13 @@ export default function AutoPublishCard() {
     const userTz = ((prof as any)?.timezone as string) || "Europe/Madrid";
     if (data) setSched({ ...DEFAULT, ...(data as any), timezone: userTz });
     else setSched({ ...DEFAULT, timezone: userTz, notification_email: session.user.email ?? null });
+    const { data: r } = await supabase
+      .from("auto_publish_runs" as any)
+      .select("id, started_at, status, message, linkedin_url, target")
+      .eq("user_id", session.user.id)
+      .order("started_at", { ascending: false })
+      .limit(10);
+    setRuns(((r as any[]) || []) as RunRow[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, [session]);
@@ -202,6 +219,52 @@ export default function AutoPublishCard() {
             {t("autoPublish.runNow")}
           </Button>
         </div>
+
+        {runs.length > 0 && (
+          <div className="space-y-1">
+            <Label className="text-xs">{t("autoPublish.recentRuns")}</Label>
+            <div className="space-y-1.5">
+              {runs.map((r) => {
+                const statusLabel =
+                  r.status === "published" ? t("autoPublish.statusPublished") :
+                  r.status === "no_posts" ? t("autoPublish.statusNoPosts") :
+                  r.status === "failed" ? t("autoPublish.statusFailed") : r.status;
+                const clickable = !!r.linkedin_url;
+                const content = (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">{new Date(r.started_at).toLocaleString()}</p>
+                      {r.message && <p className="text-muted-foreground break-all truncate">{r.message}</p>}
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="font-medium">{statusLabel}</p>
+                      {r.target && <p className="text-muted-foreground">{r.target}</p>}
+                    </div>
+                  </>
+                );
+                return clickable ? (
+                  <a
+                    key={r.id}
+                    href={r.linkedin_url!}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={t("autoPublish.viewOnLinkedin")}
+                    className="flex items-center justify-between gap-2 p-2 rounded-lg border bg-muted/30 text-xs min-w-0 hover:bg-muted/60 transition-colors"
+                  >
+                    {content}
+                  </a>
+                ) : (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between gap-2 p-2 rounded-lg border bg-muted/30 text-xs min-w-0"
+                  >
+                    {content}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
