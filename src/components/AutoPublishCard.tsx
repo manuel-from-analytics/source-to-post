@@ -52,6 +52,7 @@ export default function AutoPublishCard() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [running, setRunning] = useState(false);
+  const [runs, setRuns] = useState<RunRow[]>([]);
 
   const DAYS = [
     { v: 1, label: t("autoPublish.dayMon") },
