@@ -164,6 +164,50 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_publish_runs: {
+        Row: {
+          id: string
+          linkedin_url: string | null
+          message: string | null
+          post_id: string | null
+          schedule_id: string | null
+          started_at: string
+          status: string
+          target: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          linkedin_url?: string | null
+          message?: string | null
+          post_id?: string | null
+          schedule_id?: string | null
+          started_at?: string
+          status: string
+          target?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          linkedin_url?: string | null
+          message?: string | null
+          post_id?: string | null
+          schedule_id?: string | null
+          started_at?: string
+          status?: string
+          target?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auto_publish_runs_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "auto_publish_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       auto_publish_schedules: {
         Row: {
           created_at: string
