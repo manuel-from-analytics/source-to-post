@@ -76,6 +76,13 @@ export default function AutoPublishCard() {
     const userTz = ((prof as any)?.timezone as string) || "Europe/Madrid";
     if (data) setSched({ ...DEFAULT, ...(data as any), timezone: userTz });
     else setSched({ ...DEFAULT, timezone: userTz, notification_email: session.user.email ?? null });
+    const { data: r } = await supabase
+      .from("auto_publish_runs" as any)
+      .select("id, started_at, status, message, linkedin_url, target")
+      .eq("user_id", session.user.id)
+      .order("started_at", { ascending: false })
+      .limit(10);
+    setRuns(((r as any[]) || []) as RunRow[]);
     setLoading(false);
   };
   useEffect(() => { load(); }, [session]);
