@@ -97,7 +97,7 @@ async function runForSchedule(admin: any, sched: any): Promise<{ ok: boolean; re
         .select("id, content, title, user_id, status, linkedin_url, created_at")
         .in("id", ids)
         .eq("user_id", userId)
-        .eq("status", "ready")
+        .eq("status", "final")
         .is("linkedin_url", null)
         .order("created_at", { ascending: true })
         .limit(1);
