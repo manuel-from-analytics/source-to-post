@@ -1,0 +1,2 @@
+ALTER TABLE public.inputs ADD COLUMN IF NOT EXISTS extraction_status TEXT NOT NULL DEFAULT 'pending' CHECK (extraction_status IN ('pending','extracted','partial','failed','skipped'));
+CREATE INDEX IF NOT EXISTS idx_inputs_extraction_status ON public.inputs(extraction_status);

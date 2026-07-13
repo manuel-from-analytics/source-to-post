@@ -530,6 +530,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           extracted_content: string | null
+          extraction_status: string
           file_path: string | null
           id: string
           is_favorite: boolean | null
@@ -545,6 +546,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           extracted_content?: string | null
+          extraction_status?: string
           file_path?: string | null
           id?: string
           is_favorite?: boolean | null
@@ -560,6 +562,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           extracted_content?: string | null
+          extraction_status?: string
           file_path?: string | null
           id?: string
           is_favorite?: boolean | null
