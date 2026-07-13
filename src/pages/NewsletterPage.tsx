@@ -424,9 +424,12 @@ function NewsletterItemCard({ item, onImport, onOpen, importing, t }: {
           {t("newsletter.viewSource")}
         </a>
         {item.imported_to_library ? (
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Check className="h-3 w-3" /> {t("newsletter.imported")}
-          </span>
+          <>
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Check className="h-3 w-3" /> {t("newsletter.imported")}
+            </span>
+            <ExtractionStatusBadge status={(item as any).extraction_status} t={t} />
+          </>
         ) : (
           <Button
             variant="ghost"
