@@ -395,6 +395,7 @@ GENERAL RULES:
 3. No repeated links from the "already used URLs" list above.
 4. Write the newsletter in ${langName} regardless of the topic language.
 ${cutoffDate ? `5. Every pub_date MUST be on or after ${cutoffDate}. This is the most important rule.` : ""}
+6. FORBIDDEN SOURCES: never include URLs from youtube.com, youtu.be, linkedin.com, lnkd.in, facebook.com, fb.watch, reddit.com or redd.it. These are not extractable and will be rejected. Choose original articles, blogs, papers, or press releases instead.
 
 RECENCY PRIORITY (very important):
 - Prefer the MOST RECENT publications available. Among sources of comparable quality and relevance, ALWAYS choose the newer one.
