@@ -400,6 +400,9 @@ function ExtractionStatusBadge({ status, t }: { status?: string | null; t: (k: s
       {info.label}
     </span>
   );
+}
+
+
 
 function NewsletterItemCard({ item, onImport, onOpen, importing, t }: {
   item: NewsletterItem;
