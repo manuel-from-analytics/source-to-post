@@ -71,13 +71,17 @@ export function useNewsletterDetail(id: string | null) {
         const noRefIds = importedItems.filter(i => !i.input_id).map(i => i.id);
         const withRef = importedItems.filter(i => i.input_id);
         let missingRefIds: string[] = [];
+        const statusByInput = new Map<string, ExtractionStatus>();
         if (withRef.length > 0) {
           const inputIds = withRef.map(i => i.input_id!);
           const { data: existingInputs } = await supabase
             .from("inputs")
-            .select("id")
+            .select("id, extraction_status")
             .in("id", inputIds);
-          const existingIds = new Set((existingInputs || []).map(i => i.id));
+          const existingIds = new Set((existingInputs || []).map((i: any) => i.id));
+          for (const inp of (existingInputs || []) as any[]) {
+            statusByInput.set(inp.id, (inp.extraction_status as ExtractionStatus) || "pending");
+          }
           missingRefIds = withRef.filter(i => !existingIds.has(i.input_id!)).map(i => i.id);
         }
 
@@ -87,11 +91,14 @@ export function useNewsletterDetail(id: string | null) {
             .from("newsletter_items")
             .update({ imported_to_library: false, input_id: null })
             .in("id", orphanedIds);
-          for (const item of items || []) {
-            if (orphanedIds.includes(item.id)) {
-              item.imported_to_library = false;
-              item.input_id = null;
-            }
+        }
+        for (const item of items || []) {
+          if (orphanedIds.includes(item.id)) {
+            item.imported_to_library = false;
+            (item as any).input_id = null;
+            (item as any).extraction_status = null;
+          } else if (item.input_id) {
+            (item as any).extraction_status = statusByInput.get(item.input_id) ?? "pending";
           }
         }
       }
