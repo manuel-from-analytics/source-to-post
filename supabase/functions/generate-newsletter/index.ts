@@ -279,6 +279,22 @@ serve(async (req) => {
       try { return new URL(raw).hostname.toLowerCase().replace(/^www\./, ""); } catch { return null; }
     }
 
+    // Blocklist of sources that Firecrawl typically cannot extract (paywalled,
+    // JS-gated, or explicitly refused). Excluding them upstream avoids the
+    // agent trying to build posts from empty content.
+    const BLOCKED_DOMAINS = [
+      "youtube.com", "youtu.be", "m.youtube.com",
+      "linkedin.com", "lnkd.in",
+      "facebook.com", "fb.com", "fb.watch", "m.facebook.com",
+      "reddit.com", "redd.it", "old.reddit.com",
+    ];
+    function isBlockedUrl(raw: string): boolean {
+      const d = domainOf(raw);
+      if (!d) return false;
+      return BLOCKED_DOMAINS.some((b) => d === b || d.endsWith(`.${b}`));
+    }
+    const BLOCKED_SITE_FILTER = BLOCKED_DOMAINS.map((d) => `-site:${d}`).join(" ");
+
     // Pull a wider candidate pool — we filter out already-used URLs before passing to the AI,
     // so we need extra headroom to still have enough fresh candidates.
     const TARGET_FRESH = 8; // we want at least this many fresh candidates before calling the AI
@@ -302,16 +318,16 @@ serve(async (req) => {
     const fallbackTopic = baseTopic.toLowerCase().includes("analytics")
       ? `${baseTopic} BI data platforms semantic layer AI agents`
       : `${baseTopic} analysis trends research`;
-    const queries: string[] = [baseTopic];
+    const queries: string[] = [`${baseTopic} ${BLOCKED_SITE_FILTER}`];
     if (topUsedDomains.length > 0) {
       // Variant 1: exclude top 3 most-used domains
-      queries.push(`${baseTopic} ${topUsedDomains.slice(0, 3).map((d) => `-site:${d}`).join(" ")}`);
+      queries.push(`${baseTopic} ${topUsedDomains.slice(0, 3).map((d) => `-site:${d}`).join(" ")} ${BLOCKED_SITE_FILTER}`);
       // Variant 2: exclude all top used domains + recency hint
-      queries.push(`${fallbackTopic} latest ${topUsedDomains.map((d) => `-site:${d}`).join(" ")}`);
+      queries.push(`${fallbackTopic} latest ${topUsedDomains.map((d) => `-site:${d}`).join(" ")} ${BLOCKED_SITE_FILTER}`);
       // Variant 3: broader query with no domain exclusions; useful when the exact topic is exhausted.
-      queries.push(`${fallbackTopic} recent research`);
+      queries.push(`${fallbackTopic} recent research ${BLOCKED_SITE_FILTER}`);
     } else {
-      queries.push(`${baseTopic} latest`, `${fallbackTopic} recent research`);
+      queries.push(`${baseTopic} latest ${BLOCKED_SITE_FILTER}`, `${fallbackTopic} recent research ${BLOCKED_SITE_FILTER}`);
     }
 
     for (const q of queries) {
@@ -325,6 +341,7 @@ serve(async (req) => {
         if (!norm || seenRawUrls.has(norm)) continue;
         seenRawUrls.add(norm);
         if (recentUrlsNorm.has(norm)) continue; // already used in last 14 days
+        if (isBlockedUrl(r?.url || "")) continue; // YouTube/LinkedIn/Facebook/Reddit: not extractable
         freshCandidates.push(r);
       }
       console.log(`After "${q}": ${freshCandidates.length} fresh candidates accumulated`);
@@ -378,6 +395,7 @@ GENERAL RULES:
 3. No repeated links from the "already used URLs" list above.
 4. Write the newsletter in ${langName} regardless of the topic language.
 ${cutoffDate ? `5. Every pub_date MUST be on or after ${cutoffDate}. This is the most important rule.` : ""}
+6. FORBIDDEN SOURCES: never include URLs from youtube.com, youtu.be, linkedin.com, lnkd.in, facebook.com, fb.watch, reddit.com or redd.it. These are not extractable and will be rejected. Choose original articles, blogs, papers, or press releases instead.
 
 RECENCY PRIORITY (very important):
 - Prefer the MOST RECENT publications available. Among sources of comparable quality and relevance, ALWAYS choose the newer one.
@@ -505,6 +523,7 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
       newsletter.items = newsletter.items.filter((it: any) => {
         const norm = normalizeUrl(it?.url || "");
         if (!norm) { droppedByUrl++; return false; }
+        if (isBlockedUrl(it?.url || "")) { droppedByUrl++; return false; }
         if (recentUrlsNorm.has(norm) || seenUrlsThisBatch.has(norm)) {
           droppedByUrl++;
           return false;
