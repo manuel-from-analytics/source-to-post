@@ -227,14 +227,15 @@ Deno.serve(async (req) => {
       if (!scrapeResponse.ok) {
         const errData = await scrapeResponse.json().catch(() => ({}));
         console.error("Firecrawl error:", scrapeResponse.status, errData);
+        await supabase.from("inputs").update({ extraction_status: "failed" }).eq("id", input_id);
         if (scrapeResponse.status === 402) {
-          return new Response(JSON.stringify({ error: "Créditos de extracción agotados" }), {
+          return new Response(JSON.stringify({ error: "Créditos de extracción agotados", extraction_status: "failed" }), {
             status: 402,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
           });
         }
         return new Response(
-          JSON.stringify({ error: errData.error || "Error al extraer contenido de la URL" }),
+          JSON.stringify({ error: errData.error || "Error al extraer contenido de la URL", extraction_status: "failed" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -243,7 +244,8 @@ Deno.serve(async (req) => {
       extractedContent = scrapeData?.data?.markdown || scrapeData?.markdown || "";
 
       if (!extractedContent) {
-        return new Response(JSON.stringify({ error: "No se pudo extraer contenido de la URL" }), {
+        await supabase.from("inputs").update({ extraction_status: "failed" }).eq("id", input_id);
+        return new Response(JSON.stringify({ error: "No se pudo extraer contenido de la URL", extraction_status: "failed" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -255,23 +257,37 @@ Deno.serve(async (req) => {
       ? extractedContent.slice(0, 50000) + "\n\n[Contenido truncado]"
       : extractedContent;
 
+    // Classify extraction quality by length so downstream code (the daily agent)
+    // can skip failed/insufficient extractions instead of hallucinating posts.
+    const cleanLen = truncated.replace(/\s+/g, " ").trim().length;
+    const extraction_status: "extracted" | "partial" | "failed" =
+      cleanLen >= 1500 ? "extracted" : cleanLen >= 400 ? "partial" : "failed";
+
     const { error: updateError } = await supabase
       .from("inputs")
-      .update({ extracted_content: truncated })
+      .update({ extracted_content: truncated, extraction_status })
       .eq("id", input_id);
 
     if (updateError) throw updateError;
 
-    console.log("Extraction successful, length:", truncated.length);
+    console.log("Extraction done, length:", cleanLen, "status:", extraction_status);
 
     return new Response(
-      JSON.stringify({ success: true, length: truncated.length }),
+      JSON.stringify({ success: true, length: cleanLen, extraction_status }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {
     console.error("extract-url error:", e);
+    try {
+      const body = await req.clone().json().catch(() => ({}));
+      if (body?.input_id) {
+        const SR = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+        const admin = createClient(Deno.env.get("SUPABASE_URL")!, SR);
+        await admin.from("inputs").update({ extraction_status: "failed" }).eq("id", body.input_id);
+      }
+    } catch { /* ignore */ }
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error", extraction_status: "failed" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
