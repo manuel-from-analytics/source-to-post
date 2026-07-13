@@ -522,6 +522,7 @@ IMPORTANT: For pub_date, provide the actual or best-estimate publication date in
       newsletter.items = newsletter.items.filter((it: any) => {
         const norm = normalizeUrl(it?.url || "");
         if (!norm) { droppedByUrl++; return false; }
+        if (isBlockedUrl(it?.url || "")) { droppedByUrl++; return false; }
         if (recentUrlsNorm.has(norm) || seenUrlsThisBatch.has(norm)) {
           droppedByUrl++;
           return false;
