@@ -5,6 +5,8 @@ import { useAuth } from "./useAuth";
 import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
 
+export type ExtractionStatus = "pending" | "extracted" | "partial" | "failed" | "skipped";
+
 export interface NewsletterItem {
   id: string;
   newsletter_id: string;
@@ -16,6 +18,7 @@ export interface NewsletterItem {
   input_id: string | null;
   pub_date: string | null;
   created_at: string;
+  extraction_status?: ExtractionStatus | null;
 }
 
 export interface Newsletter {
