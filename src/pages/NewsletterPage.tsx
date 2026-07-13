@@ -385,6 +385,25 @@ function FreshnessBadge({ pubDate, t }: { pubDate: string; t: (k: string) => str
   );
 }
 
+function ExtractionStatusBadge({ status, t }: { status?: string | null; t: (k: string) => string }) {
+  if (!status) return null;
+  const map: Record<string, { label: string; color: string; hint: string }> = {
+    extracted: { label: t("newsletter.extractionExtracted"), color: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30", hint: t("newsletter.extractionExtractedHint") },
+    partial: { label: t("newsletter.extractionPartial"), color: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30", hint: t("newsletter.extractionPartialHint") },
+    failed: { label: t("newsletter.extractionFailed"), color: "bg-destructive/15 text-destructive border-destructive/30", hint: t("newsletter.extractionFailedHint") },
+    pending: { label: t("newsletter.extractionPending"), color: "bg-muted text-muted-foreground border-border", hint: t("newsletter.extractionPendingHint") },
+    skipped: { label: t("newsletter.extractionPending"), color: "bg-muted text-muted-foreground border-border", hint: t("newsletter.extractionPendingHint") },
+  };
+  const info = map[status] || map.pending;
+  return (
+    <span title={info.hint} className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${info.color}`}>
+      {info.label}
+    </span>
+  );
+}
+
+
+
 function NewsletterItemCard({ item, onImport, onOpen, importing, t }: {
   item: NewsletterItem;
   onImport: () => void;
@@ -424,9 +443,12 @@ function NewsletterItemCard({ item, onImport, onOpen, importing, t }: {
           {t("newsletter.viewSource")}
         </a>
         {item.imported_to_library ? (
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Check className="h-3 w-3" /> {t("newsletter.imported")}
-          </span>
+          <>
+            <span className="text-xs text-muted-foreground flex items-center gap-1">
+              <Check className="h-3 w-3" /> {t("newsletter.imported")}
+            </span>
+            <ExtractionStatusBadge status={(item as any).extraction_status} t={t} />
+          </>
         ) : (
           <Button
             variant="ghost"
