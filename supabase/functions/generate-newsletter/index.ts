@@ -318,16 +318,16 @@ serve(async (req) => {
     const fallbackTopic = baseTopic.toLowerCase().includes("analytics")
       ? `${baseTopic} BI data platforms semantic layer AI agents`
       : `${baseTopic} analysis trends research`;
-    const queries: string[] = [baseTopic];
+    const queries: string[] = [`${baseTopic} ${BLOCKED_SITE_FILTER}`];
     if (topUsedDomains.length > 0) {
       // Variant 1: exclude top 3 most-used domains
-      queries.push(`${baseTopic} ${topUsedDomains.slice(0, 3).map((d) => `-site:${d}`).join(" ")}`);
+      queries.push(`${baseTopic} ${topUsedDomains.slice(0, 3).map((d) => `-site:${d}`).join(" ")} ${BLOCKED_SITE_FILTER}`);
       // Variant 2: exclude all top used domains + recency hint
-      queries.push(`${fallbackTopic} latest ${topUsedDomains.map((d) => `-site:${d}`).join(" ")}`);
+      queries.push(`${fallbackTopic} latest ${topUsedDomains.map((d) => `-site:${d}`).join(" ")} ${BLOCKED_SITE_FILTER}`);
       // Variant 3: broader query with no domain exclusions; useful when the exact topic is exhausted.
-      queries.push(`${fallbackTopic} recent research`);
+      queries.push(`${fallbackTopic} recent research ${BLOCKED_SITE_FILTER}`);
     } else {
-      queries.push(`${baseTopic} latest`, `${fallbackTopic} recent research`);
+      queries.push(`${baseTopic} latest ${BLOCKED_SITE_FILTER}`, `${fallbackTopic} recent research ${BLOCKED_SITE_FILTER}`);
     }
 
     for (const q of queries) {
@@ -341,6 +341,7 @@ serve(async (req) => {
         if (!norm || seenRawUrls.has(norm)) continue;
         seenRawUrls.add(norm);
         if (recentUrlsNorm.has(norm)) continue; // already used in last 14 days
+        if (isBlockedUrl(r?.url || "")) continue; // YouTube/LinkedIn/Facebook/Reddit: not extractable
         freshCandidates.push(r);
       }
       console.log(`After "${q}": ${freshCandidates.length} fresh candidates accumulated`);
