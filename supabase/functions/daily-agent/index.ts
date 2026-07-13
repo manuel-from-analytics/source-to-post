@@ -279,6 +279,20 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
           }
         }
 
+        // Guard: require real extracted content to avoid hallucinated posts.
+        // If extraction failed (paywall, LinkedIn, PDF-only, etc.) the input will
+        // only have a title + short description; generating from that produces
+        // fabricated content, so skip the item entirely.
+        const { data: freshInput } = await admin.from("inputs")
+          .select("extracted_content, raw_content")
+          .eq("id", inputId).maybeSingle();
+        const extracted = (freshInput?.extracted_content || freshInput?.raw_content || "").trim();
+        const MIN_CHARS = 400;
+        if (extracted.length < MIN_CHARS) {
+          console.warn(`Skipping item ${item.id} (${item.url}): extracted content too short (${extracted.length} chars)`);
+          return null;
+        }
+
         const { content, decisions } = await generateContent(admin, {
           input_ids: [inputId],
           voice_id: schedule.voice_id || profile?.default_voice_id || undefined,
