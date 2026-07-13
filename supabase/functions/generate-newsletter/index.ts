@@ -279,6 +279,22 @@ serve(async (req) => {
       try { return new URL(raw).hostname.toLowerCase().replace(/^www\./, ""); } catch { return null; }
     }
 
+    // Blocklist of sources that Firecrawl typically cannot extract (paywalled,
+    // JS-gated, or explicitly refused). Excluding them upstream avoids the
+    // agent trying to build posts from empty content.
+    const BLOCKED_DOMAINS = [
+      "youtube.com", "youtu.be", "m.youtube.com",
+      "linkedin.com", "lnkd.in",
+      "facebook.com", "fb.com", "fb.watch", "m.facebook.com",
+      "reddit.com", "redd.it", "old.reddit.com",
+    ];
+    function isBlockedUrl(raw: string): boolean {
+      const d = domainOf(raw);
+      if (!d) return false;
+      return BLOCKED_DOMAINS.some((b) => d === b || d.endsWith(`.${b}`));
+    }
+    const BLOCKED_SITE_FILTER = BLOCKED_DOMAINS.map((d) => `-site:${d}`).join(" ");
+
     // Pull a wider candidate pool — we filter out already-used URLs before passing to the AI,
     // so we need extra headroom to still have enough fresh candidates.
     const TARGET_FRESH = 8; // we want at least this many fresh candidates before calling the AI
