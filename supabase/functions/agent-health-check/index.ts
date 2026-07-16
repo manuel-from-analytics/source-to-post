@@ -58,45 +58,28 @@ serve(async (req) => {
         finished_at: new Date().toISOString(),
       }).eq("id", run.id);
 
-      // Resolve recipient: notification_email on schedule, else user email.
+      // Get schedule topic for context
       const { data: sched } = await admin.from("agent_schedules")
-        .select("notification_email, topic").eq("user_id", run.user_id).maybeSingle();
-      let recipient: string | undefined = sched?.notification_email || undefined;
-      if (!recipient) {
-        try {
-          const { data: u } = await admin.auth.admin.getUserById(run.user_id);
-          recipient = u?.user?.email ?? undefined;
-        } catch { /* ignore */ }
-      }
-      if (!recipient) continue;
+        .select("topic").eq("user_id", run.user_id).maybeSingle();
 
-      try {
-        const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${ANON_JWT}`,
-            apikey: ANON_JWT,
-          },
-          body: JSON.stringify({
-            templateName: "agent-run-alert",
-            recipientEmail: recipient,
-            idempotencyKey: `agent-alert-stuck-${run.id}`,
-            templateData: {
-              alertType: "stuck",
-              runId: run.id,
-              startedAt: run.started_at,
-              durationMinutes,
-              topic: sched?.topic || undefined,
-              errorMessage: `La ejecución ha estado bloqueada >${STUCK_THRESHOLD_MIN} minutos.`,
-            },
-          }),
-        });
-        if (!resp.ok) console.error("stuck alert email failed", resp.status, await resp.text().catch(() => ""));
-        alerts.push({ run_id: run.id, recipient, durationMinutes });
-      } catch (e: any) {
-        console.error("stuck alert exception", e?.message || e);
-      }
+      const ok = await appHubNotify({
+        title: "Agente bloqueado",
+        status: "error",
+        body: [
+          sched?.topic ? `**Tema:** ${sched.topic}` : null,
+          `**Inicio:** ${run.started_at}`,
+          `**Duración:** ${durationMinutes} min`,
+          `\nLa ejecución ha estado bloqueada >${STUCK_THRESHOLD_MIN} minutos.`,
+        ].filter(Boolean).join("\n"),
+        metadata: {
+          alert_type: "stuck",
+          run_id: run.id,
+          started_at: run.started_at,
+          duration_minutes: durationMinutes,
+          topic: sched?.topic || undefined,
+        },
+      });
+      alerts.push({ run_id: run.id, durationMinutes, notified: ok });
     }
 
     return new Response(JSON.stringify({ checked: (stuck || []).length, alerts }), {
