@@ -7,6 +7,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { publishTextToLinkedIn } from "../_shared/linkedin-publish.ts";
 import { recordLabelPublication, type LabelKind } from "../_shared/label-publication.ts";
+import { appHubNotify } from "../_shared/apphub-notify.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 // Returns {dayOfWeek (0=Sun..6=Sat), hour} in the given IANA timezone.
 function nowInTz(tz: string): { dow: number; hour: number; iso: string } {
@@ -38,27 +38,7 @@ function nowInTz(tz: string): { dow: number; hour: number; iso: string } {
   return { dow, hour, iso };
 }
 
-async function sendEmail(templateName: string, recipient: string, idempotencyKey: string, data: Record<string, any>) {
-  try {
-    const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${ANON_KEY}`,
-        apikey: ANON_KEY,
-      },
-      body: JSON.stringify({
-        templateName,
-        recipientEmail: recipient,
-        idempotencyKey,
-        templateData: data,
-      }),
-    });
-    if (!resp.ok) console.error("email failed:", templateName, resp.status, await resp.text().catch(() => ""));
-  } catch (e: any) {
-    console.error("email exception:", e?.message || e);
-  }
-}
+// (email helper removed — notifications now flow through AppHub)
 
 async function resolveEmail(admin: any, userId: string, configured?: string | null): Promise<string | undefined> {
   if (configured) return configured;
@@ -108,15 +88,13 @@ async function runForSchedule(admin: any, sched: any): Promise<{ ok: boolean; re
     }
   }
 
-  const email = await resolveEmail(admin, userId, sched.notification_email);
-
   if (!post || !postId) {
-    if (email) {
-      await sendEmail("auto-publish-no-posts", email, `auto-publish-no-posts-${sched.id}-${iso}`, {
-        target,
-        scheduledAt: iso,
-      });
-    }
+    await appHubNotify({
+      title: `⚠️ Sin posts ${target === "company" ? "de empresa" : "personales"} listos`,
+      status: "warning",
+      body: `El agente intentó publicar en LinkedIn (${iso}) pero no encontró posts con etiqueta ${target} en estado Ready.`,
+      metadata: { alert_type: "auto_publish_no_posts", target, scheduled_at: iso, schedule_id: sched.id },
+    });
     const nowIso = new Date().toISOString();
     await admin.from("auto_publish_schedules").update({
       last_run_at: nowIso,
@@ -156,13 +134,23 @@ async function runForSchedule(admin: any, sched: any): Promise<{ ok: boolean; re
 
   await recordLabelPublication(admin, userId, postId, target, nowIso);
 
-  if (email) {
-    const preview = (post.content || "").trim().slice(0, 180);
-    await sendEmail("auto-publish-success", email, `auto-publish-success-${postId}`, {
-      postTitle: post.title || "Sin título",
-      postPreview: preview,
-      linkedinUrl: result.linkedin_url,
-      target,
+  {
+    const preview = (post.content || "").trim().slice(0, 400);
+    await appHubNotify({
+      title: `✅ Publicado en LinkedIn: ${post.title || "Sin título"}`,
+      status: "ok",
+      body: [
+        `**Cuenta:** ${target === "company" ? "Empresa" : "Personal"}`,
+        result.linkedin_url ? `**URL:** ${result.linkedin_url}` : null,
+        "",
+        preview,
+      ].filter(Boolean).join("\n"),
+      metadata: {
+        alert_type: "auto_publish_success",
+        target,
+        post_id: postId,
+        linkedin_url: result.linkedin_url,
+      },
     });
   }
 

@@ -3,6 +3,7 @@
 // Invoked by pg_cron every 15 minutes with x-cron-secret header.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { appHubNotify } from "../_shared/apphub-notify.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +12,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ANON_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcG5zcXZjYWdvd3ZhYXZ6enhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzMzODYsImV4cCI6MjA5MDIwOTM4Nn0.M5cD9O37pUxIXU8oieOtCUmggzTL2zVJ8TvryG7TqN0";
 
 // A run is considered "stuck" after this many minutes still in status=running.
 // The whole orchestration normally completes in 1–3 min; 25m is a safe ceiling.
@@ -58,45 +58,28 @@ serve(async (req) => {
         finished_at: new Date().toISOString(),
       }).eq("id", run.id);
 
-      // Resolve recipient: notification_email on schedule, else user email.
+      // Get schedule topic for context
       const { data: sched } = await admin.from("agent_schedules")
-        .select("notification_email, topic").eq("user_id", run.user_id).maybeSingle();
-      let recipient: string | undefined = sched?.notification_email || undefined;
-      if (!recipient) {
-        try {
-          const { data: u } = await admin.auth.admin.getUserById(run.user_id);
-          recipient = u?.user?.email ?? undefined;
-        } catch { /* ignore */ }
-      }
-      if (!recipient) continue;
+        .select("topic").eq("user_id", run.user_id).maybeSingle();
 
-      try {
-        const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${ANON_JWT}`,
-            apikey: ANON_JWT,
-          },
-          body: JSON.stringify({
-            templateName: "agent-run-alert",
-            recipientEmail: recipient,
-            idempotencyKey: `agent-alert-stuck-${run.id}`,
-            templateData: {
-              alertType: "stuck",
-              runId: run.id,
-              startedAt: run.started_at,
-              durationMinutes,
-              topic: sched?.topic || undefined,
-              errorMessage: `La ejecución ha estado bloqueada >${STUCK_THRESHOLD_MIN} minutos.`,
-            },
-          }),
-        });
-        if (!resp.ok) console.error("stuck alert email failed", resp.status, await resp.text().catch(() => ""));
-        alerts.push({ run_id: run.id, recipient, durationMinutes });
-      } catch (e: any) {
-        console.error("stuck alert exception", e?.message || e);
-      }
+      const ok = await appHubNotify({
+        title: "Agente bloqueado",
+        status: "error",
+        body: [
+          sched?.topic ? `**Tema:** ${sched.topic}` : null,
+          `**Inicio:** ${run.started_at}`,
+          `**Duración:** ${durationMinutes} min`,
+          `\nLa ejecución ha estado bloqueada >${STUCK_THRESHOLD_MIN} minutos.`,
+        ].filter(Boolean).join("\n"),
+        metadata: {
+          alert_type: "stuck",
+          run_id: run.id,
+          started_at: run.started_at,
+          duration_minutes: durationMinutes,
+          topic: sched?.topic || undefined,
+        },
+      });
+      alerts.push({ run_id: run.id, durationMinutes, notified: ok });
     }
 
     return new Response(JSON.stringify({ checked: (stuck || []).length, alerts }), {
