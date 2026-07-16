@@ -7,6 +7,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { publishTextToLinkedIn } from "../_shared/linkedin-publish.ts";
 import { recordLabelPublication, type LabelKind } from "../_shared/label-publication.ts";
+import { appHubNotify } from "../_shared/apphub-notify.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 
 // Returns {dayOfWeek (0=Sun..6=Sat), hour} in the given IANA timezone.
 function nowInTz(tz: string): { dow: number; hour: number; iso: string } {
