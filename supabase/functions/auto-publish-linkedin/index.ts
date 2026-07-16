@@ -38,27 +38,7 @@ function nowInTz(tz: string): { dow: number; hour: number; iso: string } {
   return { dow, hour, iso };
 }
 
-async function sendEmail(templateName: string, recipient: string, idempotencyKey: string, data: Record<string, any>) {
-  try {
-    const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${ANON_KEY}`,
-        apikey: ANON_KEY,
-      },
-      body: JSON.stringify({
-        templateName,
-        recipientEmail: recipient,
-        idempotencyKey,
-        templateData: data,
-      }),
-    });
-    if (!resp.ok) console.error("email failed:", templateName, resp.status, await resp.text().catch(() => ""));
-  } catch (e: any) {
-    console.error("email exception:", e?.message || e);
-  }
-}
+// (email helper removed — notifications now flow through AppHub)
 
 async function resolveEmail(admin: any, userId: string, configured?: string | null): Promise<string | undefined> {
   if (configured) return configured;
