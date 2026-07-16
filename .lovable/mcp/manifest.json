@@ -1,0 +1,730 @@
+{
+  "version": 1,
+  "sdk_version": "0.22.2",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://ofpnsqvcagowvaavzzxh.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "postflow",
+      "version": "1.0.0",
+      "title": "PostFlow"
+    },
+    "tools": [
+      {
+        "name": "get_user_defaults",
+        "title": "Get user defaults",
+        "description": "Get the user's profile defaults (default voice, CTA, length, languages, writing style, newsletter preferences).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_inputs",
+        "title": "List inputs",
+        "description": "List sources from the library. Optional filters: type, is_favorite, category_id, limit.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": [
+                "pdf",
+                "url",
+                "youtube",
+                "text"
+              ]
+            },
+            "is_favorite": {
+              "type": "boolean"
+            },
+            "category_id": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "number"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_input",
+        "title": "Get input",
+        "description": "Get full details of a specific source by ID.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_input",
+        "title": "Create input",
+        "description": "Add a new text, url or youtube source to the library.",
+        "annotations": {
+          "readOnlyHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "text",
+                "url",
+                "youtube"
+              ]
+            },
+            "raw_content": {
+              "type": "string"
+            },
+            "original_url": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "title",
+            "type"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_input",
+        "title": "Delete input",
+        "description": "Delete a source from the library by ID.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_posts",
+        "title": "List generated posts",
+        "description": "List generated posts including labels (personal/empresa), per-label publication dates, and LinkedIn performance metrics. Each post includes a `metrics` array and aggregated `performance` object. Filters: status, is_favorite, source_newsletter_id, created_after (ISO), created_before (ISO), label (name, case-insensitive), limit.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "final",
+                "published"
+              ]
+            },
+            "is_favorite": {
+              "type": "boolean"
+            },
+            "source_newsletter_id": {
+              "type": "string"
+            },
+            "created_after": {
+              "type": "string"
+            },
+            "created_before": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "number"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_post",
+        "title": "Get post",
+        "description": "Get full details of a generated post by ID, including labels, per-label publication info, and aggregated LinkedIn performance metrics.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_post",
+        "title": "Generate LinkedIn post",
+        "description": "Generate a LinkedIn post from selected sources. If save=true, also persists it to the database in one call.",
+        "annotations": {
+          "readOnlyHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "input_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "goal": {
+              "type": "string",
+              "enum": [
+                "educate",
+                "inspire",
+                "promote",
+                "engage",
+                "storytelling"
+              ]
+            },
+            "tone": {
+              "type": "string",
+              "enum": [
+                "professional",
+                "casual",
+                "inspirational",
+                "direct",
+                "humorous"
+              ]
+            },
+            "language": {
+              "type": "string",
+              "enum": [
+                "es",
+                "en",
+                "pt"
+              ]
+            },
+            "length": {
+              "type": "string",
+              "enum": [
+                "short",
+                "medium",
+                "long"
+              ]
+            },
+            "cta": {
+              "type": "string",
+              "enum": [
+                "question",
+                "share",
+                "follow",
+                "link",
+                "none"
+              ]
+            },
+            "target_audience": {
+              "type": "string"
+            },
+            "content_focus": {
+              "type": "string"
+            },
+            "voice_id": {
+              "type": "string"
+            },
+            "save": {
+              "type": "boolean"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "final",
+                "published"
+              ]
+            },
+            "title": {
+              "type": "string"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "save_post",
+        "title": "Save post",
+        "description": "Save a previously generated post to the database.",
+        "annotations": {
+          "readOnlyHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "input_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "goal": {
+              "type": "string"
+            },
+            "tone": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string"
+            },
+            "length": {
+              "type": "string"
+            },
+            "cta": {
+              "type": "string"
+            },
+            "target_audience": {
+              "type": "string"
+            },
+            "content_focus": {
+              "type": "string"
+            },
+            "voice_id": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "final",
+                "published"
+              ]
+            },
+            "source_newsletter_id": {
+              "type": "string"
+            },
+            "source_newsletter_item_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "content"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_post",
+        "title": "Update post",
+        "description": "Update an existing post by ID.",
+        "annotations": {
+          "readOnlyHint": false,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "draft",
+                "final",
+                "published"
+              ]
+            },
+            "goal": {
+              "type": "string"
+            },
+            "tone": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string"
+            },
+            "length": {
+              "type": "string"
+            },
+            "cta": {
+              "type": "string"
+            },
+            "target_audience": {
+              "type": "string"
+            },
+            "content_focus": {
+              "type": "string"
+            },
+            "voice_id": {
+              "type": "string"
+            },
+            "is_favorite": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_post",
+        "title": "Delete post",
+        "description": "Delete a generated post by ID.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_voices",
+        "title": "List voices",
+        "description": "List available writing voice profiles.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_newsletters",
+        "title": "List newsletters",
+        "description": "List generated newsletters. Optional limit (default 20).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "number"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_newsletter",
+        "title": "Get newsletter",
+        "description": "Get full newsletter content by ID, including its items.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_newsletter_items",
+        "title": "List newsletter items",
+        "description": "List items (sources found) for a given newsletter.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "newsletter_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "newsletter_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_newsletter",
+        "title": "Generate newsletter",
+        "description": "Generate a fresh newsletter using the user's preferences. Returns newsletter_id and items found.",
+        "annotations": {
+          "readOnlyHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "topic": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string",
+              "enum": [
+                "es",
+                "en",
+                "pt"
+              ]
+            },
+            "freshness_months": {
+              "type": "number"
+            },
+            "preference_profile_id": {
+              "type": "string"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "import_newsletter_item_as_input",
+        "title": "Import newsletter item",
+        "description": "Import a newsletter item into the library as a reusable input.",
+        "annotations": {
+          "readOnlyHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "item_id": {
+              "type": "string"
+            },
+            "extract_content": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "item_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "generate_posts_from_newsletter",
+        "title": "Generate posts from newsletter",
+        "description": "Atomic daily-agent action: import all items from a newsletter, generate 1 draft post per item, and return the created posts. Idempotent per (user, newsletter_item).",
+        "annotations": {
+          "readOnlyHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "newsletter_id": {
+              "type": "string"
+            },
+            "voice_id": {
+              "type": "string"
+            },
+            "goal": {
+              "type": "string"
+            },
+            "tone": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string"
+            },
+            "length": {
+              "type": "string"
+            },
+            "cta": {
+              "type": "string"
+            },
+            "target_audience": {
+              "type": "string"
+            },
+            "content_focus": {
+              "type": "string"
+            },
+            "extract_content": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "newsletter_id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "notify_review",
+        "title": "Notify review",
+        "description": "Send a notification (email) summarizing posts ready for review. Includes deep links.",
+        "annotations": {
+          "readOnlyHint": false,
+          "openWorldHint": true
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "post_ids": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "subject": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            },
+            "to": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "post_ids"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "log_agent_run",
+        "title": "Log agent run",
+        "description": "Record the outcome of an agent execution for auditing and idempotency.",
+        "annotations": {
+          "readOnlyHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "newsletter_id": {
+              "type": "string"
+            },
+            "posts_created": {
+              "type": "number"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "running",
+                "success",
+                "error",
+                "partial"
+              ]
+            },
+            "error": {
+              "type": "string"
+            },
+            "notified": {
+              "type": "boolean"
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
