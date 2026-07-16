@@ -88,15 +88,13 @@ async function runForSchedule(admin: any, sched: any): Promise<{ ok: boolean; re
     }
   }
 
-  const email = await resolveEmail(admin, userId, sched.notification_email);
-
   if (!post || !postId) {
-    if (email) {
-      await sendEmail("auto-publish-no-posts", email, `auto-publish-no-posts-${sched.id}-${iso}`, {
-        target,
-        scheduledAt: iso,
-      });
-    }
+    await appHubNotify({
+      title: `⚠️ Sin posts ${target === "company" ? "de empresa" : "personales"} listos`,
+      status: "warning",
+      body: `El agente intentó publicar en LinkedIn (${iso}) pero no encontró posts con etiqueta ${target} en estado Ready.`,
+      metadata: { alert_type: "auto_publish_no_posts", target, scheduled_at: iso, schedule_id: sched.id },
+    });
     const nowIso = new Date().toISOString();
     await admin.from("auto_publish_schedules").update({
       last_run_at: nowIso,
@@ -136,13 +134,23 @@ async function runForSchedule(admin: any, sched: any): Promise<{ ok: boolean; re
 
   await recordLabelPublication(admin, userId, postId, target, nowIso);
 
-  if (email) {
-    const preview = (post.content || "").trim().slice(0, 180);
-    await sendEmail("auto-publish-success", email, `auto-publish-success-${postId}`, {
-      postTitle: post.title || "Sin título",
-      postPreview: preview,
-      linkedinUrl: result.linkedin_url,
-      target,
+  {
+    const preview = (post.content || "").trim().slice(0, 400);
+    await appHubNotify({
+      title: `✅ Publicado en LinkedIn: ${post.title || "Sin título"}`,
+      status: "ok",
+      body: [
+        `**Cuenta:** ${target === "company" ? "Empresa" : "Personal"}`,
+        result.linkedin_url ? `**URL:** ${result.linkedin_url}` : null,
+        "",
+        preview,
+      ].filter(Boolean).join("\n"),
+      metadata: {
+        alert_type: "auto_publish_success",
+        target,
+        post_id: postId,
+        linkedin_url: result.linkedin_url,
+      },
     });
   }
 
