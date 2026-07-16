@@ -3,6 +3,7 @@
 // Invoked by pg_cron every 15 minutes with x-cron-secret header.
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { appHubNotify } from "../_shared/apphub-notify.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,7 +12,6 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ANON_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcG5zcXZjYWdvd3ZhYXZ6enhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzMzODYsImV4cCI6MjA5MDIwOTM4Nn0.M5cD9O37pUxIXU8oieOtCUmggzTL2zVJ8TvryG7TqN0";
 
 // A run is considered "stuck" after this many minutes still in status=running.
 // The whole orchestration normally completes in 1–3 min; 25m is a safe ceiling.
