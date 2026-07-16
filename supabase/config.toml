@@ -4,6 +4,9 @@ project_id = "ofpnsqvcagowvaavzzxh"
 import_map = "./supabase/functions/mcp-server/deno.json"
 verify_jwt = false
 
+[functions.mcp]
+verify_jwt = false
+
 
 [functions.notify-review]
 verify_jwt = false

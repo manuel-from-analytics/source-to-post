@@ -22,6 +22,7 @@ import McpPage from "@/pages/McpPage";
 import PerformancePage from "@/pages/PerformancePage";
 import AgentPage from "@/pages/AgentPage";
 import UnsubscribePage from "@/pages/UnsubscribePage";
+import OAuthConsentPage from "@/pages/OAuthConsent";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -82,6 +83,7 @@ function AppRoutes() {
       <Route path="/install" element={<ProtectedRoute><AppLayout><InstallPage /></AppLayout></ProtectedRoute>} />
       <Route path="/mcp" element={<ProtectedRoute><AppLayout><McpPage /></AppLayout></ProtectedRoute>} />
       <Route path="/unsubscribe" element={<UnsubscribePage />} />
+      <Route path="/.lovable/oauth/consent" element={<OAuthConsentPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

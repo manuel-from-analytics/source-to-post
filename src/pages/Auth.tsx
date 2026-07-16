@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Sparkles, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,26 @@ import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
 
+// Validate that `next` is a same-origin relative path — never an absolute URL,
+// protocol-relative URL, or backslash-prefixed variant that browsers may
+// resolve as a different origin. This keeps OAuth flows (MCP consent) safe.
+function safeNext(raw: string | null): string {
+  if (!raw) return "/dashboard";
+  try {
+    const decoded = decodeURIComponent(raw);
+    if (!decoded.startsWith("/")) return "/dashboard";
+    if (decoded.startsWith("//") || decoded.startsWith("/\\")) return "/dashboard";
+    return decoded;
+  } catch {
+    return "/dashboard";
+  }
+}
+
+function useNextParam() {
+  const [params] = useSearchParams();
+  return safeNext(params.get("next"));
+}
+
 export function LoginPage() {
   const { t } = useLanguage();
   const [showPassword, setShowPassword] = useState(false);
@@ -20,10 +40,11 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const next = useNextParam();
 
   useEffect(() => {
-    if (!authLoading && user) navigate("/dashboard", { replace: true });
-  }, [user, authLoading, navigate]);
+    if (!authLoading && user) navigate(next, { replace: true });
+  }, [user, authLoading, navigate, next]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,13 +54,13 @@ export function LoginPage() {
     if (error) {
       toast.error(error.message);
     } else {
-      navigate("/dashboard");
+      navigate(next, { replace: true });
     }
   };
 
   const handleGoogleLogin = async () => {
     const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: `${window.location.origin}${next}`,
     });
     if (error) toast.error(t("auth.googleError"));
   };
@@ -104,7 +125,7 @@ export function LoginPage() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 {t("auth.noAccount")}{" "}
-                <Link to="/signup" className="font-medium text-primary hover:underline">{t("auth.signUpLink")}</Link>
+                <Link to={`/signup${next !== "/dashboard" ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-primary hover:underline">{t("auth.signUpLink")}</Link>
               </p>
             </CardFooter>
           </form>
@@ -123,10 +144,11 @@ export function SignupPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
+  const next = useNextParam();
 
   useEffect(() => {
-    if (!authLoading && user) navigate("/dashboard", { replace: true });
-  }, [user, authLoading, navigate]);
+    if (!authLoading && user) navigate(next, { replace: true });
+  }, [user, authLoading, navigate, next]);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,7 +162,7 @@ export function SignupPage() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: `${window.location.origin}${next}`,
       },
     });
     setLoading(false);
@@ -153,7 +175,7 @@ export function SignupPage() {
 
   const handleGoogleSignup = async () => {
     const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: `${window.location.origin}${next}`,
     });
     if (error) toast.error(t("auth.googleSignupError"));
   };
@@ -226,7 +248,7 @@ export function SignupPage() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 {t("auth.haveAccount")}{" "}
-                <Link to="/login" className="font-medium text-primary hover:underline">{t("auth.signInLink")}</Link>
+                <Link to={`/login${next !== "/dashboard" ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-primary hover:underline">{t("auth.signInLink")}</Link>
               </p>
             </CardFooter>
           </form>
