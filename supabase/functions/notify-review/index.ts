@@ -8,6 +8,9 @@ const corsHeaders = {
 };
 
 const APP_BASE_URL = Deno.env.get("APP_BASE_URL") || "https://source-to-post.lovable.app";
+const NOTIFY_URL = Deno.env.get("APPHUB_NOTIFY_URL") || "https://app-hub-alpha.vercel.app/api/notify";
+const NOTIFY_TOKEN = Deno.env.get("APPHUB_NOTIFY_TOKEN");
+const NOTIFY_SOURCE = Deno.env.get("APPHUB_NOTIFY_SOURCE") || "postflow";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -24,14 +27,11 @@ serve(async (req) => {
     const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const internalUserId = req.headers.get("x-internal-user-id");
-    const isInternalCall = token === SERVICE_ROLE && internalUserId;
+    const isInternalCall = token === SERVICE_ROLE && !!internalUserId;
 
     let supabase;
-    let userEmail: string | undefined;
     if (isInternalCall) {
       supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
-      const { data: u } = await supabase.auth.admin.getUserById(internalUserId!);
-      userEmail = u.user?.email ?? undefined;
     } else {
       supabase = createClient(
         SUPABASE_URL,
@@ -44,10 +44,15 @@ serve(async (req) => {
           status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      userEmail = user.email ?? undefined;
     }
 
-    const { post_ids, subject, summary, to } = await req.json();
+    if (!NOTIFY_TOKEN) {
+      return new Response(JSON.stringify({ error: "APPHUB_NOTIFY_TOKEN not configured" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const { post_ids, subject, summary, status } = await req.json();
     if (!Array.isArray(post_ids) || post_ids.length === 0) {
       return new Response(JSON.stringify({ error: "post_ids required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -59,13 +64,6 @@ serve(async (req) => {
       .select("id, title, content")
       .in("id", post_ids);
 
-    const recipient = to || userEmail;
-    if (!recipient) {
-      return new Response(JSON.stringify({ error: "No recipient email" }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const items = (posts || []).map((p: any) => ({
       id: p.id,
       title: p.title || "Sin título",
@@ -73,39 +71,46 @@ serve(async (req) => {
       url: `${APP_BASE_URL}/history?post=${p.id}`,
     }));
 
-    // Send via Lovable Emails. Call send-transactional-email directly with
-    // an explicit Authorization header (service role) so the gateway accepts it.
-    const idempotencyKey = `agent-posts-${post_ids.slice().sort().join("-").slice(0, 80)}`;
+    // Build markdown body: one entry per post with title + link
+    const bodyLines: string[] = [];
+    if (summary) bodyLines.push(summary, "");
+    for (const it of items) {
+      bodyLines.push(`- [${it.title}](${it.url})`);
+    }
+    const bodyMd = bodyLines.join("\n").slice(0, 8000);
 
-    const ANON_JWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9mcG5zcXZjYWdvd3ZhYXZ6enhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MzMzODYsImV4cCI6MjA5MDIwOTM4Nn0.M5cD9O37pUxIXU8oieOtCUmggzTL2zVJ8TvryG7TqN0";
-    const sendResp = await fetch(`${SUPABASE_URL}/functions/v1/send-transactional-email`, {
+    const title = (subject || `${items.length} posts listos para revisar`).slice(0, 200);
+
+    const payload: Record<string, unknown> = {
+      source: NOTIFY_SOURCE,
+      title,
+      status: status || "ok",
+      body: bodyMd,
+      metadata: {
+        post_count: items.length,
+        post_ids: post_ids,
+        app_url: `${APP_BASE_URL}/history`,
+      },
+    };
+
+    const resp = await fetch(NOTIFY_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${ANON_JWT}`,
-        "apikey": ANON_JWT,
+        "Authorization": `Bearer ${NOTIFY_TOKEN}`,
       },
-      body: JSON.stringify({
-        templateName: "agent-posts-ready",
-        recipientEmail: recipient,
-        idempotencyKey,
-        templateData: {
-          summary: summary || undefined,
-          count: items.length,
-          posts: items,
-        },
-      }),
+      body: JSON.stringify(payload),
     });
 
-    const sendResult = await sendResp.json().catch(() => ({}));
-    if (!sendResp.ok) {
-      console.error("send-transactional-email failed:", sendResp.status, sendResult);
-      return new Response(JSON.stringify({ error: "Email send failed", status: sendResp.status, details: sendResult }), {
+    const result = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      console.error("apphub notify failed:", resp.status, result);
+      return new Response(JSON.stringify({ error: "Notification failed", status: resp.status, details: result }), {
         status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ ok: true, recipient, post_count: items.length, result: sendResult }), {
+    return new Response(JSON.stringify({ ok: true, post_count: items.length, result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e: any) {
