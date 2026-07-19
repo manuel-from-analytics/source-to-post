@@ -274,7 +274,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
                   "x-internal-user-id": userId,
                 },
                 body: JSON.stringify({ input_id: inputId }),
-              }, 25000, "extract-url");
+              }, 90000, "extract-url");
               if (!ex.ok) console.error("extract-url failed", ex.status, await ex.text().catch(() => ""));
             } catch (e: any) { console.error("extract-url skipped", e?.message || e); }
           }
