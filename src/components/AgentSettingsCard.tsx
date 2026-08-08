@@ -330,7 +330,7 @@ export default function AgentSettingsCard() {
                     </div>
                     <div className="text-right shrink-0">
                       <p className="font-medium">{r.posts_created} {t("agent.postsCount")}</p>
-                      <p className="text-muted-foreground">{r.status}{r.notified_at ? " · ✉" : ""}</p>
+                      <p className="text-muted-foreground">{r.status}{r.notified_at ? " · 🔔" : ""}</p>
                     </div>
                   </button>
                 );
