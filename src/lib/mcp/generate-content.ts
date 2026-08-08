@@ -2,6 +2,7 @@
 // generate_posts_from_newsletter tools.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { focusAngleInstruction } from "./focus-angles";
+import { NUMERIC_GROUNDING_RULE, enforceNumericGrounding } from "./numeric-guard";
 
 const goalMap: Record<string, string> = { educate: "Educar a la audiencia", inspire: "Inspirar y motivar", promote: "Promocionar un producto o servicio", engage: "Generar engagement y conversación", storytelling: "Contar una historia" };
 const toneMap: Record<string, string> = { professional: "profesional", casual: "casual y cercano", inspirational: "inspiracional", direct: "directo y conciso", humorous: "con humor" };
@@ -32,9 +33,11 @@ export async function generateContent(supabase: SupabaseClient, params: any): Pr
   }
 
   let systemPrompt = `Eres un experto creador de contenido para LinkedIn.\nGeneras posts de alta calidad, optimizados para engagement.\nUsa emojis con moderación, formato con saltos de línea y estructura visual clara.\nNO uses markdown (ni asteriscos ni negritas), escribe en texto plano.\nIMPORTANTE: NO empieces el post con texto entre corchetes.`;
+  systemPrompt += `\n\n${NUMERIC_GROUNDING_RULE}`;
   if (voiceTexts.length > 0) {
     systemPrompt += `\n\nESTILO DE ESCRITURA - Imita este estilo:\n${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}\n--- Fin ---`;
   }
+
 
   let userPrompt = "Genera un post para LinkedIn";
   if (sourceTexts.length > 0) userPrompt += ` basándote en:\n\n${sourceTexts.join("\n\n---\n\n")}`;
@@ -70,5 +73,24 @@ export async function generateContent(supabase: SupabaseClient, params: any): Pr
     throw new Error(`AI error ${aiResponse.status}: ${e}`);
   }
   const aiResult = await aiResponse.json();
-  return (aiResult.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+  const post = (aiResult.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+
+  const guarded = await enforceNumericGrounding(post, sourceTexts, async (prompt) => {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`AI error ${res.status}`);
+    const json = await res.json();
+    return (json.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+  });
+  return guarded.content;
+
 }

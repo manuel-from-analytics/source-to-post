@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { focusAngleInstruction } from "../_shared/focus-angles.ts";
+import { NUMERIC_GROUNDING_RULE } from "../_shared/numeric-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -93,6 +94,8 @@ Generas posts de alta calidad, optimizados para engagement.
 Usa emojis con moderación, formato con saltos de línea y estructura visual clara.
 NO uses markdown (ni asteriscos ni negritas), escribe en texto plano.
 IMPORTANTE: NO empieces el post con texto entre corchetes como [Título] o [Hook]. Empieza directamente con el contenido del post.`;
+
+    systemPrompt += `\n\n${NUMERIC_GROUNDING_RULE}`;
 
     if (voiceTexts.length > 0) {
       systemPrompt += `\n\nIMPORTANTE - ESTILO DE ESCRITURA:

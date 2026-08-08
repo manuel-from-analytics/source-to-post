@@ -4,6 +4,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { focusAngleInstruction } from "../_shared/focus-angles.ts";
+import { NUMERIC_GROUNDING_RULE, enforceNumericGrounding } from "../_shared/numeric-guard.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,9 +69,11 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
   }
 
   let systemPrompt = `Eres un experto creador de contenido para LinkedIn.\nGeneras posts de alta calidad, optimizados para engagement.\nUsa emojis con moderación, formato con saltos de línea y estructura visual clara.\nNO uses markdown (ni asteriscos ni negritas), escribe en texto plano.\nIMPORTANTE: NO empieces el post con texto entre corchetes.`;
+  systemPrompt += `\n\n${NUMERIC_GROUNDING_RULE}`;
   if (voiceTexts.length > 0) {
     systemPrompt += `\n\nESTILO DE ESCRITURA - Imita este estilo:\n${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}\n--- Fin ---`;
   }
+
 
   let userPrompt = "Genera un post para LinkedIn";
   if (sourceTexts.length > 0) userPrompt += ` basándote en:\n\n${sourceTexts.join("\n\n---\n\n")}`;
@@ -156,7 +159,26 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
     const v = decisions[k];
     if (typeof v === "string" && v.trim()) (filtered as any)[k] = v.trim();
   }
-  return { content: post, decisions: filtered };
+
+  // Factual grounding: no figure may appear in the post unless it is in the source.
+  const guarded = await enforceNumericGrounding(post, sourceTexts, async (prompt) => {
+    const res = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: prompt }],
+      }),
+    }, 45000, "numeric grounding rewrite");
+    if (!res.ok) throw new Error(`AI error ${res.status}`);
+    const json = await res.json();
+    return (json.choices?.[0]?.message?.content || "").toString().replace(/^\s*\[.*?\]\s*/g, "");
+  });
+  if (guarded.offenders.length) {
+    console.log("numeric-guard: unsupported figures", guarded.offenders, "rewritten:", guarded.rewritten);
+  }
+
+  return { content: guarded.content, decisions: filtered };
 }
 
 import { appHubNotify } from "../_shared/apphub-notify.ts";
