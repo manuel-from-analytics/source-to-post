@@ -274,6 +274,27 @@ export default function AgentSettingsCard() {
         </div>
 
         <div className="space-y-1">
+          <Label className="text-xs">{t("angle.label")}</Label>
+          <Select
+            value={schedule.focus_angle || "none"}
+            onValueChange={(v) => setSchedule({ ...schedule, focus_angle: v === "none" ? null : v })}
+          >
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">{t("agent.dash")}</SelectItem>
+              <SelectItem value="auto">{t("angle.auto")}</SelectItem>
+              <SelectItem value="business">{t("angle.business")}</SelectItem>
+              <SelectItem value="technical">{t("angle.technical")}</SelectItem>
+              <SelectItem value="strategic">{t("angle.strategic")}</SelectItem>
+              <SelectItem value="practical">{t("angle.practical")}</SelectItem>
+              <SelectItem value="educational">{t("angle.educational")}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{t("angle.hint")}</p>
+        </div>
+
+        <div className="space-y-1">
+
           <div className="flex items-center justify-between gap-2">
             <Label className="text-xs">{t("agent.contentFocus")}</Label>
             <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer">
