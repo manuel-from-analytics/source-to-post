@@ -540,6 +540,7 @@ var save_post_default = defineTool8({
       cta: params.cta ?? null,
       target_audience: params.target_audience ?? null,
       content_focus: params.content_focus ?? null,
+      focus_angle: params.focus_angle ?? null,
       voice_id: params.voice_id ?? null,
       status: params.status ?? "draft",
       source_newsletter_id: params.source_newsletter_id ?? null,
@@ -569,6 +570,7 @@ var update_post_default = defineTool9({
     cta: z9.string().optional(),
     target_audience: z9.string().optional(),
     content_focus: z9.string().optional(),
+    focus_angle: z9.enum(["business", "technical", "strategic", "practical", "educational", "auto"]).optional(),
     voice_id: z9.string().optional(),
     is_favorite: z9.boolean().optional()
   },
@@ -862,6 +864,7 @@ var generate_posts_from_newsletter_default = defineTool18({
           cta: params.cta ?? null,
           target_audience: params.target_audience ?? null,
           content_focus: params.content_focus ?? null,
+          focus_angle: params.focus_angle ?? null,
           voice_id: params.voice_id ?? null,
           status: "draft",
           source_newsletter_id: params.newsletter_id,

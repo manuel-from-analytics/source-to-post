@@ -40,6 +40,7 @@ export default defineTool({
       cta: params.cta ?? null,
       target_audience: params.target_audience ?? null,
       content_focus: params.content_focus ?? null,
+      focus_angle: params.focus_angle ?? null,
       voice_id: params.voice_id ?? null,
       status: params.status ?? "draft",
       source_newsletter_id: params.source_newsletter_id ?? null,
