@@ -89,6 +89,8 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
   else if (params.target_audience) specs.push(`Audiencia objetivo: ${params.target_audience}`);
   if (specs.length) userPrompt += `\n\nEspecificaciones:\n${specs.join("\n")}`;
   if (autoFields.length) userPrompt += `\n\nDecide tú mismo lo más adecuado para este contenido específico en: ${autoFields.join(", ")}.`;
+  const angleBlock = focusAngleInstruction(params.focus_angle, isAuto(params.language) ? null : params.language);
+  if (angleBlock) userPrompt += `\n\n${angleBlock}`;
   if (isAuto(params.content_focus)) userPrompt += `\n\nENFOQUE: elige el ángulo más interesante y accionable según el tipo de contenido fuente.`;
   else if (params.content_focus) userPrompt += `\n\nENFOQUE:\n${params.content_focus}`;
   userPrompt += "\n\nDevuelve solo el post, sin explicaciones ni metadatos.";
