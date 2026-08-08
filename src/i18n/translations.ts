@@ -499,7 +499,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "agent.postsCount": "posts",
     "agent.savedOk": "Configuración guardada",
     "agent.runOk": "Agente ejecutado: {count} posts creados",
-    "agent.runOkEmail": " · email enviado",
+    "agent.runOkEmail": " · notificación enviada",
     "agent.runError": "Error al ejecutar",
 
     // Auto-publish card
