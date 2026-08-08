@@ -159,7 +159,26 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
     const v = decisions[k];
     if (typeof v === "string" && v.trim()) (filtered as any)[k] = v.trim();
   }
-  return { content: post, decisions: filtered };
+
+  // Factual grounding: no figure may appear in the post unless it is in the source.
+  const guarded = await enforceNumericGrounding(post, sourceTexts, async (prompt) => {
+    const res = await fetchWithTimeout("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: prompt }],
+      }),
+    }, 45000, "numeric grounding rewrite");
+    if (!res.ok) throw new Error(`AI error ${res.status}`);
+    const json = await res.json();
+    return (json.choices?.[0]?.message?.content || "").toString().replace(/^\s*\[.*?\]\s*/g, "");
+  });
+  if (guarded.offenders.length) {
+    console.log("numeric-guard: unsupported figures", guarded.offenders, "rewritten:", guarded.rewritten);
+  }
+
+  return { content: guarded.content, decisions: filtered };
 }
 
 import { appHubNotify } from "../_shared/apphub-notify.ts";
