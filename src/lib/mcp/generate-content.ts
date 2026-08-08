@@ -73,5 +73,24 @@ export async function generateContent(supabase: SupabaseClient, params: any): Pr
     throw new Error(`AI error ${aiResponse.status}: ${e}`);
   }
   const aiResult = await aiResponse.json();
-  return (aiResult.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+  const post = (aiResult.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+
+  const guarded = await enforceNumericGrounding(post, sourceTexts, async (prompt) => {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`AI error ${res.status}`);
+    const json = await res.json();
+    return (json.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+  });
+  return guarded.content;
+
 }

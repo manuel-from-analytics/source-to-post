@@ -378,6 +378,64 @@ var NUMERIC_GROUNDING_RULE = `REGLA INNEGOCIABLE - CIFRAS Y M\xC9TRICAS:
 - Si no hay una cifra en la fuente que respalde la idea, expr\xE9sala de forma cualitativa (por ejemplo: "una reducci\xF3n notable del tiempo de respuesta") en lugar de poner un n\xFAmero.
 - Puedes usar n\xFAmeros que no son datos de la fuente solo cuando describen la estructura del propio post (por ejemplo "3 ideas", "2 pasos").
 - Ante la duda, elimina la cifra y describe el impacto cualitativamente.`;
+var NUM_TOKEN = /(?:[$€£]\s?)?\d[\d.,]*\s?(?:%|x|k|m|bn?|mil|millones|millón|miles|billones|mm)?/gi;
+function normalizeNumber(raw) {
+  return raw.replace(/[^\d]/g, "");
+}
+function isMetricLike(raw) {
+  const lower = raw.toLowerCase().trim();
+  if (/[%$€£]/.test(lower)) return true;
+  if (/\d\s?(x|k|m|bn?|mil|millones|millón|miles|billones|mm)\b/.test(lower)) return true;
+  if (/\d[.,]\d/.test(lower)) return true;
+  const digits = normalizeNumber(lower);
+  if (digits.length >= 3) return true;
+  return false;
+}
+function unsupportedNumbers(post, sources) {
+  const sourceDigits = /* @__PURE__ */ new Set();
+  const sourceBlob = sources.join(" \n ");
+  for (const m of sourceBlob.match(NUM_TOKEN) || []) {
+    const d = normalizeNumber(m);
+    if (d) sourceDigits.add(d);
+  }
+  const found = /* @__PURE__ */ new Set();
+  for (const m of post.match(NUM_TOKEN) || []) {
+    const token = m.trim();
+    if (!isMetricLike(token)) continue;
+    const d = normalizeNumber(token);
+    if (!d) continue;
+    if (sourceDigits.has(d)) continue;
+    found.add(token);
+  }
+  return [...found];
+}
+function numericRewritePrompt(post, offenders, sources) {
+  return `El siguiente post de LinkedIn contiene cifras que NO aparecen en las fuentes y por tanto son inventadas: ${offenders.map((o) => `"${o}"`).join(", ")}.
+
+FUENTES:
+${sources.join("\n\n---\n\n")}
+
+POST:
+${post}
+
+Reescribe el post eliminando esas cifras concretas y sustituy\xE9ndolas por una descripci\xF3n cualitativa del impacto (sin n\xFAmeros). Mant\xE9n exactamente el mismo tono, estructura, idioma y longitud aproximada. Conserva intactas las cifras que s\xED est\xE1n en las fuentes. Devuelve solo el post reescrito, sin explicaciones.`;
+}
+async function enforceNumericGrounding(post, sources, rewrite) {
+  if (!post.trim() || sources.length === 0) return { content: post, rewritten: false, offenders: [] };
+  const offenders = unsupportedNumbers(post, sources);
+  if (offenders.length === 0) return { content: post, rewritten: false, offenders: [] };
+  try {
+    const revised = (await rewrite(numericRewritePrompt(post, offenders, sources)))?.trim();
+    if (!revised) return { content: post, rewritten: false, offenders };
+    const stillBad = unsupportedNumbers(revised, sources);
+    if (stillBad.length < offenders.length) {
+      return { content: revised, rewritten: true, offenders };
+    }
+    return { content: post, rewritten: false, offenders };
+  } catch (_e) {
+    return { content: post, rewritten: false, offenders };
+  }
+}
 
 // src/lib/mcp/generate-content.ts
 var goalMap = { educate: "Educar a la audiencia", inspire: "Inspirar y motivar", promote: "Promocionar un producto o servicio", engage: "Generar engagement y conversaci\xF3n", storytelling: "Contar una historia" };
@@ -459,7 +517,24 @@ ${params.content_focus}`;
     throw new Error(`AI error ${aiResponse.status}: ${e}`);
   }
   const aiResult = await aiResponse.json();
-  return (aiResult.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+  const post = (aiResult.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+  const guarded = await enforceNumericGrounding(post, sourceTexts, async (prompt) => {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt }
+        ]
+      })
+    });
+    if (!res.ok) throw new Error(`AI error ${res.status}`);
+    const json = await res.json();
+    return (json.choices?.[0]?.message?.content || "").replace(/^\s*\[.*?\]\s*/g, "");
+  });
+  return guarded.content;
 }
 
 // src/lib/mcp/tools/generate-post.ts
