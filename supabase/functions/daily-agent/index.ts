@@ -3,6 +3,7 @@
 // or manually by users via "Run now" (with their JWT).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { focusAngleInstruction } from "../_shared/focus-angles.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
