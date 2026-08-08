@@ -1225,7 +1225,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "agent.title": "Agent",
     "agent.subtitle": "Configure your daily agent and review its runs. Click a run to open the generated newsletter.",
     "agent.dailyAgent": "Daily agent",
-    "agent.dailyAgentDesc": "Every day at the chosen hour: searches content (newsletter), generates 1 draft post per source, and emails you. No external agents.",
+    "agent.dailyAgentDesc": "Every day at the chosen hour (your timezone): finds sources (newsletter), skips YouTube/LinkedIn/Facebook/Reddit, extracts content and generates 1 draft post per valid source. Sources without extracted content are skipped. When done it sends a notification to your App Hub.",
     "agent.enabled": "Enabled",
     "agent.lastRun": "Last run",
     "agent.noRuns": "No runs yet",
