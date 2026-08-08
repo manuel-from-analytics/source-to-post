@@ -14,6 +14,7 @@ interface GenerateParams {
   cta?: string;
   target_audience?: string;
   content_focus?: string;
+  focus_angle?: string;
   iteration_prompt?: string;
   previous_content?: string;
   voice_id?: string;
@@ -125,6 +126,7 @@ export function useGeneratePost() {
     cta?: string;
     length?: string;
     content_focus?: string;
+    focus_angle?: string;
     voice_id?: string;
   }) => {
     if (!user) return;
@@ -141,6 +143,7 @@ export function useGeneratePost() {
       cta: params.cta || null,
       length: params.length || null,
       content_focus: params.content_focus || null,
+      focus_angle: params.focus_angle || null,
       voice_id: params.voice_id || null,
       status: "draft",
     } as any);
