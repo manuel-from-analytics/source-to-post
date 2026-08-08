@@ -371,6 +371,14 @@ function focusAngleInstruction(angle, language) {
   return BY_LANG[lang][angle] ?? null;
 }
 
+// src/lib/mcp/numeric-guard.ts
+var NUMERIC_GROUNDING_RULE = `REGLA INNEGOCIABLE - CIFRAS Y M\xC9TRICAS:
+- Cualquier n\xFAmero, porcentaje, importe, multiplicador, fecha o m\xE9trica que aparezca en el post DEBE estar literalmente presente en las fuentes proporcionadas.
+- Est\xE1 PROHIBIDO estimar, redondear al alza, extrapolar o inventar cifras, aunque suenen plausibles.
+- Si no hay una cifra en la fuente que respalde la idea, expr\xE9sala de forma cualitativa (por ejemplo: "una reducci\xF3n notable del tiempo de respuesta") en lugar de poner un n\xFAmero.
+- Puedes usar n\xFAmeros que no son datos de la fuente solo cuando describen la estructura del propio post (por ejemplo "3 ideas", "2 pasos").
+- Ante la duda, elimina la cifra y describe el impacto cualitativamente.`;
+
 // src/lib/mcp/generate-content.ts
 var goalMap = { educate: "Educar a la audiencia", inspire: "Inspirar y motivar", promote: "Promocionar un producto o servicio", engage: "Generar engagement y conversaci\xF3n", storytelling: "Contar una historia" };
 var toneMap = { professional: "profesional", casual: "casual y cercano", inspirational: "inspiracional", direct: "directo y conciso", humorous: "con humor" };
@@ -398,6 +406,9 @@ Generas posts de alta calidad, optimizados para engagement.
 Usa emojis con moderaci\xF3n, formato con saltos de l\xEDnea y estructura visual clara.
 NO uses markdown (ni asteriscos ni negritas), escribe en texto plano.
 IMPORTANTE: NO empieces el post con texto entre corchetes.`;
+  systemPrompt += `
+
+${NUMERIC_GROUNDING_RULE}`;
   if (voiceTexts.length > 0) {
     systemPrompt += `
 

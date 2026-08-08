@@ -33,9 +33,11 @@ export async function generateContent(supabase: SupabaseClient, params: any): Pr
   }
 
   let systemPrompt = `Eres un experto creador de contenido para LinkedIn.\nGeneras posts de alta calidad, optimizados para engagement.\nUsa emojis con moderación, formato con saltos de línea y estructura visual clara.\nNO uses markdown (ni asteriscos ni negritas), escribe en texto plano.\nIMPORTANTE: NO empieces el post con texto entre corchetes.`;
+  systemPrompt += `\n\n${NUMERIC_GROUNDING_RULE}`;
   if (voiceTexts.length > 0) {
     systemPrompt += `\n\nESTILO DE ESCRITURA - Imita este estilo:\n${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}\n--- Fin ---`;
   }
+
 
   let userPrompt = "Genera un post para LinkedIn";
   if (sourceTexts.length > 0) userPrompt += ` basándote en:\n\n${sourceTexts.join("\n\n---\n\n")}`;
