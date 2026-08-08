@@ -1990,7 +1990,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "agent.title": "Agente",
     "agent.subtitle": "Configure seu agente diário e revise suas execuções. Clique em uma execução para abrir a newsletter gerada.",
     "agent.dailyAgent": "Agente diário",
-    "agent.dailyAgentDesc": "Todos os dias na hora escolhida: busca conteúdo (newsletter), gera 1 post rascunho por fonte e te avisa por email. Sem agentes externos.",
+    "agent.dailyAgentDesc": "Todos os dias na hora escolhida (seu fuso horário): busca fontes (newsletter), descarta YouTube/LinkedIn/Facebook/Reddit, extrai o conteúdo e gera 1 post rascunho por fonte válida. Fontes sem conteúdo extraído são ignoradas. No final envia uma notificação ao seu App Hub.",
     "agent.enabled": "Ativado",
     "agent.lastRun": "Última execução",
     "agent.noRuns": "Sem execuções ainda",
