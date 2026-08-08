@@ -78,6 +78,7 @@ export function useUpdatePost() {
       cta?: string;
       length?: string;
       content_focus?: string;
+      focus_angle?: string;
       voice_id?: string;
       input_ids?: string[];
     }) => {

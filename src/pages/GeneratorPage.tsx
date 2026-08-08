@@ -43,6 +43,7 @@ interface EditingPost {
   cta?: string | null;
   length?: string | null;
   content_focus?: string | null;
+  focus_angle?: string | null;
   voice_id?: string | null;
 }
 
@@ -67,6 +68,7 @@ export default function GeneratorPage() {
   const [cta, setCta] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
   const [contentFocus, setContentFocus] = useState("");
+  const [focusAngle, setFocusAngle] = useState("none");
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>("none");
   const [addedNoteIds, setAddedNoteIds] = useState<Set<string>>(new Set());
   const [notesPanelOpen, setNotesPanelOpen] = useState(true);
@@ -154,6 +156,7 @@ export default function GeneratorPage() {
         if (initialPost.cta) setCta(initialPost.cta);
         if (initialPost.length) setLength(initialPost.length);
         if (initialPost.content_focus) setContentFocus(initialPost.content_focus);
+        if (initialPost.focus_angle) setFocusAngle(initialPost.focus_angle);
         if (initialPost.voice_id) setSelectedVoiceId(initialPost.voice_id);
         setProfileLoaded(true);
         return;
@@ -235,6 +238,7 @@ export default function GeneratorPage() {
       cta: cta || undefined,
       target_audience: targetAudience || undefined,
       content_focus: contentFocus || undefined,
+      focus_angle: focusAngle !== "none" ? focusAngle : undefined,
       voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
     });
   };
@@ -250,6 +254,7 @@ export default function GeneratorPage() {
       cta: cta || undefined,
       target_audience: targetAudience || undefined,
       content_focus: contentFocus || undefined,
+      focus_angle: focusAngle !== "none" ? focusAngle : undefined,
       iteration_prompt: iterationPrompt.trim(),
       previous_content: content,
       voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
@@ -277,6 +282,7 @@ export default function GeneratorPage() {
           cta: cta || undefined,
           length: length || undefined,
           content_focus: contentFocus || undefined,
+          focus_angle: focusAngle !== "none" ? focusAngle : undefined,
           voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
           input_ids: selectedSources,
         },
@@ -293,6 +299,7 @@ export default function GeneratorPage() {
         cta: cta || undefined,
         length: length || undefined,
         content_focus: contentFocus || undefined,
+        focus_angle: focusAngle !== "none" ? focusAngle : undefined,
         voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
       });
     }
@@ -562,12 +569,30 @@ export default function GeneratorPage() {
                   </Collapsible>
                 )}
 
+                <div className="space-y-1">
+                  <Label className="text-xs">{t("angle.label")}</Label>
+                  <Select value={focusAngle} onValueChange={setFocusAngle}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">{t("angle.none")}</SelectItem>
+                      <SelectItem value="auto">{t("angle.auto")}</SelectItem>
+                      <SelectItem value="business">{t("angle.business")}</SelectItem>
+                      <SelectItem value="technical">{t("angle.technical")}</SelectItem>
+                      <SelectItem value="strategic">{t("angle.strategic")}</SelectItem>
+                      <SelectItem value="practical">{t("angle.practical")}</SelectItem>
+                      <SelectItem value="educational">{t("angle.educational")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">{t("angle.hint")}</p>
+                </div>
+
                 <Textarea
                   placeholder={t("generator.focusPlaceholder")}
                   value={contentFocus}
                   onChange={(e) => setContentFocus(e.target.value)}
                   className="min-h-[60px]"
                 />
+
               </div>
 
               {(voices?.length ?? 0) > 0 && (

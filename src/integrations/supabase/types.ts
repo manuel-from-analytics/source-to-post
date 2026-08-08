@@ -102,6 +102,7 @@ export type Database = {
           cta: string | null
           enabled: boolean
           extract_content: boolean
+          focus_angle: string | null
           goal: string | null
           id: string
           language: string | null
@@ -124,6 +125,7 @@ export type Database = {
           cta?: string | null
           enabled?: boolean
           extract_content?: boolean
+          focus_angle?: string | null
           goal?: string | null
           id?: string
           language?: string | null
@@ -146,6 +148,7 @@ export type Database = {
           cta?: string | null
           enabled?: boolean
           extract_content?: boolean
+          focus_angle?: string | null
           goal?: string | null
           id?: string
           language?: string | null
@@ -373,6 +376,7 @@ export type Database = {
           content_focus: string | null
           created_at: string
           cta: string | null
+          focus_angle: string | null
           goal: string | null
           id: string
           input_id: string | null
@@ -398,6 +402,7 @@ export type Database = {
           content_focus?: string | null
           created_at?: string
           cta?: string | null
+          focus_angle?: string | null
           goal?: string | null
           id?: string
           input_id?: string | null
@@ -423,6 +428,7 @@ export type Database = {
           content_focus?: string | null
           created_at?: string
           cta?: string | null
+          focus_angle?: string | null
           goal?: string | null
           id?: string
           input_id?: string | null

@@ -3,6 +3,7 @@
 // or manually by users via "Run now" (with their JWT).
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { focusAngleInstruction } from "../_shared/focus-angles.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,6 +45,7 @@ interface GenerationResult {
     cta?: string | null;
     target_audience?: string | null;
     content_focus?: string | null;
+    focus_angle?: string | null;
   };
 }
 
@@ -89,6 +91,8 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
   else if (params.target_audience) specs.push(`Audiencia objetivo: ${params.target_audience}`);
   if (specs.length) userPrompt += `\n\nEspecificaciones:\n${specs.join("\n")}`;
   if (autoFields.length) userPrompt += `\n\nDecide tú mismo lo más adecuado para este contenido específico en: ${autoFields.join(", ")}.`;
+  const angleBlock = focusAngleInstruction(params.focus_angle, isAuto(params.language) ? null : params.language);
+  if (angleBlock) userPrompt += `\n\n${angleBlock}`;
   if (isAuto(params.content_focus)) userPrompt += `\n\nENFOQUE: elige el ángulo más interesante y accionable según el tipo de contenido fuente.`;
   else if (params.content_focus) userPrompt += `\n\nENFOQUE:\n${params.content_focus}`;
   userPrompt += "\n\nDevuelve solo el post, sin explicaciones ni metadatos.";
@@ -103,6 +107,7 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
   if (isAuto(params.cta)) autoKeys.push("cta");
   if (isAuto(params.target_audience)) autoKeys.push("target_audience");
   if (isAuto(params.content_focus)) autoKeys.push("content_focus");
+  if (params.focus_angle === "auto") autoKeys.push("focus_angle");
 
   userPrompt += `\n\nDevuelve EXCLUSIVAMENTE un JSON válido con esta forma exacta (sin texto adicional, sin markdown, sin code fences):\n{"decisions": { ${autoKeys.map(k => `"${k}": "..."`).join(", ") || ""} }, "post": "TEXTO DEL POST"}\n`;
   if (autoKeys.length) {
@@ -114,6 +119,7 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
     if (autoKeys.includes("cta")) userPrompt += `- cta: question | share | follow | link | none\n`;
     if (autoKeys.includes("target_audience")) userPrompt += `- target_audience: descripción breve (string)\n`;
     if (autoKeys.includes("content_focus")) userPrompt += `- content_focus: ángulo elegido en 1 frase (string)\n`;
+    if (autoKeys.includes("focus_angle")) userPrompt += `- focus_angle: business | technical | strategic | practical | educational\n`;
   }
   userPrompt += `\nEl campo "decisions" SOLO debe contener las claves listadas. El campo "post" es el texto plano del post de LinkedIn.`;
 
@@ -304,6 +310,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
           language: schedule.language || profile?.preferred_language || undefined,
           target_audience: schedule.target_audience || undefined,
           content_focus: schedule.content_focus || undefined,
+          focus_angle: schedule.focus_angle || undefined,
         });
         const norm = (v: any) => (v === "auto" || v === "__auto__" ? null : v);
         const pick = (scheduleVal: any, agentVal: any, fallback: any = null) =>
@@ -318,6 +325,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
           language: pick(schedule.language, decisions.language, profile?.preferred_language || null),
           target_audience: pick(schedule.target_audience, decisions.target_audience),
           content_focus: pick(schedule.content_focus, decisions.content_focus),
+          focus_angle: pick(schedule.focus_angle, decisions.focus_angle),
           voice_id: schedule.voice_id || profile?.default_voice_id || null,
           status: "draft",
           source_newsletter_id: newsletterId,

@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { focusAngleInstruction } from "../_shared/focus-angles.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,7 +35,7 @@ serve(async (req) => {
 
     const {
       input_ids, goal, tone, language, length, cta,
-      target_audience, content_focus, iteration_prompt,
+      target_audience, content_focus, focus_angle, iteration_prompt,
       previous_content, voice_id,
     } = await req.json();
 
@@ -125,6 +126,11 @@ ${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}
 
       if (specs.length > 0) {
         userPrompt += `\n\nEspecificaciones:\n${specs.join("\n")}`;
+      }
+
+      const angleBlock = focusAngleInstruction(focus_angle, language);
+      if (angleBlock) {
+        userPrompt += `\n\n${angleBlock}`;
       }
 
       if (content_focus) {
