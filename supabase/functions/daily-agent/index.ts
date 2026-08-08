@@ -45,6 +45,7 @@ interface GenerationResult {
     cta?: string | null;
     target_audience?: string | null;
     content_focus?: string | null;
+    focus_angle?: string | null;
   };
 }
 
