@@ -17,6 +17,7 @@ export default defineTool({
     cta: z.string().optional(),
     target_audience: z.string().optional(),
     content_focus: z.string().optional(),
+    focus_angle: z.enum(["business", "technical", "strategic", "practical", "educational", "auto"]).optional(),
     extract_content: z.boolean().optional(),
   },
   annotations: { readOnlyHint: false, openWorldHint: true },

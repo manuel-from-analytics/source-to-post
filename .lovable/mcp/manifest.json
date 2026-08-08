@@ -365,6 +365,17 @@
             "content_focus": {
               "type": "string"
             },
+            "focus_angle": {
+              "type": "string",
+              "enum": [
+                "business",
+                "technical",
+                "strategic",
+                "practical",
+                "educational",
+                "auto"
+              ]
+            },
             "voice_id": {
               "type": "string"
             },
@@ -655,6 +666,17 @@
             },
             "content_focus": {
               "type": "string"
+            },
+            "focus_angle": {
+              "type": "string",
+              "enum": [
+                "business",
+                "technical",
+                "strategic",
+                "practical",
+                "educational",
+                "auto"
+              ]
             },
             "extract_content": {
               "type": "boolean"
