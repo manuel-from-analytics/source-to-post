@@ -249,6 +249,128 @@ var get_post_default = defineTool6({
 import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.22.2";
 import { z as z7 } from "npm:zod@^4.4.3";
 
+// src/lib/mcp/focus-angles.ts
+var ES = {
+  business: `\xC1NGULO: Impacto de negocio (perfiles comerciales y directivos)
+- El lector decide sobre su empresa: comprar, invertir, priorizar. No busca contexto de mercado.
+- Prioriza casos reales con n\xFAmeros. Usa SOLO cifras presentes en la fuente; si no hay cifras, formula el impacto de forma cualitativa y no inventes datos.
+- Traduce tendencias t\xE9cnicas a decisiones de negocio (presupuesto, riesgo, plazos).
+- Habla de errores caros: por qu\xE9 fallan los proyectos de anal\xEDtica/IA y cu\xE1nto cuesta.
+- Aporta frameworks de decisi\xF3n: c\xF3mo saber si necesitas un dashboard, un agente, o nada.
+- Opina con criterio de consultor: qu\xE9 compran las empresas y qu\xE9 acaba en un caj\xF3n.
+- Evita la jerga t\xE9cnica; si aparece un t\xE9rmino, expl\xEDcalo en una l\xEDnea con su implicaci\xF3n econ\xF3mica.`,
+  technical: `\xC1NGULO: Profundidad t\xE9cnica (perfiles t\xE9cnicos)
+- Explica c\xF3mo funciona por dentro: arquitectura, flujo de datos, componentes clave.
+- Da n\xFAmeros t\xE9cnicos presentes en la fuente: latencias, costes de c\xF3mputo, contexto, precisi\xF3n, l\xEDmites. No inventes cifras.
+- Exp\xF3n trade-offs reales frente a la alternativa obvia.
+- Incluye detalles de implementaci\xF3n que ahorran horas: configuraci\xF3n, patr\xF3n concreto, gotcha t\xEDpico.
+- Opini\xF3n t\xE9cnica fundamentada: cu\xE1ndo esta soluci\xF3n no merece la pena.
+- Usa el t\xE9rmino correcto sin diluirlo; asume que el lector conoce el dominio.`,
+  strategic: `\xC1NGULO: Visi\xF3n de mercado y tendencia (direcci\xF3n, decisores)
+- El lector quiere entender el mercado, no tomar una decisi\xF3n inmediata.
+- Se\xF1ala qu\xE9 cambia en el sector y por qu\xE9 ahora: la se\xF1al concreta detr\xE1s de la noticia.
+- Analiza movimientos de los actores relevantes y qu\xE9 implican para el resto.
+- Plantea escenarios a 12-24 meses con su consecuencia pr\xE1ctica, e indica expl\xEDcitamente qu\xE9 se\xF1al invalidar\xEDa la predicci\xF3n.
+- Di qu\xE9 apuestas envejecen mal y cu\xE1les ganan tracci\xF3n.
+- Aporta una lectura propia del mercado, no un resumen neutro de la fuente.`,
+  practical: `\xC1NGULO: Accionable (cualquier perfil que quiera aplicarlo)
+- Di qu\xE9 puede hacer el lector hoy con esto: pasos concretos y ordenados.
+- Indica requisitos previos reales (herramientas, datos, tiempo estimado).
+- Incluye un ejemplo aplicado condensado, de 3 a 5 pasos m\xE1ximo, no gen\xE9rico.
+- Menciona los errores frecuentes al intentarlo y c\xF3mo evitarlos.
+- Cierra con un criterio de "hecho": c\xF3mo saber si ha funcionado.`,
+  educational: `\xC1NGULO: Divulgativo (audiencia no experta)
+- Explica el concepto desde cero con una analog\xEDa cotidiana.
+- Deja claro por qu\xE9 importa a alguien que no trabaja en esto.
+- Desmonta un malentendido habitual sobre el tema.
+- Usa un ejemplo m\xEDnimo y reconocible.
+- Cero jerga sin explicar.`,
+  auto: `\xC1NGULO: elige t\xFA el m\xE1s adecuado seg\xFAn la fuente entre business (decisi\xF3n de empresa), strategic (lectura de mercado), practical (accionable), educational (divulgativo) y technical (profundidad t\xE9cnica).
+En caso de duda entre dos \xE1ngulos, prioriza en este orden: business > strategic > practical > educational > technical.`
+};
+var EN = {
+  business: `ANGLE: Business impact (commercial and executive profiles)
+- The reader is deciding for their company: buy, invest, prioritise. They are not after market context.
+- Prioritise real cases with numbers. Use ONLY figures present in the source; if there are none, express impact qualitatively and never invent data.
+- Translate technical trends into business decisions (budget, risk, timelines).
+- Cover expensive mistakes: why analytics/AI projects fail and what that costs.
+- Offer decision frameworks: how to tell whether you need a dashboard, an agent, or nothing.
+- Give a consultant's opinion: what companies actually buy and what ends up shelved.
+- Avoid technical jargon; if a term appears, explain it in one line with its economic implication.`,
+  technical: `ANGLE: Technical depth (technical profiles)
+- Explain how it works under the hood: architecture, data flow, key components.
+- Give technical numbers present in the source: latency, compute cost, context size, accuracy, limits. Never invent figures.
+- Lay out real trade-offs against the obvious alternative.
+- Include implementation details that save hours: configuration, a concrete pattern, a typical gotcha.
+- Give a grounded technical opinion: when this solution is not worth it.
+- Use the correct term without watering it down; assume domain knowledge.`,
+  strategic: `ANGLE: Market view and trend (leadership, decision-makers)
+- The reader wants to understand the market, not make an immediate decision.
+- Point out what is changing in the sector and why now: the concrete signal behind the news.
+- Analyse the moves of relevant players and what they imply for everyone else.
+- Lay out 12-24 month scenarios with practical consequences, and explicitly state which signal would invalidate the prediction.
+- Say which bets age badly and which gain traction.
+- Provide your own reading of the market, not a neutral summary of the source.`,
+  practical: `ANGLE: Actionable (anyone who wants to apply it)
+- Say what the reader can do today: concrete, ordered steps.
+- State real prerequisites (tools, data, estimated time).
+- Include one condensed applied example, 3 to 5 steps maximum, not generic.
+- Mention common mistakes and how to avoid them.
+- Close with a "done" criterion: how to know it worked.`,
+  educational: `ANGLE: Explanatory (non-expert audience)
+- Explain the concept from scratch with an everyday analogy.
+- Make clear why it matters to someone outside the field.
+- Debunk a common misconception about the topic.
+- Use a minimal, recognisable example.
+- Zero unexplained jargon.`,
+  auto: `ANGLE: choose the most suitable one for the source among business (company decision), strategic (market reading), practical (actionable), educational (explanatory) and technical (technical depth).
+When torn between two angles, prefer this order: business > strategic > practical > educational > technical.`
+};
+var PT = {
+  business: `\xC2NGULO: Impacto de neg\xF3cio (perfis comerciais e diretivos)
+- O leitor decide sobre a sua empresa: comprar, investir, priorizar. N\xE3o procura contexto de mercado.
+- Prioriza casos reais com n\xFAmeros. Usa APENAS valores presentes na fonte; se n\xE3o houver, formula o impacto de forma qualitativa e n\xE3o inventes dados.
+- Traduz tend\xEAncias t\xE9cnicas em decis\xF5es de neg\xF3cio (or\xE7amento, risco, prazos).
+- Fala de erros caros: porque falham os projetos de anal\xEDtica/IA e quanto custam.
+- Oferece frameworks de decis\xE3o: como saber se precisas de um dashboard, de um agente, ou de nada.
+- Opini\xE3o de consultor: o que as empresas compram e o que acaba na gaveta.
+- Evita jarg\xE3o t\xE9cnico; se aparecer um termo, explica-o numa linha com a sua implica\xE7\xE3o econ\xF3mica.`,
+  technical: `\xC2NGULO: Profundidade t\xE9cnica (perfis t\xE9cnicos)
+- Explica como funciona por dentro: arquitetura, fluxo de dados, componentes-chave.
+- D\xE1 n\xFAmeros t\xE9cnicos presentes na fonte: lat\xEAncias, custos de computa\xE7\xE3o, contexto, precis\xE3o, limites. N\xE3o inventes valores.
+- Apresenta trade-offs reais face \xE0 alternativa \xF3bvia.
+- Inclui detalhes de implementa\xE7\xE3o que poupam horas: configura\xE7\xE3o, padr\xE3o concreto, gotcha t\xEDpico.
+- Opini\xE3o t\xE9cnica fundamentada: quando esta solu\xE7\xE3o n\xE3o compensa.
+- Usa o termo correto sem o diluir; assume que o leitor conhece o dom\xEDnio.`,
+  strategic: `\xC2NGULO: Vis\xE3o de mercado e tend\xEAncia (dire\xE7\xE3o, decisores)
+- O leitor quer entender o mercado, n\xE3o tomar uma decis\xE3o imediata.
+- Aponta o que muda no setor e porqu\xEA agora: o sinal concreto por tr\xE1s da not\xEDcia.
+- Analisa os movimentos dos atores relevantes e o que implicam para os restantes.
+- Prop\xF5e cen\xE1rios a 12-24 meses com consequ\xEAncia pr\xE1tica e indica explicitamente que sinal invalidaria a previs\xE3o.
+- Diz que apostas envelhecem mal e quais ganham tra\xE7\xE3o.
+- Traz uma leitura pr\xF3pria do mercado, n\xE3o um resumo neutro da fonte.`,
+  practical: `\xC2NGULO: Acion\xE1vel (qualquer perfil que queira aplic\xE1-lo)
+- Diz o que o leitor pode fazer hoje: passos concretos e ordenados.
+- Indica requisitos pr\xE9vios reais (ferramentas, dados, tempo estimado).
+- Inclui um exemplo aplicado condensado, de 3 a 5 passos no m\xE1ximo, n\xE3o gen\xE9rico.
+- Menciona os erros frequentes e como evit\xE1-los.
+- Fecha com um crit\xE9rio de "feito": como saber se funcionou.`,
+  educational: `\xC2NGULO: Divulgativo (audi\xEAncia n\xE3o especialista)
+- Explica o conceito de raiz com uma analogia do dia a dia.
+- Deixa claro porque importa a quem n\xE3o trabalha nisto.
+- Desmonta um mal-entendido habitual sobre o tema.
+- Usa um exemplo m\xEDnimo e reconhec\xEDvel.
+- Zero jarg\xE3o por explicar.`,
+  auto: `\xC2NGULO: escolhe o mais adequado \xE0 fonte entre business (decis\xE3o de empresa), strategic (leitura de mercado), practical (acion\xE1vel), educational (divulgativo) e technical (profundidade t\xE9cnica).
+Em caso de d\xFAvida entre dois \xE2ngulos, prioriza esta ordem: business > strategic > practical > educational > technical.`
+};
+var BY_LANG = { es: ES, en: EN, pt: PT };
+function focusAngleInstruction(angle, language) {
+  if (!angle) return null;
+  const lang = language === "en" ? "en" : language === "pt" ? "pt" : "es";
+  return BY_LANG[lang][angle] ?? null;
+}
+
 // src/lib/mcp/generate-content.ts
 var goalMap = { educate: "Educar a la audiencia", inspire: "Inspirar y motivar", promote: "Promocionar un producto o servicio", engage: "Generar engagement y conversaci\xF3n", storytelling: "Contar una historia" };
 var toneMap = { professional: "profesional", casual: "casual y cercano", inspirational: "inspiracional", direct: "directo y conciso", humorous: "con humor" };
