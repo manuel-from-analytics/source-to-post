@@ -28,6 +28,7 @@ type Schedule = {
   goal: string | null;
   target_audience: string | null;
   content_focus: string | null;
+  focus_angle: string | null;
   preference_profile_id: string | null;
   notification_email: string | null;
   extract_content: boolean;
@@ -37,7 +38,7 @@ type Schedule = {
 const DEFAULT: Schedule = {
   enabled: false, run_hour: 7, topic: "", voice_id: null, tone: null,
   length: null, cta: null, language: null, goal: null,
-  target_audience: null, content_focus: null, preference_profile_id: null,
+  target_audience: null, content_focus: null, focus_angle: null, preference_profile_id: null,
   notification_email: null, extract_content: false, last_run_at: null,
 };
 
@@ -86,6 +87,7 @@ export default function AgentSettingsCard() {
       goal: schedule.goal,
       target_audience: schedule.target_audience,
       content_focus: schedule.content_focus,
+      focus_angle: schedule.focus_angle,
       preference_profile_id: schedule.preference_profile_id,
       notification_email: schedule.notification_email,
       extract_content: schedule.extract_content,
