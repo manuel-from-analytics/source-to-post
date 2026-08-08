@@ -299,6 +299,10 @@ ${sourceTexts.join("\n\n---\n\n")}`;
 
 Especificaciones:
 ${specs.join("\n")}`;
+  const angleBlock = focusAngleInstruction(params.focus_angle, params.language);
+  if (angleBlock) userPrompt += `
+
+${angleBlock}`;
   if (params.content_focus) userPrompt += `
 
 ENFOQUE:

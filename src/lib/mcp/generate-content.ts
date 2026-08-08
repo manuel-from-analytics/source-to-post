@@ -45,6 +45,8 @@ export async function generateContent(supabase: SupabaseClient, params: any): Pr
   if (params.cta && ctaMap[params.cta]) specs.push(`CTA: ${ctaMap[params.cta]}`);
   if (params.target_audience) specs.push(`Audiencia objetivo: ${params.target_audience}`);
   if (specs.length) userPrompt += `\n\nEspecificaciones:\n${specs.join("\n")}`;
+  const angleBlock = focusAngleInstruction(params.focus_angle, params.language);
+  if (angleBlock) userPrompt += `\n\n${angleBlock}`;
   if (params.content_focus) userPrompt += `\n\nENFOQUE:\n${params.content_focus}`;
   userPrompt += "\n\nDevuelve solo el post, sin explicaciones ni metadatos.";
 
