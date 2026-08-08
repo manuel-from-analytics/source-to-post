@@ -459,7 +459,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "agent.title": "Agente",
     "agent.subtitle": "Configura tu agente diario y revisa sus ejecuciones. Haz click en una ejecución para abrir la newsletter generada.",
     "agent.dailyAgent": "Agente diario",
-    "agent.dailyAgentDesc": "Cada día a la hora elegida: busca contenido (newsletter), genera 1 post draft por fuente y te avisa por email. Sin agentes externos.",
+    "agent.dailyAgentDesc": "Cada día a la hora elegida (tu zona horaria): busca fuentes (newsletter), descarta YouTube/LinkedIn/Facebook/Reddit, extrae el contenido y genera 1 post borrador por fuente válida. Las fuentes sin contenido extraído se omiten. Al terminar te envía una notificación a tu App Hub.",
     "agent.enabled": "Activado",
     "agent.lastRun": "Última ejecución",
     "agent.noRuns": "Sin ejecuciones aún",
@@ -499,7 +499,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "agent.postsCount": "posts",
     "agent.savedOk": "Configuración guardada",
     "agent.runOk": "Agente ejecutado: {count} posts creados",
-    "agent.runOkEmail": " · email enviado",
+    "agent.runOkEmail": " · notificación enviada",
     "agent.runError": "Error al ejecutar",
 
     // Auto-publish card
@@ -1225,7 +1225,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "agent.title": "Agent",
     "agent.subtitle": "Configure your daily agent and review its runs. Click a run to open the generated newsletter.",
     "agent.dailyAgent": "Daily agent",
-    "agent.dailyAgentDesc": "Every day at the chosen hour: searches content (newsletter), generates 1 draft post per source, and emails you. No external agents.",
+    "agent.dailyAgentDesc": "Every day at the chosen hour (your timezone): finds sources (newsletter), skips YouTube/LinkedIn/Facebook/Reddit, extracts content and generates 1 draft post per valid source. Sources without extracted content are skipped. When done it sends a notification to your App Hub.",
     "agent.enabled": "Enabled",
     "agent.lastRun": "Last run",
     "agent.noRuns": "No runs yet",
@@ -1265,7 +1265,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "agent.postsCount": "posts",
     "agent.savedOk": "Settings saved",
     "agent.runOk": "Agent executed: {count} posts created",
-    "agent.runOkEmail": " · email sent",
+    "agent.runOkEmail": " · notification sent",
     "agent.runError": "Error running agent",
 
     // Auto-publish card
@@ -1990,7 +1990,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "agent.title": "Agente",
     "agent.subtitle": "Configure seu agente diário e revise suas execuções. Clique em uma execução para abrir a newsletter gerada.",
     "agent.dailyAgent": "Agente diário",
-    "agent.dailyAgentDesc": "Todos os dias na hora escolhida: busca conteúdo (newsletter), gera 1 post rascunho por fonte e te avisa por email. Sem agentes externos.",
+    "agent.dailyAgentDesc": "Todos os dias na hora escolhida (seu fuso horário): busca fontes (newsletter), descarta YouTube/LinkedIn/Facebook/Reddit, extrai o conteúdo e gera 1 post rascunho por fonte válida. Fontes sem conteúdo extraído são ignoradas. No final envia uma notificação ao seu App Hub.",
     "agent.enabled": "Ativado",
     "agent.lastRun": "Última execução",
     "agent.noRuns": "Sem execuções ainda",
@@ -2030,7 +2030,7 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "agent.postsCount": "posts",
     "agent.savedOk": "Configuração salva",
     "agent.runOk": "Agente executado: {count} posts criados",
-    "agent.runOkEmail": " · email enviado",
+    "agent.runOkEmail": " · notificação enviada",
     "agent.runError": "Erro ao executar",
 
     // Auto-publish card
