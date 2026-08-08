@@ -287,6 +287,18 @@
             "content_focus": {
               "type": "string"
             },
+            "focus_angle": {
+              "description": "Angle of the post: business impact, technical depth, market strategy, actionable, or explanatory.",
+              "type": "string",
+              "enum": [
+                "business",
+                "technical",
+                "strategic",
+                "practical",
+                "educational",
+                "auto"
+              ]
+            },
             "voice_id": {
               "type": "string"
             },

@@ -16,6 +16,7 @@ export default defineTool({
     cta: z.enum(["question", "share", "follow", "link", "none"]).optional(),
     target_audience: z.string().optional(),
     content_focus: z.string().optional(),
+    focus_angle: z.enum(["business", "technical", "strategic", "practical", "educational", "auto"]).optional().describe("Angle of the post: business impact, technical depth, market strategy, actionable, or explanatory."),
     voice_id: z.string().optional(),
     save: z.boolean().optional(),
     status: z.enum(["draft", "final", "published"]).optional(),

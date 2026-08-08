@@ -465,6 +465,7 @@ var generate_post_default = defineTool7({
     cta: z7.enum(["question", "share", "follow", "link", "none"]).optional(),
     target_audience: z7.string().optional(),
     content_focus: z7.string().optional(),
+    focus_angle: z7.enum(["business", "technical", "strategic", "practical", "educational", "auto"]).optional().describe("Angle of the post: business impact, technical depth, market strategy, actionable, or explanatory."),
     voice_id: z7.string().optional(),
     save: z7.boolean().optional(),
     status: z7.enum(["draft", "final", "published"]).optional(),
