@@ -127,6 +127,11 @@ ${voiceTexts.map((t, i) => `--- Ejemplo ${i + 1} ---\n${t}`).join("\n\n")}
         userPrompt += `\n\nEspecificaciones:\n${specs.join("\n")}`;
       }
 
+      const angleBlock = focusAngleInstruction(focus_angle, language);
+      if (angleBlock) {
+        userPrompt += `\n\n${angleBlock}`;
+      }
+
       if (content_focus) {
         userPrompt += `\n\nINDICACIONES DE ENFOQUE DEL CONTENIDO:\n${content_focus}`;
       }
