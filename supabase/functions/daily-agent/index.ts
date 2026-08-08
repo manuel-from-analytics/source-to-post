@@ -325,6 +325,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
           language: pick(schedule.language, decisions.language, profile?.preferred_language || null),
           target_audience: pick(schedule.target_audience, decisions.target_audience),
           content_focus: pick(schedule.content_focus, decisions.content_focus),
+          focus_angle: pick(schedule.focus_angle, decisions.focus_angle),
           voice_id: schedule.voice_id || profile?.default_voice_id || null,
           status: "draft",
           source_newsletter_id: newsletterId,
