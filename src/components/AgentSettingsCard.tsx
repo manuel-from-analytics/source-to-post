@@ -149,11 +149,8 @@ export default function AgentSettingsCard() {
             </Select>
             <p className="text-xs text-muted-foreground">{t("agent.tzHintSettings")}</p>
           </div>
-          <div className="space-y-1">
-            <Label className="text-xs">{t("agent.notificationEmail")}</Label>
-            <Input value={schedule.notification_email || ""} onChange={(e) => setSchedule({ ...schedule, notification_email: e.target.value })} placeholder="tu@email.com" />
-          </div>
         </div>
+
 
         <div className="space-y-1">
           <Label className="text-xs">{t("agent.dailyTopic")}</Label>
