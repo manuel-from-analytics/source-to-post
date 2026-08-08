@@ -107,6 +107,7 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
   if (isAuto(params.cta)) autoKeys.push("cta");
   if (isAuto(params.target_audience)) autoKeys.push("target_audience");
   if (isAuto(params.content_focus)) autoKeys.push("content_focus");
+  if (params.focus_angle === "auto") autoKeys.push("focus_angle");
 
   userPrompt += `\n\nDevuelve EXCLUSIVAMENTE un JSON válido con esta forma exacta (sin texto adicional, sin markdown, sin code fences):\n{"decisions": { ${autoKeys.map(k => `"${k}": "..."`).join(", ") || ""} }, "post": "TEXTO DEL POST"}\n`;
   if (autoKeys.length) {
