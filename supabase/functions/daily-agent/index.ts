@@ -310,6 +310,7 @@ async function runForUser(userId: string, opts: { triggered_by: "cron" | "manual
           language: schedule.language || profile?.preferred_language || undefined,
           target_audience: schedule.target_audience || undefined,
           content_focus: schedule.content_focus || undefined,
+          focus_angle: schedule.focus_angle || undefined,
         });
         const norm = (v: any) => (v === "auto" || v === "__auto__" ? null : v);
         const pick = (scheduleVal: any, agentVal: any, fallback: any = null) =>
