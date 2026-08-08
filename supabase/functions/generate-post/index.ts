@@ -34,7 +34,7 @@ serve(async (req) => {
 
     const {
       input_ids, goal, tone, language, length, cta,
-      target_audience, content_focus, iteration_prompt,
+      target_audience, content_focus, focus_angle, iteration_prompt,
       previous_content, voice_id,
     } = await req.json();
 
