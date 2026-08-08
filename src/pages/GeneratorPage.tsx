@@ -43,6 +43,7 @@ interface EditingPost {
   cta?: string | null;
   length?: string | null;
   content_focus?: string | null;
+  focus_angle?: string | null;
   voice_id?: string | null;
 }
 
@@ -155,6 +156,7 @@ export default function GeneratorPage() {
         if (initialPost.cta) setCta(initialPost.cta);
         if (initialPost.length) setLength(initialPost.length);
         if (initialPost.content_focus) setContentFocus(initialPost.content_focus);
+        if (initialPost.focus_angle) setFocusAngle(initialPost.focus_angle);
         if (initialPost.voice_id) setSelectedVoiceId(initialPost.voice_id);
         setProfileLoaded(true);
         return;
