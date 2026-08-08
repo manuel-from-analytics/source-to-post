@@ -238,6 +238,7 @@ export default function GeneratorPage() {
       cta: cta || undefined,
       target_audience: targetAudience || undefined,
       content_focus: contentFocus || undefined,
+      focus_angle: focusAngle !== "none" ? focusAngle : undefined,
       voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
     });
   };
@@ -253,6 +254,7 @@ export default function GeneratorPage() {
       cta: cta || undefined,
       target_audience: targetAudience || undefined,
       content_focus: contentFocus || undefined,
+      focus_angle: focusAngle !== "none" ? focusAngle : undefined,
       iteration_prompt: iterationPrompt.trim(),
       previous_content: content,
       voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
@@ -280,6 +282,7 @@ export default function GeneratorPage() {
           cta: cta || undefined,
           length: length || undefined,
           content_focus: contentFocus || undefined,
+          focus_angle: focusAngle !== "none" ? focusAngle : undefined,
           voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
           input_ids: selectedSources,
         },
@@ -296,6 +299,7 @@ export default function GeneratorPage() {
         cta: cta || undefined,
         length: length || undefined,
         content_focus: contentFocus || undefined,
+        focus_angle: focusAngle !== "none" ? focusAngle : undefined,
         voice_id: selectedVoiceId !== "none" ? selectedVoiceId : undefined,
       });
     }
