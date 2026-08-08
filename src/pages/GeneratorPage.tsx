@@ -67,6 +67,7 @@ export default function GeneratorPage() {
   const [cta, setCta] = useState("");
   const [targetAudience, setTargetAudience] = useState("");
   const [contentFocus, setContentFocus] = useState("");
+  const [focusAngle, setFocusAngle] = useState("none");
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>("none");
   const [addedNoteIds, setAddedNoteIds] = useState<Set<string>>(new Set());
   const [notesPanelOpen, setNotesPanelOpen] = useState(true);
