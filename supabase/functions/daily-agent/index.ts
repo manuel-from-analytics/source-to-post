@@ -119,6 +119,7 @@ async function generateContent(supabase: SupabaseClient, params: any): Promise<G
     if (autoKeys.includes("cta")) userPrompt += `- cta: question | share | follow | link | none\n`;
     if (autoKeys.includes("target_audience")) userPrompt += `- target_audience: descripción breve (string)\n`;
     if (autoKeys.includes("content_focus")) userPrompt += `- content_focus: ángulo elegido en 1 frase (string)\n`;
+    if (autoKeys.includes("focus_angle")) userPrompt += `- focus_angle: business | technical | strategic | practical | educational\n`;
   }
   userPrompt += `\nEl campo "decisions" SOLO debe contener las claves listadas. El campo "post" es el texto plano del post de LinkedIn.`;
 
