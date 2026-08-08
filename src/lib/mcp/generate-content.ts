@@ -2,6 +2,7 @@
 // generate_posts_from_newsletter tools.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { focusAngleInstruction } from "./focus-angles";
+import { NUMERIC_GROUNDING_RULE, enforceNumericGrounding } from "./numeric-guard";
 
 const goalMap: Record<string, string> = { educate: "Educar a la audiencia", inspire: "Inspirar y motivar", promote: "Promocionar un producto o servicio", engage: "Generar engagement y conversación", storytelling: "Contar una historia" };
 const toneMap: Record<string, string> = { professional: "profesional", casual: "casual y cercano", inspirational: "inspiracional", direct: "directo y conciso", humorous: "con humor" };
