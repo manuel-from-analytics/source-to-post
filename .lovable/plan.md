@@ -18,7 +18,8 @@ Ambos se envían al modelo: primero el bloque del ángulo, después el texto lib
 Cada ángulo no es una etiqueta: lleva detrás un bloque de instrucciones con los tipos de contenido que el modelo debe priorizar y el punto de vista desde el que escribir.
 
 **`business` — Impacto de negocio (perfiles comerciales y directivos)**
-- Casos reales con números: "X empresa redujo un 30% el tiempo de reporting con…"
+- Discriminante: el lector **decide sobre su empresa** (comprar, invertir, priorizar), no busca contexto de mercado
+- Casos reales con números: "X empresa redujo un 30% el tiempo de reporting con…". Usa **solo cifras presentes en la fuente**; si no hay, formula el impacto de forma cualitativa sin inventar datos
 - Traducir tendencias técnicas a decisiones de negocio: "Qué significa [tendencia] para tu presupuesto de datos en 2027"
 - Errores caros: por qué fallan los proyectos de analítica/IA y cuánto cuesta
 - Frameworks de decisión: cómo saber si necesitas un dashboard, un agente, o nada
@@ -34,16 +35,17 @@ Cada ángulo no es una etiqueta: lleva detrás un bloque de instrucciones con lo
 - Usar el término correcto sin diluirlo; asumir que el lector conoce el dominio
 
 **`strategic` — Visión de mercado y tendencia (dirección, decisores)**
+- Discriminante: el lector **quiere entender el mercado**, no tomar una decisión inmediata
 - Qué cambia en el sector y por qué ahora: señal concreta detrás de la noticia
 - Movimientos de los actores relevantes y qué implican para el resto
-- Escenarios a 12-24 meses con su consecuencia práctica
+- Escenarios a 12-24 meses con su consecuencia práctica, señalando **explícitamente qué señal invalidaría la predicción**
 - Qué apuestas envejecen mal y cuáles ganan tracción
 - Lectura propia del mercado, no resumen neutro de la fuente
 
 **`practical` — Accionable (cualquier perfil que quiera aplicarlo)**
 - Qué puede hacer el lector hoy con esto: pasos concretos y ordenados
 - Requisitos previos reales (herramientas, datos, tiempo estimado)
-- Un ejemplo aplicado de principio a fin, no genérico
+- Un ejemplo aplicado condensado (3-5 pasos máximo), no genérico
 - Errores frecuentes al intentarlo y cómo evitarlos
 - Criterio de "hecho": cómo saber si ha funcionado
 
@@ -52,11 +54,14 @@ Cada ángulo no es una etiqueta: lleva detrás un bloque de instrucciones con lo
 - Por qué importa a alguien que no trabaja en esto
 - Desmontar un malentendido habitual sobre el tema
 - Un ejemplo mínimo y reconocible
-- Cero jerga sin explicar; frases cortas
+- Cero jerga sin explicar
 
-**`auto`** — el modelo elige el ángulo más adecuado según la fuente (comportamiento actual) y devuelve cuál eligió.
+**`auto`** — el modelo elige el ángulo más adecuado según la fuente y devuelve cuál eligió. En caso de duda entre dos ángulos, orden de preferencia: **business > strategic > practical > educational > technical**.
 
 **(vacío)** — sin instrucción de ángulo.
+
+Las instrucciones de formato comunes (frases cortas, saltos de línea, sin markdown, emojis con moderación) se mantienen en el bloque de estilo base del system prompt, compartido por todos los ángulos.
+
 
 Los bloques se redactan en español/inglés/portugués según el idioma de generación del post.
 
