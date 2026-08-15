@@ -59,11 +59,20 @@ export function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}${next}`,
+    try {
+      sessionStorage.setItem("postflow:next", next);
+    } catch { /* ignore */ }
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
     });
-    if (error) toast.error(t("auth.googleError"));
+    if (result.error) {
+      toast.error(t("auth.googleError"));
+      return;
+    }
+    if (result.redirected) return;
+    navigate(next, { replace: true });
   };
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
@@ -174,11 +183,20 @@ export function SignupPage() {
   };
 
   const handleGoogleSignup = async () => {
-    const { error } = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: `${window.location.origin}${next}`,
+    try {
+      sessionStorage.setItem("postflow:next", next);
+    } catch { /* ignore */ }
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
     });
-    if (error) toast.error(t("auth.googleSignupError"));
+    if (result.error) {
+      toast.error(t("auth.googleSignupError"));
+      return;
+    }
+    if (result.redirected) return;
+    navigate(next, { replace: true });
   };
+
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4 py-12">
