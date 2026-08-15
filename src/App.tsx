@@ -1,10 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AuthProvider } from "@/hooks/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/i18n/LanguageContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AppLayout } from "@/components/layout/AppLayout";
@@ -35,71 +34,26 @@ function safeNext(raw: string | null): string {
 }
 
 function RootRedirect() {
-  const navigate = useNavigate();
-  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-  const queryParams = new URLSearchParams(window.location.search);
-  const hasOAuthResponse = [
-    "access_token",
-    "refresh_token",
-    "code",
-    "error",
-    "error_description",
-  ].some((key) => hashParams.has(key) || queryParams.has(key));
+  const { user, loading } = useAuth();
 
-  useEffect(() => {
-    if (!hasOAuthResponse) return;
-    let cancelled = false;
-
-    const finishOAuth = async () => {
-      const { supabase } = await import("@/integrations/supabase/client");
-      const accessToken = hashParams.get("access_token") ?? queryParams.get("access_token");
-      const refreshToken = hashParams.get("refresh_token") ?? queryParams.get("refresh_token");
-      const code = queryParams.get("code");
-
-      if (accessToken && refreshToken) {
-        await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        });
-      } else if (code) {
-        await supabase.auth.exchangeCodeForSession(code);
-      }
-
-      const deadline = Date.now() + 15_000;
-      let authenticated = false;
-      while (!cancelled && Date.now() < deadline) {
-        const { data, error } = await supabase.auth.getUser();
-        if (!error && data.user) {
-          authenticated = true;
-          break;
-        }
-        await new Promise((resolve) => setTimeout(resolve, 250));
-      }
-      if (cancelled) return;
-
-      let next = "/dashboard";
-      try {
-        next = safeNext(sessionStorage.getItem("postflow:next"));
-        sessionStorage.removeItem("postflow:next");
-      } catch { /* ignore */ }
-      window.history.replaceState(null, "", window.location.pathname);
-      navigate(authenticated ? next : "/login", { replace: true });
-    };
-
-    void finishOAuth();
-    return () => {
-      cancelled = true;
-    };
-  }, [hasOAuthResponse, navigate]);
-
-  if (hasOAuthResponse) {
+  // The auth SDK owns URL detection and the one-time OAuth code exchange.
+  // Waiting for AuthProvider here avoids racing it with a second exchange.
+  if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
     );
   }
-  return <Navigate to="/dashboard" replace />;
+
+  if (!user) return <Navigate to="/login" replace />;
+
+  let next = "/dashboard";
+  try {
+    next = safeNext(sessionStorage.getItem("postflow:next"));
+    sessionStorage.removeItem("postflow:next");
+  } catch { /* ignore */ }
+  return <Navigate to={next} replace />;
 }
 
 
