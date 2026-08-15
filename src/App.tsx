@@ -27,27 +27,39 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
+function safeNext(raw: string | null): string {
+  if (!raw) return "/dashboard";
+  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return "/dashboard";
+  return raw;
+}
+
 function RootRedirect() {
   const navigate = useNavigate();
   const hasOAuthHash =
-    typeof window !== "undefined" && window.location.hash.includes("access_token");
+    typeof window !== "undefined" &&
+    (window.location.hash.includes("access_token") || window.location.search.includes("code="));
 
   useEffect(() => {
     if (!hasOAuthHash) return;
-    // Poll briefly for Supabase to process the hash and set the session,
-    // then clean the URL and navigate to the dashboard.
+    // Poll briefly for the session to be set after the OAuth redirect,
+    // then clean the URL and navigate to the intended destination.
     let cancelled = false;
     const start = Date.now();
     const interval = setInterval(async () => {
       const { supabase } = await import("@/integrations/supabase/client");
       const { data } = await supabase.auth.getSession();
       if (cancelled) return;
-      if (data.session || Date.now() - start > 5000) {
+      if (data.session || Date.now() - start > 8000) {
         clearInterval(interval);
+        let next = "/dashboard";
+        try {
+          next = safeNext(sessionStorage.getItem("postflow:next"));
+          sessionStorage.removeItem("postflow:next");
+        } catch { /* ignore */ }
         window.history.replaceState(null, "", window.location.pathname);
-        navigate("/dashboard", { replace: true });
+        navigate(data.session ? next : "/login", { replace: true });
       }
-    }, 100);
+    }, 150);
     return () => {
       cancelled = true;
       clearInterval(interval);
@@ -63,6 +75,7 @@ function RootRedirect() {
   }
   return <Navigate to="/dashboard" replace />;
 }
+
 
 function AppRoutes() {
   return (
