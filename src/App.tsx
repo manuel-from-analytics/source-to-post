@@ -68,6 +68,7 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/" element={<RootRedirect />} />
+      <Route path="/index" element={<Navigate to="/dashboard" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
       <Route path="/dashboard" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
