@@ -22,11 +22,8 @@ export default function AuthCallback() {
 
   useEffect(() => {
     let active = true;
-    let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
-    const finish = async () => {
-      // getUser validates the persisted OAuth session with the auth server. Do
-      // not enter a protected route based only on a locally cached session.
+    const finish = async (): Promise<boolean> => {
       const { data, error } = await supabase.auth.getUser();
       if (!active || error || !data.user) return false;
 
@@ -41,28 +38,45 @@ export default function AuthCallback() {
       return true;
     };
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "TOKEN_REFRESHED") {
-        void finish();
+    const establishCallbackSession = async (): Promise<boolean> => {
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const query = new URLSearchParams(window.location.search);
+      const accessToken = hash.get("access_token") ?? query.get("access_token");
+      const refreshToken = hash.get("refresh_token") ?? query.get("refresh_token");
+
+      // A full-page Lovable OAuth flow returns the tokens to this public route.
+      // Persist them explicitly instead of relying on the auth client's async
+      // URL auto-detection, which can race with route protection on mobile.
+      if (accessToken && refreshToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (error) return false;
+      } else {
+        const code = query.get("code");
+        if (code) {
+          const { error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) return false;
+        }
       }
-    });
+
+      return finish();
+    };
 
     const waitForValidatedSession = async () => {
       const deadline = Date.now() + 15_000;
       while (active && Date.now() < deadline) {
-        if (await finish()) return;
+        if (await establishCallbackSession()) return;
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
       if (active) setFailed(true);
     };
 
-    // Let the auth client consume the provider callback before the first check.
-    timeoutId = setTimeout(() => void waitForValidatedSession(), 0);
+    void waitForValidatedSession();
 
     return () => {
       active = false;
-      if (timeoutId) clearTimeout(timeoutId);
-      subscription.unsubscribe();
     };
   }, [navigate]);
 
