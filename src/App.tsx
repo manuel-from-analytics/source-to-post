@@ -36,38 +36,63 @@ function safeNext(raw: string | null): string {
 
 function RootRedirect() {
   const navigate = useNavigate();
-  const hasOAuthHash =
-    typeof window !== "undefined" &&
-    (window.location.hash.includes("access_token") || window.location.search.includes("code="));
+  const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+  const queryParams = new URLSearchParams(window.location.search);
+  const hasOAuthResponse = [
+    "access_token",
+    "refresh_token",
+    "code",
+    "error",
+    "error_description",
+  ].some((key) => hashParams.has(key) || queryParams.has(key));
 
   useEffect(() => {
-    if (!hasOAuthHash) return;
-    // Poll briefly for the session to be set after the OAuth redirect,
-    // then clean the URL and navigate to the intended destination.
+    if (!hasOAuthResponse) return;
     let cancelled = false;
-    const start = Date.now();
-    const interval = setInterval(async () => {
+
+    const finishOAuth = async () => {
       const { supabase } = await import("@/integrations/supabase/client");
-      const { data } = await supabase.auth.getSession();
-      if (cancelled) return;
-      if (data.session || Date.now() - start > 8000) {
-        clearInterval(interval);
-        let next = "/dashboard";
-        try {
-          next = safeNext(sessionStorage.getItem("postflow:next"));
-          sessionStorage.removeItem("postflow:next");
-        } catch { /* ignore */ }
-        window.history.replaceState(null, "", window.location.pathname);
-        navigate(data.session ? next : "/login", { replace: true });
+      const accessToken = hashParams.get("access_token") ?? queryParams.get("access_token");
+      const refreshToken = hashParams.get("refresh_token") ?? queryParams.get("refresh_token");
+      const code = queryParams.get("code");
+
+      if (accessToken && refreshToken) {
+        await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+      } else if (code) {
+        await supabase.auth.exchangeCodeForSession(code);
       }
-    }, 150);
+
+      const deadline = Date.now() + 15_000;
+      let authenticated = false;
+      while (!cancelled && Date.now() < deadline) {
+        const { data, error } = await supabase.auth.getUser();
+        if (!error && data.user) {
+          authenticated = true;
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      if (cancelled) return;
+
+      let next = "/dashboard";
+      try {
+        next = safeNext(sessionStorage.getItem("postflow:next"));
+        sessionStorage.removeItem("postflow:next");
+      } catch { /* ignore */ }
+      window.history.replaceState(null, "", window.location.pathname);
+      navigate(authenticated ? next : "/login", { replace: true });
+    };
+
+    void finishOAuth();
     return () => {
       cancelled = true;
-      clearInterval(interval);
     };
-  }, [hasOAuthHash, navigate]);
+  }, [hasOAuthResponse, navigate]);
 
-  if (hasOAuthHash) {
+  if (hasOAuthResponse) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
