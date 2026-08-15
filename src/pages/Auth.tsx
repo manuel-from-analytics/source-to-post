@@ -59,6 +59,7 @@ export function LoginPage() {
   };
 
   const handleGoogleLogin = async () => {
+    setLoading(true);
     try {
       sessionStorage.setItem("postflow:next", next);
     } catch { /* ignore */ }
@@ -66,10 +67,28 @@ export function LoginPage() {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
+      setLoading(false);
       toast.error(t("auth.googleError"));
       return;
     }
     if (result.redirected) return;
+
+    // The managed OAuth helper normally persists these tokens itself. Persist
+    // and validate them again here because setSession returns errors instead of
+    // throwing; otherwise an invalid/unpersisted session silently navigates to
+    // the protected route and immediately bounces back to login.
+    const { error: sessionError } = await supabase.auth.setSession(result.tokens);
+    if (sessionError) {
+      setLoading(false);
+      toast.error(t("auth.googleError"));
+      return;
+    }
+    const { data, error: userError } = await supabase.auth.getUser();
+    if (userError || !data.user) {
+      setLoading(false);
+      toast.error(t("auth.googleError"));
+      return;
+    }
     navigate(next, { replace: true });
   };
 
@@ -92,7 +111,7 @@ export function LoginPage() {
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
-              <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogleLogin}>
+              <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogleLogin} disabled={loading}>
                 <svg className="h-4 w-4" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
@@ -183,6 +202,7 @@ export function SignupPage() {
   };
 
   const handleGoogleSignup = async () => {
+    setLoading(true);
     try {
       sessionStorage.setItem("postflow:next", next);
     } catch { /* ignore */ }
@@ -190,10 +210,24 @@ export function SignupPage() {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
+      setLoading(false);
       toast.error(t("auth.googleSignupError"));
       return;
     }
     if (result.redirected) return;
+
+    const { error: sessionError } = await supabase.auth.setSession(result.tokens);
+    if (sessionError) {
+      setLoading(false);
+      toast.error(t("auth.googleSignupError"));
+      return;
+    }
+    const { data, error: userError } = await supabase.auth.getUser();
+    if (userError || !data.user) {
+      setLoading(false);
+      toast.error(t("auth.googleSignupError"));
+      return;
+    }
     navigate(next, { replace: true });
   };
 
@@ -216,7 +250,7 @@ export function SignupPage() {
           </CardHeader>
           <form onSubmit={handleSignup}>
             <CardContent className="space-y-4">
-              <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogleSignup}>
+              <Button type="button" variant="outline" className="w-full gap-2" onClick={handleGoogleSignup} disabled={loading}>
                 <svg className="h-4 w-4" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
                   <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>

@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 
 interface AuthContextType {
   session: Session | null;
@@ -24,27 +23,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
 
+    const validateSession = async (candidate: Session | null) => {
+      if (!candidate) {
+        if (active) {
+          setSession(null);
+          setLoading(false);
+        }
+        return;
+      }
+
+      const { data, error } = await supabase.auth.getUser(candidate.access_token);
+      if (!active) return;
+      setSession(!error && data.user ? candidate : null);
+      setLoading(false);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!active) return;
-        setSession(session);
-        if (!session) setLoading(false);
+        void validateSession(session);
       }
     );
 
     const initialize = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!active) return;
-      if (!session) {
-        setSession(null);
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase.auth.getUser();
-      if (!active) return;
-      setSession(!error && data.user ? session : null);
-      setLoading(false);
+      await validateSession(session);
     };
 
     void initialize();
