@@ -23,32 +23,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let active = true;
 
-    const validateSession = async (candidate: Session | null) => {
-      if (!candidate) {
-        if (active) {
-          setSession(null);
-          setLoading(false);
-        }
-        return;
-      }
-
-      const { data, error } = await supabase.auth.getUser(candidate.access_token);
-      if (!active) return;
-      setSession(!error && data.user ? candidate : null);
-      setLoading(false);
-    };
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!active) return;
-        void validateSession(session);
+        // Keep this callback synchronous. Calling another auth method here can
+        // wait on the same internal lock as setSession and stall OAuth forever.
+        setSession(session);
+        setLoading(false);
       }
     );
 
     const initialize = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session: storedSession } } = await supabase.auth.getSession();
       if (!active) return;
-      await validateSession(session);
+
+      if (!storedSession) {
+        setSession(null);
+        setLoading(false);
+        return;
+      }
+
+      // Server validation is safe here because this runs outside the auth
+      // state callback and therefore cannot deadlock session persistence.
+      const { data, error } = await supabase.auth.getUser();
+      if (!active) return;
+      setSession(!error && data.user ? storedSession : null);
+      setLoading(false);
     };
 
     void initialize();
