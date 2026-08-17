@@ -52,6 +52,23 @@ export function LoginPage() {
     }
   };
 
+  const handleResetPassword = async () => {
+    if (!email) {
+      toast.error(t("auth.enterEmailFirst"));
+      return;
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(t("auth.resetSent"));
+  };
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     setAuthError(null);
