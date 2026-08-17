@@ -102,7 +102,7 @@ describe("AuthProvider", () => {
     getUser.mockResolvedValue({ data: { user: fakeSession.user }, error: null });
 
     render(<AuthProvider><Probe /></AuthProvider>);
-    expect(screen.getByTestId("status")).toHaveTextContent("initializing");
+    expect(screen.getByTestId("status")).toHaveTextContent("authenticating");
     await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"), { timeout: 1500 });
     expect(getSession).toHaveBeenCalledTimes(2);
   });
