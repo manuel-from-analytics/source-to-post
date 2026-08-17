@@ -728,6 +728,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "auth.creating": "Creando cuenta...",
     "auth.haveAccount": "¿Ya tienes cuenta?",
     "auth.signInLink": "Inicia sesión",
+    "auth.diagnosticTitle": "No se pudo completar el acceso",
+    "auth.diagnosticDescription": "Inténtalo de nuevo. Si vuelve a ocurrir, comparte este código de diagnóstico.",
+    "auth.diagnosticCode": "Código",
 
     // Unsubscribe
     "unsubscribe.title": "Cancelar suscripción",
@@ -1503,6 +1506,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "auth.creating": "Creating account...",
     "auth.haveAccount": "Already have an account?",
     "auth.signInLink": "Sign in",
+    "auth.diagnosticTitle": "Sign-in could not be completed",
+    "auth.diagnosticDescription": "Try again. If it happens again, share this diagnostic code.",
+    "auth.diagnosticCode": "Code",
 
     // Unsubscribe
     "unsubscribe.title": "Unsubscribe",
@@ -2277,6 +2283,9 @@ export const translations: Record<AppLanguage, Record<string, string>> = {
     "auth.creating": "Criando conta...",
     "auth.haveAccount": "Já tem conta?",
     "auth.signInLink": "Entrar",
+    "auth.diagnosticTitle": "Não foi possível concluir o acesso",
+    "auth.diagnosticDescription": "Tente novamente. Se acontecer de novo, compartilhe este código de diagnóstico.",
+    "auth.diagnosticCode": "Código",
 
     // Unsubscribe
     "unsubscribe.title": "Cancelar inscrição",

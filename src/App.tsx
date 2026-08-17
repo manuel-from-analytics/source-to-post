@@ -22,19 +22,14 @@ import PerformancePage from "@/pages/PerformancePage";
 import AgentPage from "@/pages/AgentPage";
 import UnsubscribePage from "@/pages/UnsubscribePage";
 import OAuthConsentPage from "@/pages/OAuthConsent";
-import AuthCallback from "@/pages/AuthCallback";
 import NotFound from "@/pages/NotFound";
+import { clearStoredAuthDestination, readStoredAuthDestination } from "@/lib/auth-navigation";
+import { completeAuthTrace, getExistingAuthAttemptId, recordAuthCheckpoint } from "@/lib/auth-diagnostics";
 
 const queryClient = new QueryClient();
 
-function safeNext(raw: string | null): string {
-  if (!raw) return "/dashboard";
-  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) return "/dashboard";
-  return raw;
-}
-
 function RootRedirect() {
-  const { user, loading } = useAuth();
+  const { user, loading, status, error } = useAuth();
 
   // The auth SDK owns URL detection and the one-time OAuth code exchange.
   // Waiting for AuthProvider here avoids racing it with a second exchange.
@@ -46,13 +41,17 @@ function RootRedirect() {
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) {
+    const attempt = getExistingAuthAttemptId();
+    if (!attempt) return <Navigate to="/login" replace />;
+    recordAuthCheckpoint("route_anonymous", error ?? status);
+    return <Navigate to={`/login?auth_error=${encodeURIComponent(error ?? "session_missing")}&attempt=${encodeURIComponent(attempt)}`} replace />;
+  }
 
-  let next = "/dashboard";
-  try {
-    next = safeNext(sessionStorage.getItem("postflow:next"));
-    sessionStorage.removeItem("postflow:next");
-  } catch { /* ignore */ }
+  recordAuthCheckpoint("route_authenticated");
+  const next = readStoredAuthDestination();
+  clearStoredAuthDestination();
+  completeAuthTrace();
   return <Navigate to={next} replace />;
 }
 
@@ -64,7 +63,7 @@ function AppRoutes() {
       <Route path="/index" element={<Navigate to="/dashboard" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
+      <Route path="/auth/callback" element={<Navigate to="/" replace />} />
       <Route path="/dashboard" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
       <Route path="/agent" element={<ProtectedRoute><AppLayout><AgentPage /></AppLayout></ProtectedRoute>} />
       <Route path="/newsletter" element={<ProtectedRoute><AppLayout><NewsletterPage /></AppLayout></ProtectedRoute>} />
