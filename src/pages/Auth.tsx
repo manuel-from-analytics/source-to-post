@@ -176,7 +176,7 @@ export function SignupPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user, loading: authLoading, beginAuthentication, confirmSession } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const next = useNextParam();
 
   useEffect(() => {
