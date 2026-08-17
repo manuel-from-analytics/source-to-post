@@ -13,14 +13,27 @@ export function safeAuthDestination(raw: string | null): string {
 
 export function readStoredAuthDestination(): string {
   try {
-    return safeAuthDestination(sessionStorage.getItem("postflow:next"));
+    return safeAuthDestination(localStorage.getItem("postflow:next") ?? sessionStorage.getItem("postflow:next"));
   } catch {
     return "/dashboard";
   }
 }
 
+export function storeAuthDestination(destination: string): void {
+  try {
+    localStorage.setItem("postflow:next", safeAuthDestination(destination));
+  } catch {
+    try {
+      sessionStorage.setItem("postflow:next", safeAuthDestination(destination));
+    } catch {
+      // Storage can be unavailable in private browsing contexts.
+    }
+  }
+}
+
 export function clearStoredAuthDestination(): void {
   try {
+    localStorage.removeItem("postflow:next");
     sessionStorage.removeItem("postflow:next");
   } catch {
     // Storage can be unavailable in private browsing contexts.

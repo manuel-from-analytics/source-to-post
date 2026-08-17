@@ -85,10 +85,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, nextSession) => {
         if (!active) return;
-        // Initialization below owns INITIAL_SESSION. Treating an empty initial
-        // event as final can beat URL/session hydration after a full redirect.
-        if (event === "INITIAL_SESSION") {
-          recordAuthCheckpoint("session_event", event);
+        // Keep this listener synchronous: the auth client emits INITIAL_SESSION
+        // only after it has restored localStorage and consumed an OAuth return.
+        // Adopting that session here is the most reliable path on mobile reloads.
+        // If the first event is temporarily empty during an active OAuth return,
+        // let initialize() keep polling instead of sending the user to login.
+        if (event === "INITIAL_SESSION" && !nextSession && getExistingAuthAttemptId()) {
+          recordAuthCheckpoint("session_event", "INITIAL_SESSION_PENDING");
           return;
         }
         revisionRef.current += 1;

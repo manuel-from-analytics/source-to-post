@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { classifyAuthError, completeAuthTrace, getExistingAuthAttemptId, recordAuthCheckpoint, startAuthTrace } from "@/lib/auth-diagnostics";
-import { safeAuthDestination } from "@/lib/auth-navigation";
+import { safeAuthDestination, storeAuthDestination } from "@/lib/auth-navigation";
 
 // Validate that `next` is a same-origin relative path — never an absolute URL,
 // protocol-relative URL, or backslash-prefixed variant that browsers may
@@ -58,9 +58,7 @@ export function LoginPage() {
     setAuthError(null);
     startAuthTrace();
     beginAuthentication();
-    try {
-      sessionStorage.setItem("postflow:next", next);
-    } catch { /* ignore */ }
+    storeAuthDestination(next);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
@@ -213,9 +211,7 @@ export function SignupPage() {
     setLoading(true);
     startAuthTrace();
     beginAuthentication();
-    try {
-      sessionStorage.setItem("postflow:next", next);
-    } catch { /* ignore */ }
+    storeAuthDestination(next);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
