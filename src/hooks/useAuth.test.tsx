@@ -69,6 +69,31 @@ describe("AuthProvider", () => {
     expect(screen.getByTestId("user")).toHaveTextContent("user-1");
   });
 
+  it("adopts a persisted session from INITIAL_SESSION after a reload", async () => {
+    const pendingSession = deferred<{ data: { session: Session | null }; error: null }>();
+    getSession.mockReturnValue(pendingSession.promise);
+    render(<AuthProvider><Probe /></AuthProvider>);
+
+    act(() => authListener?.("INITIAL_SESSION", fakeSession));
+    pendingSession.resolve({ data: { session: null }, error: null });
+
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
+    expect(screen.getByTestId("user")).toHaveTextContent("user-1");
+  });
+
+  it("keeps the restored user when the auth client refreshes its token", async () => {
+    getSession.mockResolvedValue({ data: { session: fakeSession }, error: null });
+    getUser.mockResolvedValue({ data: { user: fakeSession.user }, error: null });
+    render(<AuthProvider><Probe /></AuthProvider>);
+    await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"));
+
+    const refreshedSession = { ...fakeSession, access_token: "refreshed-access" } as Session;
+    act(() => authListener?.("TOKEN_REFRESHED", refreshedSession));
+
+    expect(screen.getByTestId("status")).toHaveTextContent("authenticated");
+    expect(screen.getByTestId("user")).toHaveTextContent("user-1");
+  });
+
   it("does not let stale initialization overwrite a newer SIGNED_IN event", async () => {
     const pendingSession = deferred<{ data: { session: Session | null }; error: null }>();
     getSession.mockReturnValue(pendingSession.promise);
