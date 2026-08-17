@@ -12,7 +12,6 @@ import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { classifyAuthError, completeAuthTrace, getExistingAuthAttemptId, recordAuthCheckpoint, startAuthTrace } from "@/lib/auth-diagnostics";
 import { safeAuthDestination, storeAuthDestination } from "@/lib/auth-navigation";
 
 // Validate that `next` is a same-origin relative path — never an absolute URL,
@@ -32,10 +31,10 @@ export function LoginPage() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading, beginAuthentication, confirmSession } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const next = useNextParam();
   const returnedError = params.get("auth_error");
-  const diagnosticId = params.get("attempt") ?? getExistingAuthAttemptId() ?? "—";
+  const diagnosticId = params.get("attempt") ?? "—";
 
   useEffect(() => {
     if (!authLoading && user) navigate(next, { replace: true });
@@ -56,34 +55,18 @@ export function LoginPage() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setAuthError(null);
-    startAuthTrace();
-    beginAuthentication();
     storeAuthDestination(next);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
-      const code = classifyAuthError(result.error);
-      recordAuthCheckpoint("oauth_response_failed", code);
       setLoading(false);
-      setAuthError(code);
+      setAuthError("google_sign_in_failed");
       return;
     }
-    if (result.redirected) {
-      recordAuthCheckpoint("oauth_redirected");
-      return;
-    }
-
-    // The generated helper is the only owner of token persistence. This page
-    // only confirms that AuthProvider can observe and validate that session.
-    recordAuthCheckpoint("oauth_response_received");
-    if (!(await confirmSession())) {
-      setLoading(false);
-      setAuthError("session_validation_failed");
-      return;
-    }
-    completeAuthTrace();
-    navigate(next, { replace: true });
+    if (result.redirected) return;
+    // Tokens received and session set by the helper; AuthProvider's listener
+    // will pick it up and the effect above navigates to `next`.
   };
 
 
@@ -177,7 +160,7 @@ export function SignupPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user, loading: authLoading, beginAuthentication, confirmSession } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const next = useNextParam();
 
   useEffect(() => {
@@ -209,31 +192,18 @@ export function SignupPage() {
 
   const handleGoogleSignup = async () => {
     setLoading(true);
-    startAuthTrace();
-    beginAuthentication();
     storeAuthDestination(next);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
-      recordAuthCheckpoint("oauth_response_failed", classifyAuthError(result.error));
       setLoading(false);
       toast.error(t("auth.googleSignupError"));
       return;
     }
-    if (result.redirected) {
-      recordAuthCheckpoint("oauth_redirected");
-      return;
-    }
-
-    recordAuthCheckpoint("oauth_response_received");
-    if (!(await confirmSession())) {
-      setLoading(false);
-      toast.error(t("auth.googleSignupError"));
-      return;
-    }
-    completeAuthTrace();
-    navigate(next, { replace: true });
+    if (result.redirected) return;
+    // Tokens received and session set by the helper; AuthProvider's listener
+    // will pick it up, and the effect above navigates once the user exists.
   };
 
 
