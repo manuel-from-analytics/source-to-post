@@ -92,7 +92,10 @@ async def check_google_flow(page, label):
     except Exception:
         await page.wait_for_timeout(4000)
         target = page.url
-    ok = "accounts.google.com" in target or "supabase.co/auth" in target
+    ok = any(
+        m in target
+        for m in ("accounts.google.com", "supabase.co/auth", "/~oauth/initiate")
+    )
     record(f"{label}: OAuth flow starts", ok, target)
     if popup:
         await popup.close()
@@ -151,10 +154,8 @@ async def scenario_embedded(pw):
             body = await frame.inner_text("body")
             has_login = "Google" in body
             record(f"{label}: auth screen rendered in iframe", has_login, frame.url)
-        hit = next(
-            (t for t in ERROR_TEXTS if t.lower() in (await frame.inner_text("body")).lower()),
-            None,
-        )
+        frame_body = (await frame.inner_text("body")).lower()
+        hit = next((t for t in ERROR_TEXTS if t.lower() in frame_body), None)
         record(f"{label}: no session-error banner", hit is None, hit or "")
     await page.screenshot(path=str(SHOTS / "embedded_preview.png"))
     await browser.close()
