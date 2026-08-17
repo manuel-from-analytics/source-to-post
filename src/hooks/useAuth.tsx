@@ -88,6 +88,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Keep this listener synchronous: the auth client emits INITIAL_SESSION
         // only after it has restored localStorage and consumed an OAuth return.
         // Adopting that session here is the most reliable path on mobile reloads.
+        // If the first event is temporarily empty during an active OAuth return,
+        // let initialize() keep polling instead of sending the user to login.
+        if (event === "INITIAL_SESSION" && !nextSession && getExistingAuthAttemptId()) {
+          recordAuthCheckpoint("session_event", "INITIAL_SESSION_PENDING");
+          return;
+        }
         revisionRef.current += 1;
         recordAuthCheckpoint("session_event", event);
         setSession(nextSession);

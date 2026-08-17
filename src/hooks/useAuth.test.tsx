@@ -128,6 +128,8 @@ describe("AuthProvider", () => {
 
     render(<AuthProvider><Probe /></AuthProvider>);
     expect(screen.getByTestId("status")).toHaveTextContent("authenticating");
+    act(() => authListener?.("INITIAL_SESSION", null));
+    expect(screen.getByTestId("status")).toHaveTextContent("authenticating");
     await waitFor(() => expect(screen.getByTestId("status")).toHaveTextContent("authenticated"), { timeout: 1500 });
     expect(getSession).toHaveBeenCalledTimes(2);
   });
