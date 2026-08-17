@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "python3 e2e/auth_dashboard_e2e.py"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
