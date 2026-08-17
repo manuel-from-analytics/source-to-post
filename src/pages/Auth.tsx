@@ -55,34 +55,18 @@ export function LoginPage() {
   const handleGoogleLogin = async () => {
     setLoading(true);
     setAuthError(null);
-    startAuthTrace();
-    beginAuthentication();
     storeAuthDestination(next);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
-      const code = classifyAuthError(result.error);
-      recordAuthCheckpoint("oauth_response_failed", code);
       setLoading(false);
-      setAuthError(code);
+      setAuthError("google_sign_in_failed");
       return;
     }
-    if (result.redirected) {
-      recordAuthCheckpoint("oauth_redirected");
-      return;
-    }
-
-    // The generated helper is the only owner of token persistence. This page
-    // only confirms that AuthProvider can observe and validate that session.
-    recordAuthCheckpoint("oauth_response_received");
-    if (!(await confirmSession())) {
-      setLoading(false);
-      setAuthError("session_validation_failed");
-      return;
-    }
-    completeAuthTrace();
-    navigate(next, { replace: true });
+    if (result.redirected) return;
+    // Tokens received and session set by the helper; AuthProvider's listener
+    // will pick it up and the effect above navigates to `next`.
   };
 
 
