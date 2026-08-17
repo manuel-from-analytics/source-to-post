@@ -48,11 +48,17 @@ export default function AuthCallback() {
           return;
         }
       } else if (callback.code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(callback.code);
-        if (error) {
-          recordAuthCheckpoint("oauth_response_failed", "callback_code_rejected");
-          setFailed(true);
-          return;
+        // The auth client may already have consumed the PKCE code while the
+        // application bundle initialized. Only exchange it when that automatic
+        // restoration did not produce a session.
+        const { data: existing } = await supabase.auth.getSession();
+        if (!existing.session) {
+          const { error } = await supabase.auth.exchangeCodeForSession(callback.code);
+          if (error) {
+            recordAuthCheckpoint("oauth_response_failed", "callback_code_rejected");
+            setFailed(true);
+            return;
+          }
         }
       }
 
