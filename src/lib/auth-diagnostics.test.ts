@@ -10,16 +10,17 @@ import {
 describe("auth diagnostics", () => {
   beforeEach(() => {
     sessionStorage.clear();
+    localStorage.clear();
     vi.restoreAllMocks();
   });
 
   it("stores only safe checkpoint metadata", () => {
     expect(getExistingAuthAttemptId()).toBeNull();
     recordAuthCheckpoint("session_initializing");
-    expect(sessionStorage.getItem("postflow:auth-trace")).toBeNull();
+    expect(localStorage.getItem("postflow:auth-trace")).toBeNull();
     const attemptId = startAuthTrace();
     recordAuthCheckpoint("oauth_response_failed", "missing_tokens");
-    const serialized = sessionStorage.getItem("postflow:auth-trace") ?? "";
+    const serialized = localStorage.getItem("postflow:auth-trace") ?? "";
 
     expect(getAuthAttemptId()).toBe(attemptId);
     expect(getExistingAuthAttemptId()).toBe(attemptId);
@@ -27,6 +28,12 @@ describe("auth diagnostics", () => {
     expect(serialized).toContain("missing_tokens");
     expect(serialized).not.toContain("access_token");
     expect(serialized).not.toContain("refresh_token");
+  });
+
+  it("discards stale OAuth attempts", () => {
+    localStorage.setItem("postflow:auth-attempt", "stale-attempt");
+    localStorage.setItem("postflow:auth-started-at", String(Date.now() - 16 * 60 * 1000));
+    expect(getExistingAuthAttemptId()).toBeNull();
   });
 
   it.each([

@@ -25,10 +25,11 @@ const TRACE_KEY = "postflow:auth-trace";
 const ATTEMPT_KEY = "postflow:auth-attempt";
 const START_KEY = "postflow:auth-started-at";
 const MAX_ENTRIES = 30;
+const ATTEMPT_TTL_MS = 15 * 60 * 1000;
 
 function availableStorage(): Storage | null {
   try {
-    return window.sessionStorage;
+    return window.localStorage;
   } catch {
     return null;
   }
@@ -70,7 +71,16 @@ export function getAuthAttemptId(): string {
 }
 
 export function getExistingAuthAttemptId(): string | null {
-  return availableStorage()?.getItem(ATTEMPT_KEY) ?? null;
+  const storage = availableStorage();
+  const attemptId = storage?.getItem(ATTEMPT_KEY) ?? null;
+  const startedAt = Number(storage?.getItem(START_KEY));
+  if (!attemptId || !startedAt || Date.now() - startedAt > ATTEMPT_TTL_MS) {
+    storage?.removeItem(ATTEMPT_KEY);
+    storage?.removeItem(START_KEY);
+    storage?.removeItem(TRACE_KEY);
+    return null;
+  }
+  return attemptId;
 }
 
 export function completeAuthTrace(): void {

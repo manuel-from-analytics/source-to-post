@@ -3,10 +3,14 @@ import {
   clearStoredAuthDestination,
   readStoredAuthDestination,
   safeAuthDestination,
+  storeAuthDestination,
 } from "./auth-navigation";
 
 describe("auth navigation", () => {
-  beforeEach(() => sessionStorage.clear());
+  beforeEach(() => {
+    sessionStorage.clear();
+    localStorage.clear();
+  });
 
   it.each([
     [null, "/dashboard"],
@@ -20,7 +24,7 @@ describe("auth navigation", () => {
   });
 
   it("reads and clears the stored destination", () => {
-    sessionStorage.setItem("postflow:next", "/performance");
+    storeAuthDestination("/performance");
     expect(readStoredAuthDestination()).toBe("/performance");
     clearStoredAuthDestination();
     expect(readStoredAuthDestination()).toBe("/dashboard");

@@ -51,6 +51,7 @@ describe("AuthProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStorage.clear();
+    localStorage.clear();
     authListener = undefined;
   });
 
@@ -120,7 +121,8 @@ describe("AuthProvider", () => {
   });
 
   it("waits for session hydration after a full-page OAuth return", async () => {
-    sessionStorage.setItem("postflow:auth-attempt", "attempt-1");
+    localStorage.setItem("postflow:auth-attempt", "attempt-1");
+    localStorage.setItem("postflow:auth-started-at", String(Date.now()));
     getSession
       .mockResolvedValueOnce({ data: { session: null }, error: null })
       .mockResolvedValueOnce({ data: { session: fakeSession }, error: null });
