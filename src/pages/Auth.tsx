@@ -159,6 +159,9 @@ export function LoginPage() {
               <Button className="w-full" type="submit" disabled={loading}>
                 {loading ? t("auth.signingIn") : t("auth.signIn")}
               </Button>
+              <button type="button" onClick={handleResetPassword} disabled={loading} className="text-sm font-medium text-primary hover:underline">
+                {t("auth.forgotPassword")}
+              </button>
               <p className="text-center text-sm text-muted-foreground">
                 {t("auth.noAccount")}{" "}
                 <Link to={`/signup${next !== "/dashboard" ? `?next=${encodeURIComponent(next)}` : ""}`} className="font-medium text-primary hover:underline">{t("auth.signUpLink")}</Link>
