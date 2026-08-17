@@ -22,6 +22,7 @@ import PerformancePage from "@/pages/PerformancePage";
 import AgentPage from "@/pages/AgentPage";
 import UnsubscribePage from "@/pages/UnsubscribePage";
 import OAuthConsentPage from "@/pages/OAuthConsent";
+import ResetPasswordPage from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 import { clearStoredAuthDestination, readStoredAuthDestination } from "@/lib/auth-navigation";
 
@@ -55,6 +56,7 @@ function AppRoutes() {
       <Route path="/index" element={<Navigate to="/dashboard" replace />} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route path="/auth/callback" element={<Navigate to="/" replace />} />
       <Route path="/dashboard" element={<ProtectedRoute><AppLayout><Dashboard /></AppLayout></ProtectedRoute>} />
       <Route path="/agent" element={<ProtectedRoute><AppLayout><AgentPage /></AppLayout></ProtectedRoute>} />
