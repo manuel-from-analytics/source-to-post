@@ -24,15 +24,14 @@ import UnsubscribePage from "@/pages/UnsubscribePage";
 import OAuthConsentPage from "@/pages/OAuthConsent";
 import NotFound from "@/pages/NotFound";
 import { clearStoredAuthDestination, readStoredAuthDestination } from "@/lib/auth-navigation";
-import { completeAuthTrace, getExistingAuthAttemptId, recordAuthCheckpoint } from "@/lib/auth-diagnostics";
 
 const queryClient = new QueryClient();
 
 function RootRedirect() {
-  const { user, loading, status, error } = useAuth();
+  const { user, loading } = useAuth();
 
-  // The auth SDK owns URL detection and the one-time OAuth code exchange.
-  // Waiting for AuthProvider here avoids racing it with a second exchange.
+  // The auth SDK owns URL detection and the one-time OAuth code exchange,
+  // so we only wait for it to settle before routing.
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -41,17 +40,10 @@ function RootRedirect() {
     );
   }
 
-  if (!user) {
-    const attempt = getExistingAuthAttemptId();
-    if (!attempt) return <Navigate to="/login" replace />;
-    recordAuthCheckpoint("route_anonymous", error ?? status);
-    return <Navigate to={`/login?auth_error=${encodeURIComponent(error ?? "session_missing")}&attempt=${encodeURIComponent(attempt)}`} replace />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
 
-  recordAuthCheckpoint("route_authenticated");
   const next = readStoredAuthDestination();
   clearStoredAuthDestination();
-  completeAuthTrace();
   return <Navigate to={next} replace />;
 }
 
