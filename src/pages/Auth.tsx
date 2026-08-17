@@ -208,31 +208,18 @@ export function SignupPage() {
 
   const handleGoogleSignup = async () => {
     setLoading(true);
-    startAuthTrace();
-    beginAuthentication();
     storeAuthDestination(next);
     const result = await lovable.auth.signInWithOAuth("google", {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
-      recordAuthCheckpoint("oauth_response_failed", classifyAuthError(result.error));
       setLoading(false);
       toast.error(t("auth.googleSignupError"));
       return;
     }
-    if (result.redirected) {
-      recordAuthCheckpoint("oauth_redirected");
-      return;
-    }
-
-    recordAuthCheckpoint("oauth_response_received");
-    if (!(await confirmSession())) {
-      setLoading(false);
-      toast.error(t("auth.googleSignupError"));
-      return;
-    }
-    completeAuthTrace();
-    navigate(next, { replace: true });
+    if (result.redirected) return;
+    // Tokens received and session set by the helper; AuthProvider's listener
+    // will pick it up, and the effect above navigates once the user exists.
   };
 
 
