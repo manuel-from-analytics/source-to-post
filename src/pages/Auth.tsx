@@ -12,7 +12,6 @@ import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { classifyAuthError, completeAuthTrace, getExistingAuthAttemptId, recordAuthCheckpoint, startAuthTrace } from "@/lib/auth-diagnostics";
 import { safeAuthDestination, storeAuthDestination } from "@/lib/auth-navigation";
 
 // Validate that `next` is a same-origin relative path — never an absolute URL,
