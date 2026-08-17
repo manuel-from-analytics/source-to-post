@@ -31,10 +31,10 @@ export function LoginPage() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading, beginAuthentication, confirmSession } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const next = useNextParam();
   const returnedError = params.get("auth_error");
-  const diagnosticId = params.get("attempt") ?? getExistingAuthAttemptId() ?? "—";
+  const diagnosticId = params.get("attempt") ?? "—";
 
   useEffect(() => {
     if (!authLoading && user) navigate(next, { replace: true });
