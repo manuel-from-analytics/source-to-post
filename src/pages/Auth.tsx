@@ -11,25 +11,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { useLanguage } from "@/i18n/LanguageContext";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { classifyAuthError, completeAuthTrace, getExistingAuthAttemptId, recordAuthCheckpoint, startAuthTrace } from "@/lib/auth-diagnostics";
+import { safeAuthDestination } from "@/lib/auth-navigation";
 
 // Validate that `next` is a same-origin relative path — never an absolute URL,
 // protocol-relative URL, or backslash-prefixed variant that browsers may
 // resolve as a different origin. This keeps OAuth flows (MCP consent) safe.
-function safeNext(raw: string | null): string {
-  if (!raw) return "/dashboard";
-  try {
-    const decoded = decodeURIComponent(raw);
-    if (!decoded.startsWith("/")) return "/dashboard";
-    if (decoded.startsWith("//") || decoded.startsWith("/\\")) return "/dashboard";
-    return decoded;
-  } catch {
-    return "/dashboard";
-  }
-}
-
 function useNextParam() {
   const [params] = useSearchParams();
-  return safeNext(params.get("next"));
+  return safeAuthDestination(params.get("next"));
 }
 
 export function LoginPage() {
@@ -38,9 +29,13 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, beginAuthentication, confirmSession } = useAuth();
   const next = useNextParam();
+  const returnedError = params.get("auth_error");
+  const diagnosticId = params.get("attempt") ?? getExistingAuthAttemptId() ?? "—";
 
   useEffect(() => {
     if (!authLoading && user) navigate(next, { replace: true });
@@ -60,6 +55,9 @@ export function LoginPage() {
 
   const handleGoogleLogin = async () => {
     setLoading(true);
+    setAuthError(null);
+    startAuthTrace();
+    beginAuthentication();
     try {
       sessionStorage.setItem("postflow:next", next);
     } catch { /* ignore */ }
@@ -67,28 +65,26 @@ export function LoginPage() {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
+      const code = classifyAuthError(result.error);
+      recordAuthCheckpoint("oauth_response_failed", code);
       setLoading(false);
-      toast.error(t("auth.googleError"));
+      setAuthError(code);
       return;
     }
-    if (result.redirected) return;
+    if (result.redirected) {
+      recordAuthCheckpoint("oauth_redirected");
+      return;
+    }
 
-    // The managed OAuth helper normally persists these tokens itself. Persist
-    // and validate them again here because setSession returns errors instead of
-    // throwing; otherwise an invalid/unpersisted session silently navigates to
-    // the protected route and immediately bounces back to login.
-    const { error: sessionError } = await supabase.auth.setSession(result.tokens);
-    if (sessionError) {
+    // The generated helper is the only owner of token persistence. This page
+    // only confirms that AuthProvider can observe and validate that session.
+    recordAuthCheckpoint("oauth_response_received");
+    if (!(await confirmSession())) {
       setLoading(false);
-      toast.error(t("auth.googleError"));
+      setAuthError("session_validation_failed");
       return;
     }
-    const { data, error: userError } = await supabase.auth.getUser();
-    if (userError || !data.user) {
-      setLoading(false);
-      toast.error(t("auth.googleError"));
-      return;
-    }
+    completeAuthTrace();
     navigate(next, { replace: true });
   };
 
@@ -103,6 +99,18 @@ export function LoginPage() {
           </div>
           <p className="text-sm text-muted-foreground">{t("auth.tagline")}</p>
         </div>
+
+        {(authError || returnedError) && (
+          <Alert variant="destructive">
+            <AlertTitle>{t("auth.diagnosticTitle")}</AlertTitle>
+            <AlertDescription>
+              <p>{t("auth.diagnosticDescription")}</p>
+              <p className="mt-1 font-mono text-xs break-all">
+                {t("auth.diagnosticCode")}: {authError ?? returnedError} · {diagnosticId}
+              </p>
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader className="pb-4">
@@ -171,7 +179,7 @@ export function SignupPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, beginAuthentication, confirmSession } = useAuth();
   const next = useNextParam();
 
   useEffect(() => {
@@ -203,6 +211,8 @@ export function SignupPage() {
 
   const handleGoogleSignup = async () => {
     setLoading(true);
+    startAuthTrace();
+    beginAuthentication();
     try {
       sessionStorage.setItem("postflow:next", next);
     } catch { /* ignore */ }
@@ -210,24 +220,23 @@ export function SignupPage() {
       redirect_uri: window.location.origin,
     });
     if (result.error) {
+      recordAuthCheckpoint("oauth_response_failed", classifyAuthError(result.error));
       setLoading(false);
       toast.error(t("auth.googleSignupError"));
       return;
     }
-    if (result.redirected) return;
+    if (result.redirected) {
+      recordAuthCheckpoint("oauth_redirected");
+      return;
+    }
 
-    const { error: sessionError } = await supabase.auth.setSession(result.tokens);
-    if (sessionError) {
+    recordAuthCheckpoint("oauth_response_received");
+    if (!(await confirmSession())) {
       setLoading(false);
       toast.error(t("auth.googleSignupError"));
       return;
     }
-    const { data, error: userError } = await supabase.auth.getUser();
-    if (userError || !data.user) {
-      setLoading(false);
-      toast.error(t("auth.googleSignupError"));
-      return;
-    }
+    completeAuthTrace();
     navigate(next, { replace: true });
   };
 
